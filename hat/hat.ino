@@ -21,10 +21,16 @@
 #include <Adafruit_NeoPixel.h>
 #include <Adafruit_NeoMatrix.h>
 #include <Adafruit_GFX.h>
+#include <EEPROM.h>
 
 #define SHARED_BUFFER_SIZE  14
 
 int sharedBuffer[SHARED_BUFFER_SIZE];
+
+// HUG COUNTER STUFF ----------------------------------------------------------
+
+#define EEPROM_COUNT    0
+
 
 // NEOPIXEL STUFF ----------------------------------------------------------
 
@@ -145,10 +151,11 @@ uint8_t  i;
 uint16_t minLvl, maxLvl;
 int      n, height;
 byte     currentColumn;
+unsigned long t;
 
 void loop() {
 
-  unsigned long t = millis(); // Current elapsed time, milliseconds.
+  t = millis(); // Current elapsed time, milliseconds.
   // millis() comparisons are used rather than delay() so that animation
   // speed is consistent regardless of message length & other factors.
 
@@ -218,6 +225,8 @@ void loop() {
       msgLen = 7;
     } else if (mode == MODE_SOUND) {
       memset(sharedBuffer, 0, SHARED_BUFFER_SIZE);
+    } else if (mode == MODE_COUNT) {
+      height = EEPROM.read(EEPROM_COUNT) + (EEPROM.read(EEPROM_COUNT+1) << 8);
     }
     
     prevMode = mode;
@@ -270,6 +279,13 @@ void loop() {
     maxLvlAvg = (maxLvlAvg * 63 + maxLvl) >> 6; // (fake rolling average)
    
   } else if (mode == MODE_COUNT) {
+    sprintf(msg, "%d", height);
+    n = strlen(msg);
+    n = (NEO_WIDTH - 5 * n) >> 1;
+    matrix.fillScreen(0);
+    matrix.setCursor(n, 0);
+    matrix.print(msg);
+    matrix.show();
   }
 }
 
