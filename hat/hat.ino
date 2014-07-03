@@ -22,6 +22,10 @@
 #include <Adafruit_NeoMatrix.h>
 #include <Adafruit_GFX.h>
 
+#define SHARED_BUFFER_SIZE  14
+
+int sharedBuffer[SHARED_BUFFER_SIZE];
+
 // NEOPIXEL STUFF ----------------------------------------------------------
 
 // 4 meters of NeoPixel strip is coiled around a top hat; the result is
@@ -41,7 +45,8 @@ Adafruit_NeoMatrix matrix(NEO_WIDTH, NEO_HEIGHT, NEO_PIN,
   NEO_MATRIX_ROWS + NEO_MATRIX_PROGRESSIVE,
   NEO_GRB         + NEO_KHZ800);
 
-char          msg[21]       = {0};            // BLE 20 char limit + NUL
+#define MSG_MAX  21
+char          *msg          = (char*)sharedBuffer;
 uint8_t       msgLen        = 0;              // Empty message
 int           msgX          = matrix.width(); // Start off right edge
 unsigned long prevFrameTime = 0L;             // For animation timing
@@ -51,16 +56,16 @@ unsigned long prevFrameTime = 0L;             // For animation timing
 #define MIC_PIN   A0  // Microphone is attached to this analog pin
 #define DC_OFFSET  0  // DC offset in mic signal - if unusure, leave 0
 #define NOISE     10  // Noise/hum/interference in mic signal
-#define SAMPLES   13  // Length of buffer for dynamic level adjustment
+#define SAMPLES   12  // Length of buffer for dynamic level adjustment
 #define TOP       (NEO_HEIGHT + 2) // Allow dot to go slightly off scale
 
 byte
   volCount  = 0;      // Frame counter for storing past volume data
 int
-  vol[SAMPLES],       // Collection of prior volume samples
   lvl       = 10,      // Current "dampened" audio level
   minLvlAvg = 0,      // For dynamic adjustment of graph low & high
   maxLvlAvg = 512;
+int *vol = sharedBuffer;
 
 // BLUEFRUIT LE STUFF-------------------------------------------------------
 
@@ -120,17 +125,7 @@ void setup() {
   matrix.setBrightness(31);    // Batteries have limited sauce
   matrix.fillScreen(0);
 
-  memset(vol, 0, sizeof(vol));
-
-  msg[0] = 'G';
-  msg[1] = 'U';
-  msg[2] = 'S';
-  msg[3] = 'T';
-  msg[4] = 'A';
-  msg[5] = 'V';
-  msg[6] = 'O';
-  msg[7] = 0;
-  msgLen = 7;
+  memset(sharedBuffer, 0, SHARED_BUFFER_SIZE);
 
   BTLEserial.begin();
 
@@ -143,7 +138,9 @@ void setup() {
 #define MODE_TEXT   1
 #define MODE_COUNT  2
 
+byte prevMode = 0xff;
 byte mode = MODE_SOUND;
+
 uint8_t  i;
 uint16_t minLvl, maxLvl;
 int      n, height;
@@ -202,10 +199,28 @@ void loop() {
         break;
       }
     } else { // Not color, must be message string
-      msgLen      = readStr(msg, sizeof(msg)-1);
+      msgLen      = readStr(msg, MSG_MAX-1);
       msg[msgLen] = 0;
       msgX        = matrix.width(); // Reset scrolling
     }
+  }
+  
+  if (prevMode != mode) {
+    if (mode == MODE_TEXT) {
+      msg[0] = 'H';
+      msg[1] = 'U';
+      msg[2] = 'G';
+      msg[3] = ' ';
+      msg[4] = 'M';
+      msg[5] = 'E';
+      msg[6] = '!';
+      msg[7] = 0;
+      msgLen = 7;
+    } else if (mode == MODE_SOUND) {
+      memset(sharedBuffer, 0, SHARED_BUFFER_SIZE);
+    }
+    
+    prevMode = mode;
   }
 
   if (mode == MODE_TEXT) {
@@ -229,16 +244,7 @@ void loop() {
     if(height < 0L)       height = 0;      // Clip output
     else if(height > TOP) height = TOP;
    
-   
     // Color pixels based on rainbow gradient
-    
-//    for(i=0; i<N_PIXELS; i++) {
-//      if(i >= height)               strip.setPixelColor(i,   0,   0, 0);
-//      else strip.setPixelColor(i,Wheel());
-//    }
-   
-   
-   
     matrix.drawFastVLine(13+currentColumn,0,TOP-height,0);
     matrix.drawFastVLine(13+currentColumn,TOP-height,height,Wheel(map(height,0,TOP,30,150)));
     matrix.show();
