@@ -22,6 +22,7 @@
 #include <Adafruit_NeoMatrix.h>
 #include <Adafruit_GFX.h>
 #include <EEPROM.h>
+#include <CapacitiveSensor.h>
 
 
 // SHARED MEMORY STUFF ----------------------------------------------------------
@@ -34,6 +35,9 @@ int           i1, i2, i3, i4;
 unsigned long ul1;
 uint16_t      ui161, ui162;
 
+
+// CAPACITIVE SENSOR STUFF ----------------------------------------------------
+CapacitiveSensor  cs = CapacitiveSensor(11, 12);   // Sensor in 12
 
 // HUG COUNTER STUFF ----------------------------------------------------------
 
@@ -152,6 +156,8 @@ void setup() {
 
   BTLEserial.begin();
 
+  cs.set_CS_AutocaL_Millis(0xFFFFFFFF);     // turn off autocalibrate on channel 1 - just as an example
+
   pinMode(LED, OUTPUT);
   digitalWrite(LED, LOW);
   analogReference(EXTERNAL);
@@ -223,6 +229,10 @@ void loop() {
       msg[msgLen] = 0;
       msgX        = matrix.width(); // Reset scrolling
     }
+  }
+  
+  if (cs.capacitiveSensor(30) > 400) {
+  } else {
   }
   
   if (prevMode != mode) {
