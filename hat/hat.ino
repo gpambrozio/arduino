@@ -23,9 +23,17 @@
 #include <Adafruit_GFX.h>
 #include <EEPROM.h>
 
-#define SHARED_BUFFER_SIZE  14
 
+// SHARED MEMORY STUFF ----------------------------------------------------------
+
+#define SHARED_BUFFER_SIZE  14
 int sharedBuffer[SHARED_BUFFER_SIZE];
+
+uint8_t       ui81, ui82;
+int           i1, i2, i3, i4;
+unsigned long ul1;
+uint16_t      ui161, ui162;
+
 
 // HUG COUNTER STUFF ----------------------------------------------------------
 
@@ -52,10 +60,11 @@ Adafruit_NeoMatrix matrix(NEO_WIDTH, NEO_HEIGHT, NEO_PIN,
   NEO_GRB         + NEO_KHZ800);
 
 #define MSG_MAX  21
-char          *msg          = (char*)sharedBuffer;
-uint8_t       msgLen        = 0;              // Empty message
-int           msgX          = matrix.width(); // Start off right edge
-unsigned long prevFrameTime = 0L;             // For animation timing
+#define msg ((char*)sharedBuffer)
+#define msgLen (ui81)
+#define msgX (i1)
+#define prevFrameTime (ul1)
+
 #define FPS 10                                // Scrolling speed
 
 // MUSIC STUFF  ---------------------------------------------------------
@@ -65,13 +74,21 @@ unsigned long prevFrameTime = 0L;             // For animation timing
 #define SAMPLES   12  // Length of buffer for dynamic level adjustment
 #define TOP       (NEO_HEIGHT + 2) // Allow dot to go slightly off scale
 
-byte
-  volCount  = 0;      // Frame counter for storing past volume data
-int
-  lvl       = 10,      // Current "dampened" audio level
-  minLvlAvg = 0,      // For dynamic adjustment of graph low & high
-  maxLvlAvg = 512;
-int *vol = sharedBuffer;
+#define vol ((int*)sharedBuffer)
+
+#define volCount (ui81)    // Frame counter for storing past volume data
+#define currentColumn (ui82)
+
+#define lvl (i1)          // Current "dampened" audio level
+#define minLvlAvg (i2)    // For dynamic adjustment of graph low & high
+#define maxLvlAvg (i3)
+#define height (i4)
+
+#define minLvl (ui161)
+#define maxLvl (ui162)
+
+// COUNT STUFF  ----------------------------------------------------------
+#define count (i1)
 
 // BLUEFRUIT LE STUFF-------------------------------------------------------
 
@@ -148,13 +165,9 @@ byte prevMode = 0xff;
 byte mode = MODE_SOUND;
 
 uint8_t  i;
-uint16_t minLvl, maxLvl;
-int      n, height;
-byte     currentColumn;
 unsigned long t;
 
 void loop() {
-
   t = millis(); // Current elapsed time, milliseconds.
   // millis() comparisons are used rather than delay() so that animation
   // speed is consistent regardless of message length & other factors.
@@ -223,10 +236,16 @@ void loop() {
       msg[6] = '!';
       msg[7] = 0;
       msgLen = 7;
+      msgX = matrix.width(); // Start off right edge
+      prevFrameTime = 0L;             // For animation timing
     } else if (mode == MODE_SOUND) {
       memset(sharedBuffer, 0, SHARED_BUFFER_SIZE);
+      volCount  = 0;
+      lvl       = 10;
+      minLvlAvg = 0;
+      maxLvlAvg = 512;
     } else if (mode == MODE_COUNT) {
-      height = EEPROM.read(EEPROM_COUNT) + (EEPROM.read(EEPROM_COUNT+1) << 8);
+      count = EEPROM.read(EEPROM_COUNT) + (EEPROM.read(EEPROM_COUNT+1) << 8);
     }
     
     prevMode = mode;
@@ -242,10 +261,13 @@ void loop() {
       prevFrameTime = t;
     }
   } else if (mode == MODE_SOUND) {
-    n   = analogRead(MIC_PIN);                        // Raw reading from mic 
-    n   = abs(n - 512 - DC_OFFSET); // Center on zero
-    n   = (n <= NOISE) ? 0 : (n - NOISE);             // Remove noise/hum
-    lvl = ((lvl * 7) + n) >> 3;    // "Dampened" reading (else looks twitchy)
+    height   = analogRead(MIC_PIN);                        // Raw reading from mic
+    height   = abs(height - 512 - DC_OFFSET); // Center on zero
+    height   = (height <= NOISE) ? 0 : (height - NOISE);             // Remove noise/hum
+    lvl = ((lvl * 7) + height) >> 3;    // "Dampened" reading (else looks twitchy)
+
+    vol[volCount] = height;                 // Save sample for dynamic leveling
+    if(++volCount >= SAMPLES) volCount = 0; // Advance/rollover sample counter
    
     // Calculate bar height based on dynamic min/max levels (fixed point):
     height = TOP * (lvl - minLvlAvg) / (long)(maxLvlAvg - minLvlAvg);
@@ -258,9 +280,6 @@ void loop() {
     matrix.drawFastVLine(13+currentColumn,TOP-height,height,Wheel(map(height,0,TOP,30,150)));
     matrix.show();
     if (++currentColumn >= 10) currentColumn = 0;
-   
-    vol[volCount] = n;                      // Save sample for dynamic leveling
-    if(++volCount >= SAMPLES) volCount = 0; // Advance/rollover sample counter
    
     // Get volume range of prior frames
     minLvl = maxLvl = vol[0];
@@ -279,11 +298,11 @@ void loop() {
     maxLvlAvg = (maxLvlAvg * 63 + maxLvl) >> 6; // (fake rolling average)
    
   } else if (mode == MODE_COUNT) {
-    sprintf(msg, "%d", height);
-    n = strlen(msg);
-    n = (NEO_WIDTH - 5 * n) >> 1;
+    sprintf(msg, "%d", count);
+    msgLen = strlen(msg);
+    msgLen = (NEO_WIDTH - 5 * msgLen) >> 1;
     matrix.fillScreen(0);
-    matrix.setCursor(n, 0);
+    matrix.setCursor(msgLen, 0);
     matrix.print(msg);
     matrix.show();
   }
