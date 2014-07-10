@@ -38,7 +38,13 @@
 #define CAP2_SENSOR   9
 
 #define EXTRA_GND     8
+#define MOTOR         7
 #define PRESSURE     A1
+
+#define LED          13     // Onboard LED (not NeoPixel) pin
+
+#define MARK  {Serial.print("Running line ");Serial.println(__LINE__);}
+//#define MARK  {}
 
 // SHARED MEMORY STUFF ----------------------------------------------------------
 
@@ -119,7 +125,6 @@ aci_evt_opcode_t  prevState  = ACI_EVT_DISCONNECTED;
 
 // The Arduino's onboard LED indicates BTLE status.  Fast flash = waiting
 // for connection, slow flash = connected, off = disconnected.
-#define LED 13                   // Onboard LED (not NeoPixel) pin
 int           LEDperiod   = 0;   // Time (milliseconds) between LED toggles
 boolean       LEDstate    = LOW; // LED flashing state HIGH/LOW
 unsigned long prevLEDtime = 0L;  // For LED timing
@@ -155,6 +160,9 @@ uint8_t readStr(char dest[], uint8_t maxlen) {
 // MEAT, POTATOES ----------------------------------------------------------
 
 void setup() {
+  // initialize serial communications at 9600 bps:
+  Serial.begin(9600);
+
   matrix.begin();
   matrix.setRemapFunction(remapXY);
   matrix.setTextWrap(false);   // Allow scrolling off left
@@ -175,12 +183,18 @@ void setup() {
   pinMode(LED, OUTPUT);
   digitalWrite(LED, LOW);
   
+  pinMode(MOTOR, OUTPUT);
+  digitalWrite(MOTOR, LOW);
+  
   analogReference(EXTERNAL);
 }
 
-#define MODE_SOUND  0
-#define MODE_TEXT   1
-#define MODE_COUNT  2
+typedef enum {
+  MODE_SOUND = 0,
+  MODE_TEXT,
+  MODE_COUNTER,
+  MODE_LAST
+} modes;
 
 byte prevMode = 0xff;
 byte mode = MODE_SOUND;
@@ -192,7 +206,7 @@ void loop() {
   t = millis(); // Current elapsed time, milliseconds.
   // millis() comparisons are used rather than delay() so that animation
   // speed is consistent regardless of message length & other factors.
-
+MARK
   BTLEserial.pollACI(); // Handle BTLE operations
   aci_evt_opcode_t state = BTLEserial.getState();
 
@@ -207,13 +221,13 @@ void loop() {
     LEDstate    = LOW; // Any state change resets LED
     digitalWrite(LED, LEDstate);
   }
-
+MARK
   if(LEDperiod && ((t - prevLEDtime) >= LEDperiod)) { // Handle LED flash
     prevLEDtime = t;
     LEDstate    = !LEDstate;
     digitalWrite(LED, LEDstate);
   }
-
+MARK
   // If connected, check for input from BTLE...
   if((state == ACI_EVT_CONNECTED) && BTLEserial.available()) {
     if(BTLEserial.peek() == '#') { // Color commands start with '#'
@@ -245,8 +259,13 @@ void loop() {
       msgX        = matrix.width(); // Reset scrolling
     }
   }
-  
-  if (cs1.capacitiveSensor(30) > 400) {
+MARK
+  i = cs1.capacitiveSensor(30);
+  Serial.print(mode);
+  Serial.print(' ');
+  Serial.println(i);
+  if (i > 100) {
+    if (++mode >= MODE_LAST) mode = 0;
   } else {
   }
   
@@ -269,13 +288,13 @@ void loop() {
       lvl       = 10;
       minLvlAvg = 0;
       maxLvlAvg = 512;
-    } else if (mode == MODE_COUNT) {
+    } else if (mode == MODE_COUNTER) {
       count = EEPROM.read(EEPROM_COUNT) + (EEPROM.read(EEPROM_COUNT+1) << 8);
     }
     
     prevMode = mode;
   }
-
+MARK
   if (mode == MODE_TEXT) {
     if((t - prevFrameTime) >= (1000L / FPS)) { // Handle scrolling
       matrix.fillScreen(0);
@@ -322,7 +341,7 @@ void loop() {
     minLvlAvg = (minLvlAvg * 63 + minLvl) >> 6; // Dampen min/max levels
     maxLvlAvg = (maxLvlAvg * 63 + maxLvl) >> 6; // (fake rolling average)
    
-  } else if (mode == MODE_COUNT) {
+  } else if (mode == MODE_COUNTER) {
     sprintf(msg, "%d", count);
     msgLen = strlen(msg);
     msgLen = (NEO_WIDTH - 5 * msgLen) >> 1;
@@ -331,6 +350,7 @@ void loop() {
     matrix.print(msg);
     matrix.show();
   }
+MARK
 }
 
 // Input a value 0 to 255 to get a color value.
