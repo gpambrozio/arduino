@@ -24,6 +24,21 @@
 #include <EEPROM.h>
 #include <CapacitiveSensor.h>
 
+#define NEO_PIN     3   // Arduino pin to NeoPixel data input
+#define MIC_PIN     A0  // Microphone is attached to this analog pin
+
+// CLK, MISO, MOSI connect to hardware SPI.  Other pins are configrable:
+#define ADAFRUITBLE_REQ  4
+#define ADAFRUITBLE_RST  5
+#define ADAFRUITBLE_RDY  2 // Must be an interrupt pin
+
+#define CAP1_IN      11
+#define CAP1_SENSOR  12
+#define CAP2_IN      10
+#define CAP2_SENSOR   9
+
+#define EXTRA_GND     8
+#define PRESSURE     A1
 
 // SHARED MEMORY STUFF ----------------------------------------------------------
 
@@ -37,7 +52,8 @@ uint16_t      ui161, ui162;
 
 
 // CAPACITIVE SENSOR STUFF ----------------------------------------------------
-CapacitiveSensor  cs = CapacitiveSensor(11, 12);   // Sensor in 12
+CapacitiveSensor  cs1 = CapacitiveSensor(CAP1_IN, CAP1_SENSOR);
+CapacitiveSensor  cs2 = CapacitiveSensor(CAP2_IN, CAP2_SENSOR);
 
 // HUG COUNTER STUFF ----------------------------------------------------------
 
@@ -51,7 +67,6 @@ CapacitiveSensor  cs = CapacitiveSensor(11, 12);   // Sensor in 12
 // 37 pixels around...a 240 pixel reel isn't quite enough for 7 rows all
 // around, so there's 7 rows at the front, 6 at the back; a smaller hat
 // will fare better.
-#define NEO_PIN     3 // Arduino pin to NeoPixel data input
 #define NEO_WIDTH  37 // Hat circumference in pixels
 #define NEO_HEIGHT  7 // Number of pixel rows (round up if not equal)
 #define NEO_OFFSET  (((NEO_WIDTH * NEO_HEIGHT) - 240) / 2)
@@ -72,7 +87,6 @@ Adafruit_NeoMatrix matrix(NEO_WIDTH, NEO_HEIGHT, NEO_PIN,
 #define FPS 10                                // Scrolling speed
 
 // MUSIC STUFF  ---------------------------------------------------------
-#define MIC_PIN   A0  // Microphone is attached to this analog pin
 #define DC_OFFSET  0  // DC offset in mic signal - if unusure, leave 0
 #define NOISE     10  // Noise/hum/interference in mic signal
 #define SAMPLES   12  // Length of buffer for dynamic level adjustment
@@ -96,10 +110,6 @@ Adafruit_NeoMatrix matrix(NEO_WIDTH, NEO_HEIGHT, NEO_PIN,
 
 // BLUEFRUIT LE STUFF-------------------------------------------------------
 
-// CLK, MISO, MOSI connect to hardware SPI.  Other pins are configrable:
-#define ADAFRUITBLE_REQ  4
-#define ADAFRUITBLE_RST  5
-#define ADAFRUITBLE_RDY  2 // Must be an interrupt pin
 
 Adafruit_BLE_UART BTLEserial = Adafruit_BLE_UART(
   ADAFRUITBLE_REQ, ADAFRUITBLE_RDY, ADAFRUITBLE_RST);
@@ -156,10 +166,15 @@ void setup() {
 
   BTLEserial.begin();
 
-  cs.set_CS_AutocaL_Millis(0xFFFFFFFF);     // turn off autocalibrate on channel 1 - just as an example
+  cs1.set_CS_AutocaL_Millis(0xFFFFFFFF);     // turn off autocalibrate on channel 1 - just as an example
+  cs2.set_CS_AutocaL_Millis(0xFFFFFFFF);     // turn off autocalibrate on channel 1 - just as an example
 
+  pinMode(EXTRA_GND, OUTPUT);
+  digitalWrite(EXTRA_GND, LOW);
+  
   pinMode(LED, OUTPUT);
   digitalWrite(LED, LOW);
+  
   analogReference(EXTERNAL);
 }
 
@@ -231,7 +246,7 @@ void loop() {
     }
   }
   
-  if (cs.capacitiveSensor(30) > 400) {
+  if (cs1.capacitiveSensor(30) > 400) {
   } else {
   }
   
