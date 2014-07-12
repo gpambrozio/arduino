@@ -258,20 +258,20 @@ void loop() {
   }
 
   i = cs1.capacitiveSensorRaw(30);
+
+  count1 = ((count1 * 7) + i) >> 3;    // "Dampened" reading
   Serial.print(mode);
   Serial.print(' ');
   Serial.print(count1);
   Serial.print(' ');
   Serial.println(i);
-  if (i >= 100) {
-    if (state1 == 0) count = 0;
-    else if (count1 < 15 && ++count1 == 15) {
+  if (count1 >= 120) {
+    if (state1 == 0) {
       if (++mode >= MODE_LAST) mode = 0;
       motor_end = t + (mode == 0 ? 500 : 200);
+      state1 = 1;
     }
-    state1 = 1;
-  } else if (i < 70) {
-    count1 = 0;
+  } else if (count1 < 80) {
     state1 = 0;
   }
   
@@ -351,8 +351,6 @@ void loop() {
     minLvlAvg = (minLvlAvg * 63 + minLvl) >> 6; // Dampen min/max levels
     maxLvlAvg = (maxLvlAvg * 63 + maxLvl) >> 6; // (fake rolling average)
 
-    // For some reason there needs to be a delay here.
-    delay(1);
   } else if (mode == MODE_COUNTER) {
     sprintf(msg, "%d", count);
     msgLen = strlen(msg);
@@ -362,6 +360,9 @@ void loop() {
     matrix.print(msg);
     matrix.show();
   }
+  
+  // For some reason there needs to be a delay here.
+  delay(1);
 }
 
 // Input a value 0 to 255 to get a color value.
