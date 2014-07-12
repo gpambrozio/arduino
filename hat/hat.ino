@@ -38,7 +38,7 @@
 #define CAP2_SENSOR   9
 
 #define EXTRA_GND     8
-#define MOTOR         7
+#define MOTOR         6
 #define PRESSURE     A1
 
 #define LED          13     // Onboard LED (not NeoPixel) pin
@@ -174,9 +174,6 @@ void setup() {
 
   BTLEserial.begin();
 
-  cs1.set_CS_AutocaL_Millis(0xFFFFFFFF);     // turn off autocalibrate on channel 1 - just as an example
-  cs2.set_CS_AutocaL_Millis(0xFFFFFFFF);     // turn off autocalibrate on channel 1 - just as an example
-
   pinMode(EXTRA_GND, OUTPUT);
   digitalWrite(EXTRA_GND, LOW);
   
@@ -193,20 +190,20 @@ typedef enum {
   MODE_SOUND = 0,
   MODE_TEXT,
   MODE_COUNTER,
-  MODE_LAST
+  MODE_LAST,
 } modes;
 
 byte prevMode = 0xff;
 byte mode = MODE_SOUND;
 
-uint8_t  i;
-unsigned long t;
+uint8_t  i, state1, count1;
+unsigned long t, motor_end;
 
 void loop() {
   t = millis(); // Current elapsed time, milliseconds.
   // millis() comparisons are used rather than delay() so that animation
   // speed is consistent regardless of message length & other factors.
-MARK
+
   BTLEserial.pollACI(); // Handle BTLE operations
   aci_evt_opcode_t state = BTLEserial.getState();
 
@@ -221,13 +218,13 @@ MARK
     LEDstate    = LOW; // Any state change resets LED
     digitalWrite(LED, LEDstate);
   }
-MARK
+
   if(LEDperiod && ((t - prevLEDtime) >= LEDperiod)) { // Handle LED flash
     prevLEDtime = t;
     LEDstate    = !LEDstate;
     digitalWrite(LED, LEDstate);
   }
-MARK
+
   // If connected, check for input from BTLE...
   if((state == ACI_EVT_CONNECTED) && BTLEserial.available()) {
     if(BTLEserial.peek() == '#') { // Color commands start with '#'
@@ -259,15 +256,26 @@ MARK
       msgX        = matrix.width(); // Reset scrolling
     }
   }
-MARK
-  i = cs1.capacitiveSensor(30);
+
+  i = cs1.capacitiveSensorRaw(30);
   Serial.print(mode);
   Serial.print(' ');
+  Serial.print(count1);
+  Serial.print(' ');
   Serial.println(i);
-  if (i > 100) {
-    if (++mode >= MODE_LAST) mode = 0;
-  } else {
+  if (i >= 100) {
+    if (state1 == 0) count = 0;
+    else if (count1 < 15 && ++count1 == 15) {
+      if (++mode >= MODE_LAST) mode = 0;
+      motor_end = t + (mode == 0 ? 500 : 200);
+    }
+    state1 = 1;
+  } else if (i < 70) {
+    count1 = 0;
+    state1 = 0;
   }
+  
+  digitalWrite(MOTOR, motor_end > t ? HIGH : LOW);
   
   if (prevMode != mode) {
     if (mode == MODE_TEXT) {
@@ -294,7 +302,7 @@ MARK
     
     prevMode = mode;
   }
-MARK
+
   if (mode == MODE_TEXT) {
     if((t - prevFrameTime) >= (1000L / FPS)) { // Handle scrolling
       matrix.fillScreen(0);
@@ -315,22 +323,24 @@ MARK
    
     // Calculate bar height based on dynamic min/max levels (fixed point):
     height = TOP * (lvl - minLvlAvg) / (long)(maxLvlAvg - minLvlAvg);
-   
+
     if(height < 0L)       height = 0;      // Clip output
     else if(height > TOP) height = TOP;
-   
+
     // Color pixels based on rainbow gradient
-    matrix.drawFastVLine(13+currentColumn,0,TOP-height,0);
-    matrix.drawFastVLine(13+currentColumn,TOP-height,height,Wheel(map(height,0,TOP,30,150)));
+    matrix.drawFastVLine(12+currentColumn,0,TOP-height,0);
+    matrix.drawFastVLine(12+currentColumn,TOP-height,height,Wheel(map(height,0,TOP,30,150)));
     matrix.show();
     if (++currentColumn >= 10) currentColumn = 0;
-   
+
     // Get volume range of prior frames
     minLvl = maxLvl = vol[0];
+
     for(i=1; i<SAMPLES; i++) {
       if(vol[i] < minLvl)      minLvl = vol[i];
       else if(vol[i] > maxLvl) maxLvl = vol[i];
     }
+
     // minLvl and maxLvl indicate the volume range over prior frames, used
     // for vertically scaling the output graph (so it looks interesting
     // regardless of volume level).  If they're too close together though
@@ -340,17 +350,18 @@ MARK
     if((maxLvl - minLvl) < TOP) maxLvl = minLvl + TOP;
     minLvlAvg = (minLvlAvg * 63 + minLvl) >> 6; // Dampen min/max levels
     maxLvlAvg = (maxLvlAvg * 63 + maxLvl) >> 6; // (fake rolling average)
-   
+
+    // For some reason there needs to be a delay here.
+    delay(1);
   } else if (mode == MODE_COUNTER) {
     sprintf(msg, "%d", count);
     msgLen = strlen(msg);
     msgLen = (NEO_WIDTH - 5 * msgLen) >> 1;
     matrix.fillScreen(0);
-    matrix.setCursor(msgLen, 0);
+    matrix.setCursor(msgLen - 1, 0);
     matrix.print(msg);
     matrix.show();
   }
-MARK
 }
 
 // Input a value 0 to 255 to get a color value.
