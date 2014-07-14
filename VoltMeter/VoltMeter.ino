@@ -21,8 +21,8 @@ SerialLCD slcd(11,12);//this is a must, assign soft serial pins
 #define ANALOG_IN  A0
 #define LED   13
 
-long start5 = 0, start4 = 0, start3 = 0;
-long end5 = 0, end4 = 0, end3 = 0;
+unsigned long start5 = 0, start4 = 0, start3 = 0;
+unsigned long end5 = 0, end4 = 0, end3 = 0;
 
 void setup() {
   // set up
@@ -41,7 +41,7 @@ void loop() {
   volt = (int)voltage;
   if (volt < 450 && end5 == 0) end5 = millis();
   if (volt < 400 && volt > 300 && start4 == 0) start4 = millis();
-  if (volt < 300 && start3 == 0) { end4 = start3 = millis(); }
+  if (volt < 300 && start3 == 0) { end4 = millis(); start3 = millis(); }
   if (volt < 200 && end3 == 0) { end3 = millis(); }
   slcd.print((int)voltage, DEC);
   // set the cursor to column 0, line 1
@@ -50,17 +50,21 @@ void loop() {
   slcd.setCursor(0, 1);
   slcd.print("5=");
   if (end5 > 0)
-    slcd.print((end5-start5)/1000, DEC);
+    slcd.print((end5-start5)/60000, DEC);
   else
-    slcd.print((millis()-start5)/1000, DEC);
-  slcd.print("  4=");
-  if (end4 > 0)
-    slcd.print((end4-start4)/1000, DEC);
-  else if (start4 > 0)
-    slcd.print((millis()-start4)/1000, DEC);
-  slcd.print("  3=");
-  if (end3 > 0)
-    slcd.print((end3-start3)/1000, DEC);
-  else if (start3 > 0)
-    slcd.print((millis()-start3)/1000, DEC);
+    slcd.print((millis()-start5)/60000, DEC);
+  if (start4 > 0) {
+    slcd.print("  4=");
+    if (end4 > 0)
+      slcd.print((end4-start4)/60000, DEC);
+    else
+      slcd.print((millis()-start4)/60000, DEC);
+  }
+  if (start3 > 0) {
+    slcd.print("  3=");
+    if (end3 > 0)
+      slcd.print((end3-start3)/60000, DEC);
+    else
+      slcd.print((millis()-start3)/60000, DEC);
+  }
 }
