@@ -107,19 +107,32 @@ void loop()
     inByte = Serial.read();
     switch (inByte) {
       case 'A':
-      press(AWAY_OUTPUT);
-      break;
+        press(AWAY_OUTPUT);
+        break;
       
-    case 'S':
-      press(STAY_OUTPUT);
-      break;
+      case 'S':
+        press(STAY_OUTPUT);
+        break;
+        
+      case 'O':
+        Mirf.setTADDR((byte *)"drape");
+        mirfData = (3 << 8) | 1;
+        Mirf.send((byte *)&mirfData);
+        break;
+        
+      case 'C':
+        Mirf.setTADDR((byte *)"drape");
+        mirfData = (3 << 8) | 2;
+        Mirf.send((byte *)&mirfData);
+        break;
     }
     
     Serial.print("Received ");
     Serial.println(inByte);
     lastContactTime = millis();
   }
-  if (Mirf.dataReady()) {
+  
+  if (!Mirf.isSending() && Mirf.dataReady()) {
     Mirf.getData((byte *)&mirfData);
     Serial.print("Received data ");
     Serial.println(mirfData);
