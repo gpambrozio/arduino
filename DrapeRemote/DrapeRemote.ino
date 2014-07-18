@@ -54,6 +54,7 @@ void setup()
   while (!Serial) {
     ; // wait for serial port to connect. Needed for Leonardo only
   }
+  Serial.println("Start");
 
   Mirf.spi = &MirfHardwareSpi;
   Mirf.csnPin = 3;
@@ -105,7 +106,8 @@ void loop()
     Mirf.getData((byte *)&mirfData);
     Serial.println(mirfData);
     unsigned long command = (mirfData & 0xFF);
-    unsigned long time = mirfData >> 8;
+    unsigned long time = 1000 * ((mirfData >> 8) & 0xFF);
+    Serial.println(time);
     switch (command) {
       case 1:
         press(OPEN_OUTPUT);
@@ -121,5 +123,4 @@ void loop()
     }
   }
 }
-
 

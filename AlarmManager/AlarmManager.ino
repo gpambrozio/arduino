@@ -55,8 +55,8 @@ void setup()
   }
 
   Mirf.spi = &MirfHardwareSpi;
-  Mirf.csnPin = 3;
   Mirf.cePin = 2;
+  Mirf.csnPin = 3;
   Mirf.init();
   
   /*
@@ -107,28 +107,44 @@ void loop()
     inByte = Serial.read();
     switch (inByte) {
       case 'A':
+        Serial.println("Received Away");
         press(AWAY_OUTPUT);
         break;
       
       case 'S':
+        Serial.println("Received Stay");
         press(STAY_OUTPUT);
         break;
         
       case 'O':
+        Serial.println("Received Open");
+        inByte = Serial.read();
+        mirfData = (inByte - '0') * 10;
+        inByte = Serial.read();
+        mirfData += (inByte - '0');
+        mirfData <<= 8;
+        mirfData |= 1;
         Mirf.setTADDR((byte *)"drape");
-        mirfData = (3 << 8) | 1;
         Mirf.send((byte *)&mirfData);
         break;
         
       case 'C':
+        Serial.println("Received Close");
+        inByte = Serial.read();
+        mirfData = (inByte - '0') * 10;
+        inByte = Serial.read();
+        mirfData += (inByte - '0');
+        mirfData <<= 8;
+        mirfData |= 2;
         Mirf.setTADDR((byte *)"drape");
-        mirfData = (3 << 8) | 2;
         Mirf.send((byte *)&mirfData);
         break;
+        
+      default:
+        Serial.print("Received ");
+        Serial.println(inByte);
     }
     
-    Serial.print("Received ");
-    Serial.println(inByte);
     lastContactTime = millis();
   }
   
