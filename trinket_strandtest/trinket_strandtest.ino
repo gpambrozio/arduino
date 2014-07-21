@@ -1,4 +1,4 @@
-#include "Adafruit_WS2801_trinket.h"
+#include "Adafruit_WS2801_trinket_onecolor.h"
 
 /*****************************************************************************
 Example sketch for driving Adafruit WS2801 pixels!
@@ -33,7 +33,7 @@ uint8_t clockPin = 0;    // Green wire on Adafruit Pixels
 // and the +5V wire to a +5V supply
 
 // Set the first variable to the NUMBER of pixels. 25 = 25 pixels in a row
-Adafruit_WS2801 strip = Adafruit_WS2801(16, dataPin, clockPin);
+Adafruit_WS2801 strip = Adafruit_WS2801(2000, dataPin, clockPin);
 
 // Optional: leave off pin numbers to use hardware SPI
 // (pinout is then specific to each board and can't be changed)
@@ -52,32 +52,14 @@ void setup() {
     
   strip.begin();
 
-  // Update LED contents, to start they are all 'off'
-  strip.show();
 }
 
 
 void loop() {
-  // Some example procedures showing how to display to the pixels
-  
-  colorWipe(Color(255, 0, 0), 50);
+  // Update LED contents, to start they are all 'off'
+  strip.setPixelColor(Color(255, 255, 255));
+  strip.show();
   delay(1000);
-  colorWipe(Color(0, 255, 0), 50);
-  delay(1000);
-  colorWipe(Color(0, 0, 255), 50);
-  delay(1000);
-}
-
-// fill the dots one after the other with said color
-// good for testing purposes
-void colorWipe(uint32_t c, uint8_t wait) {
-  int i;
-  
-  for (i=0; i < strip.numPixels(); i++) {
-      strip.setPixelColor(i, c);
-      strip.show();
-      delay(wait);
-  }
 }
 
 /* Helper functions */
