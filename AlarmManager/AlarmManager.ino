@@ -29,9 +29,8 @@
  * CSN -> 7
  */
 #include <SPI.h>
-#include <Mirf.h>
-#include <nRF24L01.h>
-#include <MirfHardwareSpiDriver.h>
+#include "nRF24L01.h"
+#include "RF24.h"
 
 #define STAY_OUTPUT 11
 #define AWAY_OUTPUT 12
@@ -39,6 +38,15 @@
 int inByte = 0;         // incoming serial byte
 unsigned long lastContactTime = 0;
 unsigned long mirfData;
+
+RF24 radio(2,3);
+
+//
+// Topology
+//
+
+// Radio pipe addresses for the 2 nodes to communicate.
+const uint64_t pipes[2] = { 0xF0F0F0F0E1LL, 0xF0F0F0F0D2LL };
 
 void setup()
 {
@@ -54,40 +62,32 @@ void setup()
     ; // wait for serial port to connect. Needed for Leonardo only
   }
 
-  Mirf.spi = &MirfHardwareSpi;
-  Mirf.cePin = 2;
-  Mirf.csnPin = 3;
-  Mirf.init();
-  
-  /*
-   * Configure reciving address.
-   */
-   
-  Mirf.setRADDR((byte *)"serv1");
-  
-  /*
-   * Set the payload length to sizeof(unsigned long) the
-   * return type of millis().
-   *
-   * NB: payload on client and server must be the same.
-   */
-   
-  Mirf.payload = sizeof(unsigned long);
-  
-  /*
-   * Write channel and payload config then power up reciver.
-   */
-   
-  /*
-   * To change channel:
-   * 
-   * Mirf.channel = 10;
-   *
-   * NB: Make sure channel is legal in your area.
-   */
-   
-  Mirf.config();
+  //
+  // Setup and configure rf radio
+  //
 
+  radio.begin();
+
+  // optionally, increase the delay between retries & # of retries
+  radio.setRetries(15,15);
+
+  // optionally, reduce the payload size.  seems to
+  // improve reliability
+  radio.setPayloadSize(sizeof(unsigned long));
+  
+  radio.openReadingPipe(1,pipes[1]);
+  
+  radio.setPALevel(RF24_PA_HIGH);
+  radio.setDataRate(RF24_1MBPS);
+
+  //
+  // Start listening
+  //
+
+  radio.startListening();
+
+  Serial.println("starting");
+  
   lastContactTime = millis();
 }
 
@@ -124,8 +124,10 @@ void loop()
         mirfData += (inByte - '0');
         mirfData <<= 8;
         mirfData |= 1;
-        Mirf.setTADDR((byte *)"drape");
-        Mirf.send((byte *)&mirfData);
+        radio.stopListening();
+        radio.openWritingPipe(pipes[0]);
+        radio.write((byte *)&mirfData, sizeof(unsigned long));
+        radio.startListening();
         break;
         
       case 'C':
@@ -136,8 +138,10 @@ void loop()
         mirfData += (inByte - '0');
         mirfData <<= 8;
         mirfData |= 2;
-        Mirf.setTADDR((byte *)"drape");
-        Mirf.send((byte *)&mirfData);
+        radio.stopListening();
+        radio.openWritingPipe(pipes[0]);
+        radio.write((byte *)&mirfData, sizeof(unsigned long));
+        radio.startListening();
         break;
         
       default:
@@ -148,8 +152,8 @@ void loop()
     lastContactTime = millis();
   }
   
-  if (!Mirf.isSending() && Mirf.dataReady()) {
-    Mirf.getData((byte *)&mirfData);
+  if (radio.available()) {
+    radio.read((byte *)&mirfData, sizeof(unsigned long));
     Serial.print("Received data ");
     Serial.println(mirfData);
   }
