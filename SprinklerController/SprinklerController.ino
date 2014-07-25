@@ -39,11 +39,11 @@
 #include <LiquidCrystal.h>
 #include <Wire.h>
 
-#define START_HOUR        2
+#define START_HOUR        3
 
 #define DAYS_PERIOD_R1    2
 #define DAYS_PERIOD_R2    3
-#define MINUTES_R1       30
+#define MINUTES_R1       45
 #define MINUTES_R2       30
 
 #define clockAddress 0x68
