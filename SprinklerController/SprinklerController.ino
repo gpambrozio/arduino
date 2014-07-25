@@ -266,7 +266,7 @@ void loop() {
   twoDigit(second);
   lcd.print(" ");
   
-  if (forceR1 == 1 || (forceR1 == 0 && hour == START_HOUR && minute <= MINUTES_R1 &&
+  if (forceR1 == 1 || (forceR1 == 0 && hour == START_HOUR && minute < MINUTES_R1 &&
       (daysFromStartOfYear(dayOfMonth, month) % DAYS_PERIOD_R1) == 0)) {
     digitalWrite(RELAY1, HIGH);
     lcd.print("R1");
@@ -275,7 +275,7 @@ void loop() {
     lcd.print("--");
   }
   lcd.print(" ");
-  if (forceR2 == 1 || (forceR2 == 0 && hour == START_HOUR && minute <= MINUTES_R2 &&
+  if (forceR2 == 1 || (forceR2 == 0 && hour == START_HOUR && minute < MINUTES_R2 &&
       (daysFromStartOfYear(dayOfMonth, month) % DAYS_PERIOD_R2) == 0)) {
     digitalWrite(RELAY2, HIGH);
     lcd.print("R2");
