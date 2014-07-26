@@ -20,10 +20,13 @@
 
 #define START_HOUR        3
 
-#define DAYS_PERIOD_R1    2
-#define DAYS_PERIOD_R2    3
-#define MINUTES_R1       45
-#define MINUTES_R2       30
+// 1 = grass
+// 2 = drip
+
+#define DAYS_PERIOD_R1    3
+#define DAYS_PERIOD_R2    2
+#define MINUTES_R1       30
+#define MINUTES_R2       45
 
 #define clockAddress 0x68
 
@@ -108,8 +111,8 @@ void printDateToSerial() {
   Serial.print("/");
   Serial.print(dayOfMonth, DEC);
   Serial.print("/");
-  Serial.print(year, DEC);
-}  
+  Serial.println(year, DEC);
+}
 
 void twoDigit(byte x) {
   if (x < 10)
@@ -154,8 +157,6 @@ void setup() {
   
   // set up the LCD's number of columns and rows: 
   lcd.begin(16, 2);
-  // Print a message to the LCD.
-  lcd.print("hello, world!");
   
   Wire.begin();
   Serial.begin(9600);
@@ -197,7 +198,6 @@ void loop() {
   delay(100);
 
   getDateDs1307();
-  Serial.println("");
 
   // set the cursor to column 0, line 1
   // (note: line 1 is the second row, since counting begins with 0):
