@@ -11,7 +11,7 @@
 #include <Adafruit_LSM303_U.h>
 #include <Adafruit_NeoPixel.h>
 
-#define neoPixelPin 12
+#define neoPixelPin 3
 
 // We could do this as 2 16-pixel rings wired in parallel.
 // But keeping them separate lets us do the right and left
@@ -21,22 +21,24 @@ Adafruit_NeoPixel strip = Adafruit_NeoPixel(32, neoPixelPin, NEO_GRB + NEO_KHZ80
 Adafruit_LSM303_Accel_Unified accel = Adafruit_LSM303_Accel_Unified(54321);
 Adafruit_LSM303_Mag_Unified mag = Adafruit_LSM303_Mag_Unified(12345);
  
+// Pi for calculations - not the raspberry type
+#define  Pi  3.14159
+#define increment (2 * Pi / 16) // distance between pixels in radians
+
 float pos = 8;  // Starting center position of pupil
-float increment = 2 * 3.14159 / 16; // distance between pixels in radians
 float MomentumH = 0; // horizontal component of pupil rotational inertia
 float MomentumV = 0; // vertical component of pupil rotational inertia
 
 // Tuning constants. (a.k.a. "Fudge Factors)  
 // These can be tweaked to adjust the liveliness and sensitivity of the eyes.
-const float friction = 0.995; // frictional damping constant.  1.0 is no friction.
-const float swing = 60;  // arbitrary divisor for gravitational force
-const float gravity = 200;  // arbitrary divisor for lateral acceleration
-const float nod = 7.5; // accelerometer threshold for toggling modes
+#define friction 0.995   // frictional damping constant.  1.0 is no friction.
+#define swing    60.0    // arbitrary divisor for gravitational force
+#define gravity  200.0   // arbitrary divisor for lateral acceleration
+#define nod      7.5     // accelerometer threshold for toggling modes
 
 long nodStart = 0;
 long nodTime = 1000;
 
-int mode = 0;
 #define MODE_NORMAL   0
 #define MODE_ANTI     1
 #define MODE_MIRROR   2
@@ -44,20 +46,20 @@ int mode = 0;
 #define MODE_OFF      4
 #define MODE_COUNT    5
 
+int mode = MODE_NORMAL;
+
 bool antiGravity = false;  // The pendulum will anti-gravitate to the top.
 bool mirroredEyes = false; // The left eye will mirror the right.
 
 uint16_t j_rainbow;
 
-const float halfWidth = 1.25; // half-width of pupil (in pixels)
-
-// Pi for calculations - not the raspberry type
-const float Pi = 3.14159;
+#define halfWidth  1.25 // half-width of pupil (in pixels)
 
 void setup(void)
 {
    Serial.begin(9600);
    strip.begin();
+   strip.setBrightness(30);
    strip.show(); // Initialize all pixels to 'off'  sensor_t sensor;
 
    // Initialize the sensors
@@ -70,25 +72,21 @@ void setup(void)
 
 void setPixelColor(int i, uint32_t color)
 {
-  uint32_t r = (color >> 16) >> 4;
-  uint32_t g = ((color >> 8) & 0xff) >> 4;
-  uint32_t b = (color & 0xff) >> 4;
-  color = strip.Color(r, g, b);
-  if (i <= 7)
+  if (i < 15)
   {
-    i += 8;
+    i++;
   }
   else if (i < 16)
   {
-    i -= 8;
+    i = 15 - i;
   }
-  else if (i <= 30)
+  else if (i < 31)
   {
     i++;
   }
   else
   {
-    i = 16;
+    i = 31 + 16 - i;
   }
   strip.setPixelColor(i, color);
 }
@@ -128,20 +126,18 @@ void loop(void)
        antiGravity = false;  
        mirroredEyes = true;
        break;
-   }
-
-   if (mode == MODE_RAINBOW)
-   {
-     rainbowCycle(2, j_rainbow);
-     if (++j_rainbow >= 256*5) j_rainbow = 0;
-   }
-   else if (mode == MODE_OFF)
-   {
+     case MODE_RAINBOW:
+       rainbowCycle(2, j_rainbow);
+       if (++j_rainbow >= 256*5) j_rainbow = 0;
+       break;
+     case MODE_OFF:
       for(uint16_t i=0; i< strip.numPixels(); i++) {
         setPixelColor(i, 0);
       }
+      break;
    }
-   else
+
+   if (mode != MODE_RAINBOW && mode != MODE_OFF)
    {
      // apply a little frictional damping to keep things in control and prevent perpetual motion
      MomentumH *= friction;
@@ -157,14 +153,18 @@ void loop(void)
      // and with the X-axis pointed forward.  So the Y axis reads the horizontal
      // acceleration and the inverse of the Z axis is gravity.
      // For other orientations of the sensor, just change the axis to match.
-     MomentumH += TorqueH * event.acceleration.z / swing;
+     
+     // This is horizontal acceleration
+     MomentumH -= TorqueH * event.acceleration.z / swing;
+     
+     // Below if vertical acceleration (gravity)
      if (antiGravity)
      {
-       MomentumV -= TorqueV * event.acceleration.y / gravity;
+       MomentumV -= TorqueV * event.acceleration.x / gravity;
      }
      else
      {
-       MomentumV += TorqueV * event.acceleration.y / gravity;
+       MomentumV += TorqueV * event.acceleration.x / gravity;
      }
   
      // Calculate the new position
@@ -174,19 +174,20 @@ void loop(void)
      while (round(pos) < 0) pos += 16.0;
      while (round(pos) > 15) pos -= 16.0;
   
-     Serial.println(pos);
      // Now re-compute the display
+     Serial.println(pos);
      for (int i = 0; i < 16; i++)
      {
         // Compute the distance bewteen the pixel and the center
         // point of the virtual pendulum.
-        float diff = fabs((float)i - pos - 0.5);
-  
+        float diff = fabs((float)i - pos);
+        if (diff > 8.0) diff = 16 - diff;  // wrap around
+
         // Light up nearby pixels proportional to their proximity to 'pos'
         if (diff <= halfWidth) 
         {
            uint32_t color;
-           float proximity = halfWidth - diff * 200;
+           float proximity = (halfWidth - diff) * 200;
   
            // pick a color based on heading & proximity to 'pos'
            color = selectColor(heading, proximity);
@@ -281,7 +282,7 @@ uint32_t selectColor(float heading, float proximity)
 // monitor orientation for mode-change 'gestures'
 void CheckForNods(sensors_event_t event)
 {
-   if (event.acceleration.x > nod)
+   if (event.acceleration.y > nod)
    {
      if (millis() - nodStart > nodTime)
      {
@@ -290,7 +291,7 @@ void CheckForNods(sensors_event_t event)
        spinDown();
      }
    }
-   else if (event.acceleration.x < -(nod + 1))
+   else if (event.acceleration.y < -(nod + 1))
    {
      if (millis() - nodStart > nodTime)
      {
