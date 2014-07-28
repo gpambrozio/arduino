@@ -34,17 +34,20 @@ float MomentumV = 0; // vertical component of pupil rotational inertia
 #define friction 0.995   // frictional damping constant.  1.0 is no friction.
 #define swing    60.0    // arbitrary divisor for gravitational force
 #define gravity  200.0   // arbitrary divisor for lateral acceleration
-#define nod      7.5     // accelerometer threshold for toggling modes
+#define nod      8.5     // accelerometer threshold for toggling modes
 
 long nodStart = 0;
-long nodTime = 1000;
+#define nodTime  1000
 
-#define MODE_NORMAL   0
-#define MODE_ANTI     1
-#define MODE_MIRROR   2
-#define MODE_RAINBOW  3
-#define MODE_OFF      4
-#define MODE_COUNT    5
+enum MODES {
+  MODE_NORMAL = 0,
+  MODE_ANTI,
+  MODE_MIRROR,
+  MODE_RAINBOW,
+  MODE_LIGHT,
+  MODE_OFF,
+  MODE_COUNT
+};
 
 int mode = MODE_NORMAL;
 
@@ -91,6 +94,8 @@ void setPixelColor(int i, uint32_t color)
   strip.setPixelColor(i, color);
 }
 
+uint32_t color;
+
 // main processing loop
 void loop(void) 
 {
@@ -112,6 +117,7 @@ void loop(void)
 
    // Check for mode change commands
    CheckForNods(event);
+   strip.setBrightness(30);
    switch (mode)
    {
      case MODE_NORMAL:
@@ -130,14 +136,21 @@ void loop(void)
        rainbowCycle(2, j_rainbow);
        if (++j_rainbow >= 256*5) j_rainbow = 0;
        break;
+     case MODE_LIGHT:
+       strip.setBrightness(100);
+       color = strip.Color(255,255,255);
+       for(uint16_t i=0; i< strip.numPixels(); i++) {
+         setPixelColor(i, color);
+       }
+       break;
      case MODE_OFF:
-      for(uint16_t i=0; i< strip.numPixels(); i++) {
-        setPixelColor(i, 0);
-      }
-      break;
+       for(uint16_t i=0; i< strip.numPixels(); i++) {
+         setPixelColor(i, 0);
+       }
+       break;
    }
 
-   if (mode != MODE_RAINBOW && mode != MODE_OFF)
+   if (mode != MODE_RAINBOW && mode != MODE_OFF && mode != MODE_LIGHT)
    {
      // apply a little frictional damping to keep things in control and prevent perpetual motion
      MomentumH *= friction;
@@ -186,7 +199,6 @@ void loop(void)
         // Light up nearby pixels proportional to their proximity to 'pos'
         if (diff <= halfWidth) 
         {
-           uint32_t color;
            float proximity = (halfWidth - diff) * 200;
   
            // pick a color based on heading & proximity to 'pos'
@@ -280,41 +292,41 @@ uint32_t selectColor(float heading, float proximity)
 }
 
 // monitor orientation for mode-change 'gestures'
+int lastGesture = 0;
+
+#define CHECK_GESTURE(x, oper) { \
+  if (lastGesture != x) { \
+    nodStart = millis(); \
+    lastGesture = x; \
+  } \
+  if (millis() - nodStart > nodTime)  { \
+    oper;   \
+    spinDown();   \
+    nodStart = millis(); \
+  } \
+}
+
 void CheckForNods(sensors_event_t event)
 {
    if (event.acceleration.y > nod)
    {
-     if (millis() - nodStart > nodTime)
-     {
-       mode = 0;
-       nodStart = millis(); // reset timer     
-       spinDown();
-     }
+     CHECK_GESTURE(1, {mode = 0;})
    }
    else if (event.acceleration.y < -(nod + 1))
    {
-     if (millis() - nodStart > nodTime)
-     {
-       mode++;
-       if (mode >= MODE_COUNT) {
-         mode = 0;
-       }
-       spinUp();
-       nodStart = millis(); // reset timer     
-     }
+     CHECK_GESTURE(2, {if (++mode >= MODE_COUNT) mode = 0;})
    }
    else if (event.acceleration.z > nod)
    {
-     if (millis() - nodStart > nodTime)
-     {
-       mode = MODE_OFF;
-       nodStart = millis(); // reset timer     
-       spinDown();
-     }
+     CHECK_GESTURE(3, {mode = MODE_OFF;})
+   }
+   else if (event.acceleration.z < -(nod+1))
+   {
+     CHECK_GESTURE(4, {mode = MODE_LIGHT;})
    }
    else // no nods in progress
    {
-     nodStart = millis(); // reset timer
+     CHECK_GESTURE(0, {});
    }
 }
 
