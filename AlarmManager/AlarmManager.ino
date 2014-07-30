@@ -1,32 +1,4 @@
 /*
-  Serial Call and Response
- Language: Wiring/Arduino
- 
- This program sends an ASCII A (byte of value 65) on startup
- and repeats that until it gets some data in.
- Then it waits for a byte in the serial port, and 
- sends three sensor values whenever it gets a byte in.
- 
- Thanks to Greg Shakar and Scott Fitzgerald for the improvements
- 
- Created 26 Sept. 2005
- by Tom Igoe
- modified 24 April 2012
- by Tom Igoe and Scott Fitzgerald
-
- This example code is in the public domain.
-
- http://www.arduino.cc/en/Tutorial/SerialCallResponse
-
- * Pins:
- * Hardware SPI:
- * MISO -> 12
- * MOSI -> 11
- * SCK -> 13
- *
- * Configurable:
- * CE -> 8
- * CSN -> 7
  */
 #include <SPI.h>
 #include "RadioCommon.h"
@@ -120,6 +92,15 @@ void loop()
         radio.startListening();
         break;
         
+      case 'P':
+        Serial.println("Received Panic");
+        mirfData = 'P';
+        radio.stopListening();
+        radio.openWritingPipe(pipes[RADIO_ALARM]);
+        radio.write((byte *)&mirfData, sizeof(unsigned long));
+        radio.startListening();
+        break;
+        
       default:
         Serial.print("Received ");
         Serial.println(inByte);
@@ -130,8 +111,16 @@ void loop()
   
   if (radio.available()) {
     radio.read((byte *)&mirfData, sizeof(unsigned long));
-    Serial.print("Received data ");
-    Serial.println(mirfData);
+    inByte = mirfData & 0xFF;
+    switch(inByte) {
+      case 'A':
+        Serial.println("Received Alarm");
+        break;
+
+      default:
+        Serial.print("Received ");
+        Serial.println(mirfData);
+    }
   }
 }
 
