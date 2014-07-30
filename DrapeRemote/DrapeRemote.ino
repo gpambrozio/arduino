@@ -29,6 +29,7 @@
  * CSN -> 7
  */
 #include <SPI.h>
+#include "RadioCommon.h"
 #include "nRF24L01.h"
 #include "RF24.h"
 
@@ -40,13 +41,6 @@ int inByte = 0;         // incoming serial byte
 unsigned long mirfData;
 
 RF24 radio(2,3);
-
-//
-// Topology
-//
-
-// Radio pipe addresses for the 2 nodes to communicate.
-const uint64_t pipes[2] = { 0xF0F0F0F0E1LL, 0xF0F0F0F0D2LL };
 
 void setup()
 {
@@ -68,25 +62,7 @@ void setup()
   // Setup and configure rf radio
   //
 
-  radio.begin();
-
-  // optionally, increase the delay between retries & # of retries
-  radio.setRetries(15,15);
-
-  // optionally, reduce the payload size.  seems to
-  // improve reliability
-  radio.setPayloadSize(sizeof(unsigned long));
-  
-  radio.openReadingPipe(1,pipes[0]);
-  
-  radio.setPALevel(RF24_PA_HIGH);
-  radio.setDataRate(RF24_250KBPS);
-
-  //
-  // Start listening
-  //
-
-  radio.startListening();
+  START_RADIO(radio, RADIO_DRAPE);
 }
 
 void press(int output)

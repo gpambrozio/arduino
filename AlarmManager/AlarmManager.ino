@@ -29,6 +29,7 @@
  * CSN -> 7
  */
 #include <SPI.h>
+#include "RadioCommon.h"
 #include "nRF24L01.h"
 #include "RF24.h"
 
@@ -40,13 +41,6 @@ unsigned long lastContactTime = 0;
 unsigned long mirfData;
 
 RF24 radio(2,3);
-
-//
-// Topology
-//
-
-// Radio pipe addresses for the 2 nodes to communicate.
-const uint64_t pipes[2] = { 0xF0F0F0F0E1LL, 0xF0F0F0F0D2LL };
 
 void setup()
 {
@@ -66,25 +60,7 @@ void setup()
   // Setup and configure rf radio
   //
 
-  radio.begin();
-
-  // optionally, increase the delay between retries & # of retries
-  radio.setRetries(15,15);
-
-  // optionally, reduce the payload size.  seems to
-  // improve reliability
-  radio.setPayloadSize(sizeof(unsigned long));
-  
-  radio.openReadingPipe(1,pipes[1]);
-  
-  radio.setPALevel(RF24_PA_HIGH);
-  radio.setDataRate(RF24_250KBPS);
-
-  //
-  // Start listening
-  //
-
-  radio.startListening();
+  START_RADIO(radio, RADIO_SERVER);
 
   Serial.println("starting");
   
@@ -125,7 +101,7 @@ void loop()
         mirfData <<= 8;
         mirfData |= 1;
         radio.stopListening();
-        radio.openWritingPipe(pipes[0]);
+        radio.openWritingPipe(pipes[RADIO_DRAPE]);
         radio.write((byte *)&mirfData, sizeof(unsigned long));
         radio.startListening();
         break;
@@ -139,7 +115,7 @@ void loop()
         mirfData <<= 8;
         mirfData |= 2;
         radio.stopListening();
-        radio.openWritingPipe(pipes[0]);
+        radio.openWritingPipe(pipes[RADIO_DRAPE]);
         radio.write((byte *)&mirfData, sizeof(unsigned long));
         radio.startListening();
         break;
