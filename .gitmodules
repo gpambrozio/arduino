@@ -25,3 +25,9 @@
 [submodule "libraries/AdafruitGFXLibrary"]
 	path = libraries/AdafruitGFXLibrary
 	url = git@github.com:adafruit/Adafruit-GFX-Library.git
+[submodule "Adafruit_WS2801_trinket"]
+	path = Adafruit_WS2801_trinket
+	url = git@github.com:gpambrozio/Adafruit-WS2801-Library.git
+[submodule "Adafruit_WS2801_trinket_onecolor"]
+	path = Adafruit_WS2801_trinket_onecolor
+	url = git@github.com:gpambrozio/Adafruit-WS2801-Library.git
