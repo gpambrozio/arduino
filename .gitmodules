@@ -1,3 +1,27 @@
 [submodule "libraries/Adafruit_NeoPixel"]
 	path = libraries/Adafruit_NeoPixel
 	url = git@github.com:adafruit/Adafruit_NeoPixel.git
+[submodule "libraries/Adafruit_LSM303"]
+	path = libraries/Adafruit_LSM303
+	url = git@github.com:adafruit/Adafruit_LSM303.git
+[submodule "libraries/Adafruit_LSM303DLHC"]
+	path = libraries/Adafruit_LSM303DLHC
+	url = git@github.com:adafruit/Adafruit_LSM303DLHC.git
+[submodule "libraries/Adafruit_Motor_Shield_V2_Library"]
+	path = libraries/Adafruit_Motor_Shield_V2_Library
+	url = git@github.com:adafruit/Adafruit_Motor_Shield_V2_Library.git
+[submodule "libraries/Adafruit_NeoMatrix"]
+	path = libraries/Adafruit_NeoMatrix
+	url = git@github.com:adafruit/Adafruit_NeoMatrix.git
+[submodule "libraries/Adafruit_nRF8001"]
+	path = libraries/Adafruit_nRF8001
+	url = git@github.com:adafruit/Adafruit_nRF8001.git
+[submodule "libraries/Adafruit_Sensor"]
+	path = libraries/Adafruit_Sensor
+	url = git@github.com:adafruit/Adafruit_Sensor.git
+[submodule "libraries/Adafruit_WS2801"]
+	path = libraries/Adafruit_WS2801
+	url = git@github.com:adafruit/Adafruit-WS2801-Library.git
+[submodule "libraries/AdafruitGFXLibrary"]
+	path = libraries/AdafruitGFXLibrary
+	url = git@github.com:adafruit/Adafruit-GFX-Library.git
