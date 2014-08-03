@@ -43,8 +43,16 @@
 
 #define LED          13     // Onboard LED (not NeoPixel) pin
 
-#define MARK  {Serial.print("Running line ");Serial.println(__LINE__);}
-//#define MARK  {}
+typedef enum {
+    HatCommandGetCount = 50,
+    HatCommandResetCount,
+    HatCommandSetColor,
+    HatCommandChangeMode,
+    HatCommandSetBrightness,
+} HatCommand;
+
+//#define MARK  {Serial.print("Running line ");Serial.println(__LINE__);}
+#define MARK  {}
 
 // SHARED MEMORY STUFF ----------------------------------------------------------
 
@@ -139,13 +147,6 @@ uint16_t remapXY(uint16_t x, uint16_t y) {
   return y * NEO_WIDTH + x - NEO_OFFSET;
 }
 
-// Given hexadecimal character [0-9,a-f], return decimal value (0 if invalid)
-uint8_t unhex(char c) {
-  return ((c >= '0') && (c <= '9')) ?      c - '0' :
-         ((c >= 'a') && (c <= 'f')) ? 10 + c - 'a' :
-         ((c >= 'A') && (c <= 'F')) ? 10 + c - 'A' : 0;
-}
-
 // Read from BTLE into buffer, up to maxlen chars (remainder discarded).
 // Does NOT append trailing NUL.  Returns number of bytes stored.
 uint8_t readStr(char dest[], uint8_t maxlen) {
@@ -190,6 +191,7 @@ typedef enum {
   MODE_SOUND = 0,
   MODE_TEXT,
   MODE_COUNTER,
+  MODE_LIGHT,
   MODE_LAST,
 } modes;
 
@@ -227,33 +229,43 @@ void loop() {
 
   // If connected, check for input from BTLE...
   if((state == ACI_EVT_CONNECTED) && BTLEserial.available()) {
-    if(BTLEserial.peek() == '#') { // Color commands start with '#'
-      char color[7];
-      switch(readStr(color, sizeof(color))) {
-       case 4:                  // #RGB    4/4/4 RGB
-        matrix.setTextColor(matrix.Color(
-          unhex(color[1]) * 17, // Expand to 8/8/8
-          unhex(color[2]) * 17,
-          unhex(color[3]) * 17));
+    int command = BTLEserial.read();
+    switch (command) {
+      case HatCommandGetCount:
+        count1 = EEPROM.read(EEPROM_COUNT) + (EEPROM.read(EEPROM_COUNT+1) << 8);
         break;
-       case 5:                  // #XXXX   5/6/5 RGB
-        matrix.setTextColor(
-          (unhex(color[1]) << 12) +
-          (unhex(color[2]) <<  8) +
-          (unhex(color[3]) <<  4) +
-           unhex(color[4]));
+        
+      case HatCommandResetCount:
+        EEPROM.write(EEPROM_COUNT, 0);
+        EEPROM.write(EEPROM_COUNT+1, 0);
         break;
-       case 7:                  // #RRGGBB 8/8/8 RGB
-        matrix.setTextColor(matrix.Color(
-          (unhex(color[1]) << 4) + unhex(color[2]),
-          (unhex(color[3]) << 4) + unhex(color[4]),
-          (unhex(color[5]) << 4) + unhex(color[6])));
+        
+      case HatCommandSetColor:
+        char color[3];
+        readStr(color, 3);
+        matrix.setTextColor(matrix.Color(color[0], color[1], color[2]));
+        if (mode == MODE_LIGHT) {
+          matrix.fillRect(12, 0, 11, NEO_HEIGHT, matrix.Color(color[0], color[1], color[2]));
+          matrix.show();
+        }
         break;
-      }
-    } else { // Not color, must be message string
-      msgLen      = readStr(msg, MSG_MAX-1);
-      msg[msgLen] = 0;
-      msgX        = matrix.width(); // Reset scrolling
+        
+      case HatCommandChangeMode:
+        mode = BTLEserial.read();
+        break;
+
+      case HatCommandSetBrightness:
+        matrix.setBrightness(BTLEserial.read());
+        matrix.show();
+        break;
+        
+      default:
+        prevMode = mode = MODE_TEXT;
+        msgLen = command;
+        readStr(msg, msgLen);
+        msg[msgLen] = 0;
+        msgX        = matrix.width(); // Reset scrolling
+        prevFrameTime = 0L;           // For animation timing
     }
   }
 
@@ -279,18 +291,12 @@ void loop() {
   
   if (prevMode != mode) {
     if (mode == MODE_TEXT) {
-      msg[0] = 'H';
-      msg[1] = 'U';
-      msg[2] = 'G';
-      msg[3] = ' ';
-      msg[4] = 'M';
-      msg[5] = 'E';
-      msg[6] = '!';
-      msg[7] = 0;
+      strcpy(msg, "HUG ME!");
       msgLen = 7;
       msgX = matrix.width(); // Start off right edge
       prevFrameTime = 0L;             // For animation timing
     } else if (mode == MODE_SOUND) {
+      matrix.fillScreen(0);
       memset(sharedBuffer, 0, SHARED_BUFFER_SIZE);
       volCount  = 0;
       lvl       = 10;
@@ -298,6 +304,10 @@ void loop() {
       maxLvlAvg = 512;
     } else if (mode == MODE_COUNTER) {
       count = EEPROM.read(EEPROM_COUNT) + (EEPROM.read(EEPROM_COUNT+1) << 8);
+    } else if (mode == MODE_LIGHT) {
+      matrix.fillScreen(0);
+      matrix.fillRect(12, 0, 11, NEO_HEIGHT, matrix.Color(255, 255, 255));
+      matrix.show();
     }
     
     prevMode = mode;
@@ -331,7 +341,7 @@ void loop() {
     matrix.drawFastVLine(12+currentColumn,0,TOP-height,0);
     matrix.drawFastVLine(12+currentColumn,TOP-height,height,Wheel(map(height,0,TOP,30,150)));
     matrix.show();
-    if (++currentColumn >= 10) currentColumn = 0;
+    if (++currentColumn >= 11) currentColumn = 0;
 
     // Get volume range of prior frames
     minLvl = maxLvl = vol[0];
