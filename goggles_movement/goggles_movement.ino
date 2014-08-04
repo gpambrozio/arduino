@@ -34,9 +34,9 @@ float MomentumV = 0; // vertical component of pupil rotational inertia
 #define friction 0.995   // frictional damping constant.  1.0 is no friction.
 #define swing    60.0    // arbitrary divisor for gravitational force
 #define gravity  200.0   // arbitrary divisor for lateral acceleration
-#define nod      8.5     // accelerometer threshold for toggling modes
+#define nod      7.5     // accelerometer threshold for toggling modes
 
-long nodStart = 0;
+unsigned long nodStart = 0;
 #define nodTime  1000
 
 enum MODES {
@@ -57,6 +57,7 @@ bool mirroredEyes = false; // The left eye will mirror the right.
 uint16_t j_rainbow;
 
 #define halfWidth  1.25 // half-width of pupil (in pixels)
+#define OFFSET     2.5
 
 void setup(void)
 {
@@ -95,6 +96,8 @@ void setPixelColor(int i, uint32_t color)
 }
 
 uint32_t color;
+// monitor orientation for mode-change 'gestures'
+int lastGesture = 0;
 
 // main processing loop
 void loop(void) 
@@ -171,14 +174,7 @@ void loop(void)
      MomentumH -= TorqueH * event.acceleration.z / swing;
      
      // Below if vertical acceleration (gravity)
-     if (antiGravity)
-     {
-       MomentumV -= TorqueV * event.acceleration.x / gravity;
-     }
-     else
-     {
-       MomentumV += TorqueV * event.acceleration.x / gravity;
-     }
+     MomentumV += (antiGravity ? -1 : 1) * TorqueV * event.acceleration.x / gravity;
   
      // Calculate the new position
      pos += MomentumH + MomentumV;
@@ -188,12 +184,11 @@ void loop(void)
      while (round(pos) > 15) pos -= 16.0;
   
      // Now re-compute the display
-     Serial.println(pos);
      for (int i = 0; i < 16; i++)
      {
         // Compute the distance bewteen the pixel and the center
         // point of the virtual pendulum.
-        float diff = fabs((float)i - pos);
+        float diff = fabs((float)i - pos + (antiGravity ? -1 : 1) * OFFSET);
         if (diff > 8.0) diff = 16 - diff;  // wrap around
 
         // Light up nearby pixels proportional to their proximity to 'pos'
@@ -291,18 +286,15 @@ uint32_t selectColor(float heading, float proximity)
      }
 }
 
-// monitor orientation for mode-change 'gestures'
-int lastGesture = 0;
-
 #define CHECK_GESTURE(x, oper) { \
   if (lastGesture != x) { \
     nodStart = millis(); \
     lastGesture = x; \
   } \
-  if (millis() - nodStart > nodTime)  { \
-    oper;   \
+  if (millis() - nodTime > nodStart)  { \
+    oper   \
     spinDown();   \
-    nodStart = millis(); \
+    nodStart = 0xFFFFFFFF; \
   } \
 }
 
@@ -316,17 +308,10 @@ void CheckForNods(sensors_event_t event)
    {
      CHECK_GESTURE(2, {if (++mode >= MODE_COUNT) mode = 0;})
    }
-   else if (event.acceleration.z > nod)
-   {
-     CHECK_GESTURE(3, {mode = MODE_OFF;})
-   }
-   else if (event.acceleration.z < -(nod+1))
-   {
-     CHECK_GESTURE(4, {mode = MODE_LIGHT;})
-   }
    else // no nods in progress
    {
-     CHECK_GESTURE(0, {});
+     nodStart = millis();
+     lastGesture = 0;
    }
 }
 
