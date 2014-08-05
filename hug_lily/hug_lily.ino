@@ -7,6 +7,8 @@
 #define GROUND_PIN    10
 #define LED           13
 
+#define COMM_OUT      A5
+
 #define THRESHOLD     150
 
 int count = 0;
@@ -18,13 +20,15 @@ void setup() {
   Serial.begin(9600);
   
   pinMode(ANALOG_IN, INPUT_PULLUP);
-  digitalWrite(ANALOG_IN, HIGH);  // set pullup on analog pin
   
   pinMode(GROUND_PIN, OUTPUT);
   digitalWrite(GROUND_PIN, LOW);
 
   pinMode(LED, OUTPUT);
   digitalWrite(LED, LOW);
+  
+  pinMode(COMM_OUT, OUTPUT);
+  digitalWrite(COMM_OUT, HIGH);
 
   count = EEPROM.read(EEPROM_COUNT) + (EEPROM.read(EEPROM_COUNT+1) << 8);
   updateCount(count);
@@ -75,7 +79,22 @@ void loop() {
 
 void updateCount(int aux) {
   digitalWrite(LED, HIGH);
-  delay(1000);
+  unsigned long start = millis();
+  
+  int current_count = count;
+  for (int i = 0; i < 16; i++) {
+    digitalWrite(COMM_OUT, LOW);
+    if ((current_count & 0x8000) == 0x8000) {
+      delay(60);
+    } else {
+      delay(10);
+    }
+    digitalWrite(COMM_OUT, HIGH);
+    current_count <<= 1;
+    delay(10);
+  }
+  
+  delay(1000 - (millis() - start));
   digitalWrite(LED, LOW);
 }
 

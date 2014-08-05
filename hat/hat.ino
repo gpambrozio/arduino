@@ -16,6 +16,8 @@
   MIT license.  All text above must be included in any redistribution.
   --------------------------------------------------------------------------*/
 
+#define DEBUG_INTERRUPT_TIMES   0
+
 #include <SPI.h>
 #include <Adafruit_BLE_UART.h>
 #include <Adafruit_NeoPixel.h>
@@ -23,23 +25,25 @@
 #include <Adafruit_GFX.h>
 #include <EEPROM.h>
 #include <CapacitiveSensor.h>
+#include <wiring_private.h>
 
-#define NEO_PIN     3   // Arduino pin to NeoPixel data input
+#define NEO_PIN     8   // Arduino pin to NeoPixel data input
 #define MIC_PIN     A0  // Microphone is attached to this analog pin
 
 // CLK, MISO, MOSI connect to hardware SPI.  Other pins are configrable:
 #define ADAFRUITBLE_REQ  4
 #define ADAFRUITBLE_RST  5
-#define ADAFRUITBLE_RDY  2 // Must be an interrupt pin
+#define ADAFRUITBLE_RDY  3 // Must be an interrupt pin
 
 #define CAP1_IN      11
 #define CAP1_SENSOR  12
 #define CAP2_IN      10
 #define CAP2_SENSOR   9
 
-#define EXTRA_GND     8
 #define MOTOR         6
-#define PRESSURE     A1
+
+#define SUSPENDER     2
+#define SUSPENDER_INTERRUPT EXTERNAL_INT_1
 
 #define LED          13     // Onboard LED (not NeoPixel) pin
 
@@ -64,14 +68,11 @@ int           i1, i2, i3, i4;
 unsigned long ul1;
 uint16_t      ui161, ui162;
 
-
 // CAPACITIVE SENSOR STUFF ----------------------------------------------------
 CapacitiveSensor  cs1 = CapacitiveSensor(CAP1_IN, CAP1_SENSOR);
 CapacitiveSensor  cs2 = CapacitiveSensor(CAP2_IN, CAP2_SENSOR);
 
 // HUG COUNTER STUFF ----------------------------------------------------------
-
-#define EEPROM_COUNT    0
 
 
 // NEOPIXEL STUFF ----------------------------------------------------------
@@ -120,13 +121,12 @@ Adafruit_NeoMatrix matrix(NEO_WIDTH, NEO_HEIGHT, NEO_PIN,
 #define maxLvl (ui162)
 
 // COUNT STUFF  ----------------------------------------------------------
-#define count (i1)
+volatile int count = 0;
 
 // BLUEFRUIT LE STUFF-------------------------------------------------------
 
 
-Adafruit_BLE_UART BTLEserial = Adafruit_BLE_UART(
-  ADAFRUITBLE_REQ, ADAFRUITBLE_RDY, ADAFRUITBLE_RST);
+Adafruit_BLE_UART BTLEserial = Adafruit_BLE_UART(ADAFRUITBLE_REQ, ADAFRUITBLE_RDY, ADAFRUITBLE_RST);
 aci_evt_opcode_t  prevState  = ACI_EVT_DISCONNECTED;
 
 // STATUS LED STUFF --------------------------------------------------------
@@ -168,21 +168,22 @@ void setup() {
   matrix.setRemapFunction(remapXY);
   matrix.setTextWrap(false);   // Allow scrolling off left
   matrix.setTextColor(matrix.Color(0,0,0xFF)); // Blue by default
-  matrix.setBrightness(31);    // Batteries have limited sauce
+  matrix.setBrightness(30);    // Batteries have limited sauce
   matrix.fillScreen(0);
 
   memset(sharedBuffer, 0, SHARED_BUFFER_SIZE);
 
   BTLEserial.begin();
 
-  pinMode(EXTRA_GND, OUTPUT);
-  digitalWrite(EXTRA_GND, LOW);
-  
   pinMode(LED, OUTPUT);
   digitalWrite(LED, LOW);
   
   pinMode(MOTOR, OUTPUT);
   digitalWrite(MOTOR, LOW);
+  
+  pinMode(SUSPENDER, INPUT_PULLUP);
+  attachInterrupt(SUSPENDER_INTERRUPT, read_suspender, CHANGE);
+  sei();
   
   analogReference(EXTERNAL);
 }
@@ -196,7 +197,7 @@ typedef enum {
 } modes;
 
 byte prevMode = 0xff;
-byte mode = MODE_SOUND;
+volatile byte mode = MODE_SOUND;
 
 uint8_t  i, state1, count1;
 unsigned long t, motor_end;
@@ -209,7 +210,7 @@ void loop() {
   BTLEserial.pollACI(); // Handle BTLE operations
   aci_evt_opcode_t state = BTLEserial.getState();
 
-  if(state != prevState) { // BTLE state change?
+  if (state != prevState) { // BTLE state change?
     switch(state) {        // Change LED flashing to show state
      case ACI_EVT_DEVICE_STARTED: LEDperiod = 1000L / 10; break;
      case ACI_EVT_CONNECTED:      LEDperiod = 1000L / 2;  break;
@@ -221,23 +222,20 @@ void loop() {
     digitalWrite(LED, LEDstate);
   }
 
-  if(LEDperiod && ((t - prevLEDtime) >= LEDperiod)) { // Handle LED flash
+  if (LEDperiod && ((t - prevLEDtime) >= LEDperiod)) { // Handle LED flash
     prevLEDtime = t;
     LEDstate    = !LEDstate;
     digitalWrite(LED, LEDstate);
   }
 
   // If connected, check for input from BTLE...
-  if((state == ACI_EVT_CONNECTED) && BTLEserial.available()) {
+  if ((state == ACI_EVT_CONNECTED) && BTLEserial.available()) {
     int command = BTLEserial.read();
     switch (command) {
       case HatCommandGetCount:
-        count1 = EEPROM.read(EEPROM_COUNT) + (EEPROM.read(EEPROM_COUNT+1) << 8);
         break;
         
       case HatCommandResetCount:
-        EEPROM.write(EEPROM_COUNT, 0);
-        EEPROM.write(EEPROM_COUNT+1, 0);
         break;
         
       case HatCommandSetColor:
@@ -270,13 +268,19 @@ void loop() {
   }
 
   i = cs1.capacitiveSensorRaw(30);
+  
+#if DEBUG_INTERRUPT_TIMES == 1
+  print_times();
+#endif
 
   count1 = ((count1 * 7) + i) >> 3;    // "Dampened" reading
-  Serial.print(mode);
-  Serial.print(' ');
-  Serial.print(count1);
-  Serial.print(' ');
-  Serial.println(i);
+//  Serial.print(mode);
+//  Serial.print(' ');
+//  Serial.print(count);
+//  Serial.print(' ');
+//  Serial.print(count1);
+//  Serial.print(' ');
+//  Serial.println(i);
   if (count1 >= 120) {
     if (state1 == 0) {
       if (++mode >= MODE_LAST) mode = 0;
@@ -303,7 +307,6 @@ void loop() {
       minLvlAvg = 0;
       maxLvlAvg = 512;
     } else if (mode == MODE_COUNTER) {
-      count = EEPROM.read(EEPROM_COUNT) + (EEPROM.read(EEPROM_COUNT+1) << 8);
     } else if (mode == MODE_LIGHT) {
       matrix.fillScreen(0);
       matrix.fillRect(12, 0, 11, NEO_HEIGHT, matrix.Color(255, 255, 255));
@@ -388,4 +391,64 @@ uint32_t Wheel(byte WheelPos) {
    return matrix.Color(0, WheelPos * 3, 255 - WheelPos * 3);
   }
 }
+
+boolean started = false;
+byte bit_count = 0;
+int read_count = 0;
+unsigned long last_fall = 0;
+unsigned long this_fall = 0;
+unsigned long this_change = 0;
+
+#if DEBUG_INTERRUPT_TIMES == 1
+volatile boolean debug_times = false;
+volatile unsigned long all_times[16];
+#endif
+
+void read_suspender() {
+  this_fall = millis();
+  this_change = this_fall - last_fall;
+  if (digitalRead(SUSPENDER) == LOW) {
+    last_fall = this_fall;
+    if (!started || (this_change > 500)) {
+#if DEBUG_INTERRUPT_TIMES == 1
+      if (started) {
+        debug_times = true;
+        all_times[bit_count] = this_change;
+      }
+#endif
+      started = true;
+      bit_count = 0;
+      read_count = 0;
+    }
+  } else if (started) {
+    read_count <<= 1;
+    if (this_change >= 20) {
+      read_count |= 1;
+    }
+#if DEBUG_INTERRUPT_TIMES == 1
+    all_times[bit_count] = this_change;
+#endif
+    if (++bit_count == 16) {
+      count = read_count;
+      started = false;
+      mode = MODE_COUNTER;
+#if DEBUG_INTERRUPT_TIMES == 1
+      debug_times = true;
+#endif
+    }
+  }
+}
+
+#if DEBUG_INTERRUPT_TIMES == 1
+void print_times() {
+  if (debug_times) {
+    debug_times = false;
+    for (int i=0; i<16;i++) {
+      Serial.print(all_times[i]);
+      Serial.print(" ");
+    }
+    Serial.println(count);
+  }
+}
+#endif
 
