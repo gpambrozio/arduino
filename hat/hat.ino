@@ -74,6 +74,8 @@ CapacitiveSensor  cs2 = CapacitiveSensor(CAP2_IN, CAP2_SENSOR);
 
 // HUG COUNTER STUFF ----------------------------------------------------------
 
+volatile int count = 0;
+volatile unsigned long back_to_text = 0;
 
 // NEOPIXEL STUFF ----------------------------------------------------------
 
@@ -119,9 +121,6 @@ Adafruit_NeoMatrix matrix(NEO_WIDTH, NEO_HEIGHT, NEO_PIN,
 
 #define minLvl (ui161)
 #define maxLvl (ui162)
-
-// COUNT STUFF  ----------------------------------------------------------
-volatile int count = 0;
 
 // BLUEFRUIT LE STUFF-------------------------------------------------------
 
@@ -293,6 +292,13 @@ void loop() {
   
   digitalWrite(MOTOR, motor_end > t ? HIGH : LOW);
   
+  if (back_to_text && t > back_to_text) {
+    back_to_text = 0;
+    if (mode == MODE_COUNTER) {
+      mode = MODE_TEXT;
+    }
+  }
+  
   if (prevMode != mode) {
     if (mode == MODE_TEXT) {
       strcpy(msg, "HUG ME!");
@@ -367,10 +373,10 @@ void loop() {
   } else if (mode == MODE_COUNTER) {
     sprintf(msg, "%d", count);
     msgLen = strlen(msg);
-    msgLen = (NEO_WIDTH - 5 * msgLen) >> 1;
+    msgLen = (NEO_WIDTH - 4 * msgLen) >> 1;
     matrix.fillScreen(0);
     matrix.setCursor(msgLen - 1, 0);
-    matrix.print(msg);
+    matrix.printSmallNumber(count);
     matrix.show();
   }
   
@@ -432,6 +438,7 @@ void read_suspender() {
       count = read_count;
       started = false;
       mode = MODE_COUNTER;
+      back_to_text = millis() + 10000;
 #if DEBUG_INTERRUPT_TIMES == 1
       debug_times = true;
 #endif
