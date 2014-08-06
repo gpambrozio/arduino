@@ -9,7 +9,7 @@
 
 #define COMM_OUT      A5
 
-#define THRESHOLD     150
+#define THRESHOLD     250
 
 int count = 0;
 
@@ -47,7 +47,7 @@ void loop() {
   sensorValue = analogRead(ANALOG_IN);
   newState = (sensorValue < THRESHOLD);
   if (newState != prevState) {
-    debounce = millis() + (state ? 1000 : 200);
+    debounce = millis() + (state ? 500 : 200);
     prevState = newState;
   } else if (millis() > debounce) {
     state = newState;
