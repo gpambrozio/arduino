@@ -6,6 +6,7 @@
 #define ANALOG_IN     A2
 #define GROUND_PIN    10
 #define LED           13
+#define VIBRATION     5
 
 #define COMM_OUT      A5
 
@@ -29,6 +30,9 @@ void setup() {
   
   pinMode(COMM_OUT, OUTPUT);
   digitalWrite(COMM_OUT, HIGH);
+  
+  pinMode(VIBRATION, OUTPUT);
+  digitalWrite(VIBRATION, HIGH);
 
   count = EEPROM.read(EEPROM_COUNT) + (EEPROM.read(EEPROM_COUNT+1) << 8);
   updateCount(count);
@@ -79,6 +83,7 @@ void loop() {
 
 void updateCount(int aux) {
   digitalWrite(LED, HIGH);
+  digitalWrite(VIBRATION, LOW);
   unsigned long start = millis();
   
   int current_count = count;
@@ -96,5 +101,6 @@ void updateCount(int aux) {
   
   delay(1000 - (millis() - start));
   digitalWrite(LED, LOW);
+  digitalWrite(VIBRATION, HIGH);
 }
 
