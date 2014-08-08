@@ -55,9 +55,10 @@ void loop() {
     }
   }
   
+  Bean.setScratchData(2, (uint8_t *)&sensorValue, sizeof(sensorValue));
   // print the results to the serial monitor:
-  Serial.print("sensor = ");
-  Serial.println(sensorValue);
+//  Serial.print("sensor = ");
+//  Serial.println(sensorValue);
 //  Serial.print("    count = ");
 //  Serial.print(count);
 //  Serial.print("   state = ");
