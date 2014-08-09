@@ -33,7 +33,7 @@ void setup() {
 }
 
 void loop() {
-  rainbowCycle(5);
+  rainbowCycle(1);
   colorWipe(strip.Color(0, 0, 0));
 
   GIMSK = _BV(PCIE);     // Enable pin change interrupt
