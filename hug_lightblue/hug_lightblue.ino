@@ -115,6 +115,16 @@ void loop() {
     Bean.setLed(0,0,0);
     digitalWrite(VIBRATION, LOW);
   }
+  
+  if (Serial.available()) {
+    switch (Serial.read()) {
+      case 'r':
+        count = 0;
+        EEPROM.write(EEPROM_COUNT, 0);
+        EEPROM.write(EEPROM_COUNT+1, 0);
+        break;
+    }
+  }
 
   // print the results to the serial monitor:
 //  Serial.print("sensor = ");
