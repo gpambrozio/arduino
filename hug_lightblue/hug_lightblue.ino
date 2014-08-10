@@ -6,7 +6,7 @@
 #define ANALOG_IN     A0
 #define VIBRATION     2
 
-#define INITIAL_VALUE  500
+#define INITIAL_VALUE  200
 #define THRESHOLD      0.75
 
 #define LOOP_SLEEP     50
@@ -67,19 +67,23 @@ uint32_t loopNumber = 0;
 void loop() {
   // read the analog in value:
   sensorValue = analogRead(ANALOG_IN);
-  sensorRecentSum += sensorValue;
-  if (++sensorSumCount == COUNT_LIMIT) {
-    sensorRecentSum >>= RECENT_COUNT_PO2;
-    sensorHistorySum -= sensorHistory[sensorHistoryPosition];
-    sensorHistory[sensorHistoryPosition] = sensorRecentSum;
-    sensorHistorySum += sensorRecentSum;
-    if (++sensorHistoryPosition == HISTORY_SIZE) {
-      sensorHistoryPosition = 0;
+  
+  // Ignore anything too high
+  if (sensorValue < 1020) {
+    sensorRecentSum += sensorValue;
+    if (++sensorSumCount == COUNT_LIMIT) {
+      sensorRecentSum >>= RECENT_COUNT_PO2;
+      sensorHistorySum -= sensorHistory[sensorHistoryPosition];
+      sensorHistory[sensorHistoryPosition] = sensorRecentSum;
+      sensorHistorySum += sensorRecentSum;
+      if (++sensorHistoryPosition == HISTORY_SIZE) {
+        sensorHistoryPosition = 0;
+      }
+      sensorSumCount = 0;
+      sensorRecentSum = 0;
+      sensorHistoryAvg = sensorHistorySum >> HISTORY_SIZE_PO2;
+      sensorThreashold = (uint16_t)((float)sensorHistoryAvg * 0.75);
     }
-    sensorSumCount = 0;
-    sensorRecentSum = 0;
-    sensorHistoryAvg = sensorHistorySum >> HISTORY_SIZE_PO2;
-    sensorThreashold = (uint16_t)((float)sensorHistoryAvg * 0.75);
   }
   
   newState = (sensorValue < sensorThreashold);
@@ -94,6 +98,7 @@ void loop() {
       EEPROM.write(EEPROM_COUNT, count & 0xFF);
       EEPROM.write(EEPROM_COUNT+1, (count >> 8) & 0xFF);
 
+      Serial.print("count:");
       Serial.println(count);
 
       startVibration = loopNumber;
