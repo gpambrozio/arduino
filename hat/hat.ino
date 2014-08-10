@@ -16,16 +16,12 @@
   MIT license.  All text above must be included in any redistribution.
   --------------------------------------------------------------------------*/
 
-#define DEBUG_INTERRUPT_TIMES   0
-
 #include <SPI.h>
 #include <Adafruit_BLE_UART.h>
 #include <Adafruit_NeoPixel.h>
 #include <Adafruit_NeoMatrix.h>
 #include <Adafruit_GFX.h>
-#include <EEPROM.h>
 #include <CapacitiveSensor.h>
-#include <wiring_private.h>
 
 #define NEO_PIN     8   // Arduino pin to NeoPixel data input
 #define MIC_PIN     A0  // Microphone is attached to this analog pin
@@ -42,17 +38,14 @@
 
 #define MOTOR         6
 
-#define SUSPENDER     2
-#define SUSPENDER_INTERRUPT EXTERNAL_INT_1
-
 #define LED          13     // Onboard LED (not NeoPixel) pin
 
 typedef enum {
     HatCommandGetCount = 50,
-    HatCommandResetCount,
     HatCommandSetColor,
     HatCommandChangeMode,
     HatCommandSetBrightness,
+    HatCommandSetCount,
 } HatCommand;
 
 //#define MARK  {Serial.print("Running line ");Serial.println(__LINE__);}
@@ -74,8 +67,8 @@ CapacitiveSensor  cs2 = CapacitiveSensor(CAP2_IN, CAP2_SENSOR);
 
 // HUG COUNTER STUFF ----------------------------------------------------------
 
-volatile int count = 0;
-volatile unsigned long back_to_text = 0;
+uint16_t count = 0;
+unsigned long back_to_text = 0;
 
 // NEOPIXEL STUFF ----------------------------------------------------------
 
@@ -180,10 +173,6 @@ void setup() {
   pinMode(MOTOR, OUTPUT);
   digitalWrite(MOTOR, LOW);
   
-  pinMode(SUSPENDER, INPUT_PULLUP);
-  attachInterrupt(SUSPENDER_INTERRUPT, read_suspender, CHANGE);
-  sei();
-  
   analogReference(EXTERNAL);
 }
 
@@ -196,7 +185,7 @@ typedef enum {
 } modes;
 
 byte prevMode = 0xff;
-volatile byte mode = MODE_SOUND;
+byte mode = MODE_SOUND;
 
 uint8_t  i, state1, count1;
 unsigned long t, motor_end;
@@ -234,9 +223,6 @@ void loop() {
       case HatCommandGetCount:
         break;
         
-      case HatCommandResetCount:
-        break;
-        
       case HatCommandSetColor:
         char color[3];
         readStr(color, 3);
@@ -256,6 +242,12 @@ void loop() {
         matrix.show();
         break;
         
+      case HatCommandSetCount:
+        count = BTLEserial.read() + (BTLEserial.read() << 8);
+        mode = MODE_COUNTER;
+        back_to_text = millis() + 10000;
+        break;
+        
       default:
         prevMode = mode = MODE_TEXT;
         msgLen = command;
@@ -268,10 +260,6 @@ void loop() {
 
   i = cs1.capacitiveSensorRaw(30);
   
-#if DEBUG_INTERRUPT_TIMES == 1
-  print_times();
-#endif
-
   count1 = ((count1 * 7) + i) >> 3;    // "Dampened" reading
 //  Serial.print(mode);
 //  Serial.print(' ');
@@ -397,65 +385,4 @@ uint32_t Wheel(byte WheelPos) {
    return matrix.Color(0, WheelPos * 3, 255 - WheelPos * 3);
   }
 }
-
-boolean started = false;
-byte bit_count = 0;
-int read_count = 0;
-unsigned long last_fall = 0;
-unsigned long this_fall = 0;
-unsigned long this_change = 0;
-
-#if DEBUG_INTERRUPT_TIMES == 1
-volatile boolean debug_times = false;
-volatile unsigned long all_times[16];
-#endif
-
-void read_suspender() {
-  this_fall = millis();
-  this_change = this_fall - last_fall;
-  if (digitalRead(SUSPENDER) == LOW) {
-    last_fall = this_fall;
-    if (!started || (this_change > 500)) {
-#if DEBUG_INTERRUPT_TIMES == 1
-      if (started) {
-        debug_times = true;
-        all_times[bit_count] = this_change;
-      }
-#endif
-      started = true;
-      bit_count = 0;
-      read_count = 0;
-    }
-  } else if (started) {
-    read_count <<= 1;
-    if (this_change >= 20) {
-      read_count |= 1;
-    }
-#if DEBUG_INTERRUPT_TIMES == 1
-    all_times[bit_count] = this_change;
-#endif
-    if (++bit_count == 16) {
-      count = read_count;
-      started = false;
-      mode = MODE_COUNTER;
-      back_to_text = millis() + 10000;
-#if DEBUG_INTERRUPT_TIMES == 1
-      debug_times = true;
-#endif
-    }
-  }
-}
-
-#if DEBUG_INTERRUPT_TIMES == 1
-void print_times() {
-  if (debug_times) {
-    debug_times = false;
-    for (int i=0; i<16;i++) {
-      Serial.print(all_times[i]);
-      Serial.print(" ");
-    }
-    Serial.println(count);
-  }
-}
-#endif
 
