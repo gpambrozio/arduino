@@ -10,30 +10,30 @@
 
 TclClass TCL;
 
-#ifdef TCL_DIO
 uint8_t TclClass::datapinmask, TclClass::clkpinmask;
 volatile uint8_t *TclClass::dataport, *TclClass::clkport;
-#endif
-
+boolean TclClass::isSPI;
 
 void TclClass::begin() {
-#ifdef TCL_SPI
-  // Set the SPI parameters
+#ifdef SPI
   SPI.begin();
   SPI.setBitOrder(MSBFIRST);
   SPI.setDataMode(SPI_MODE0);
   SPI.setClockDivider(SPI_CLOCK_DIV2);
+  isSPI = true;
 #endif
-#ifdef TCL_DIO
-  pinMode(TCL_CLOCKPIN, OUTPUT);
-  pinMode(TCL_DATAPIN, OUTPUT);
-  clkport     = portOutputRegister(digitalPinToPort(TCL_CLOCKPIN));
-  clkpinmask  = digitalPinToBitMask(TCL_CLOCKPIN);
-  dataport    = portOutputRegister(digitalPinToPort(TCL_DATAPIN));
-  datapinmask = digitalPinToBitMask(TCL_DATAPIN);
+}
+
+void TclClass::begin(int clockPin, int dataPin) {
+  pinMode(clockPin, OUTPUT);
+  pinMode(dataPin, OUTPUT);
+  clkport     = portOutputRegister(digitalPinToPort(clockPin));
+  clkpinmask  = digitalPinToBitMask(clockPin);
+  dataport    = portOutputRegister(digitalPinToPort(dataPin));
+  datapinmask = digitalPinToBitMask(dataPin);
   *clkport   &= ~clkpinmask;
   *dataport  &= ~datapinmask;
-#endif
+  isSPI = false;
 }
 
 void TclClass::setupDeveloperShield() {
@@ -49,7 +49,7 @@ void TclClass::setupDeveloperShield() {
 }
 
 void TclClass::end() {
-#ifdef TCL_SPI
+#ifdef SPI
   SPI.end();
 #endif
 }
@@ -63,7 +63,6 @@ byte TclClass::makeFlag(byte red, byte green, byte blue) {
   return ~flag;
 }
 
-#ifdef TCL_DIO
 void TclClass::dioWrite(byte c) {
   for(byte bit = 0x80; bit; bit >>= 1) {
     if(c & bit) {
@@ -74,23 +73,22 @@ void TclClass::dioWrite(byte c) {
     *clkport |=  clkpinmask;
     *clkport &= ~clkpinmask;
   }
-
 }
-#endif
 
 void TclClass::sendFrame(byte flag, byte red, byte green, byte blue) {
-#ifdef TCL_SPI
-  SPI.transfer(flag);
-  SPI.transfer(blue);
-  SPI.transfer(green);
-  SPI.transfer(red);
+  if (isSPI) {
+#ifdef SPI
+    SPI.transfer(flag);
+    SPI.transfer(blue);
+    SPI.transfer(green);
+    SPI.transfer(red);
 #endif
-#ifdef TCL_DIO
-  dioWrite(flag);
-  dioWrite(blue);
-  dioWrite(green);
-  dioWrite(red);
-#endif
+  } else {
+    dioWrite(flag);
+    dioWrite(blue);
+    dioWrite(green);
+    dioWrite(red);
+  }
 }
 
 void TclClass::sendColor(byte red, byte green, byte blue) {
