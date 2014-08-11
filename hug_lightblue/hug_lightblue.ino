@@ -7,7 +7,7 @@
 #define VIBRATION     2
 
 #define INITIAL_VALUE  200
-#define THRESHOLD      0.75
+#define THRESHOLD      0.70
 
 #define LOOP_SLEEP     50
 
