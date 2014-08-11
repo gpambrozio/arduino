@@ -1,209 +1,138 @@
 /*****************************************************************************
- * rainbow.ino
- *
- * This example will send a sequence of rainbow colors down a 25 pixel long
- * strand of total control lighting. The Arduino will send an update every
- * second to the strand, although this is unnecessary and if you disconnect
- * the Arduino from the strand, you will see that as long as the lights have
- * power, they will retain the last color information sent to them.
- *
- * Copyright 2011 Christopher De Vries
- * This program is distributed under the Artistic License 2.0, a copy of which
- * is included in the file LICENSE.txt along with this library.
  ****************************************************************************/
-#include <SPI.h>
+
 #include <TCL.h>
+#import "structs.h"
+
+#define TCL_CLOCKPIN 1
+#define TCL_DATAPIN  0
+
+#define MIC_PIN      1    // Analog 1 is pin 2
 
 #define LEDS  50
 
-// Initial formula from here: http://blog.bodurov.com/Common-Coefficient-Transformations/
-// Python code for the table below
-/*
-import math
+#define DC_OFFSET  0  // DC offset in mic signal - if unusure, leave 0
+#define NOISE     10  // Noise/hum/interference in mic signal
+#define SAMPLES   12  // Length of buffer for dynamic level adjustment
+#define TOP       ((LEDS / 2) + 2) // Allow dot to go slightly off scale
 
-curve = 3.9
-for i in range(128):
-	x = float(i) / 127.0
-	sign = 1.0
-	if x-0.5 < 0:
-		sign = -1.0
-	value = sign*math.pow(math.fabs(x-0.5)/curve,1.0/3.0)+0.5
-	if value < 0.0:
-		value = 0.0
-	if value > 1.0:
-		value = 1.0
-	print "%.8f, " % value,
-	if ((i+1) % 8 == 0):
-		print ""
-		
-for i in range(128):
-	x = float(127-i) / 127.0
-	sign = 1.0
-	if x-0.5 < 0:
-		sign = -1.0
-	value = sign*math.pow(math.fabs(x-0.5)/curve,1.0/3.0)+0.5
-	if value < 0.0:
-		value = 0.0
-	if value > 1.0:
-		value = 1.0
-	print "%.8f, " % value,
-	if ((i+1) % 8 == 0):
-		print ""
-				
-print "};"
-*/
 
-PROGMEM float fade_table[256] = {
-0.00000000,  0.00000000,  0.00111291,  0.00383170,  0.00658061,  0.00936050,  0.01217225,  0.01501679,  
-
-0.01789509,  0.02080818,  0.02375713,  0.02674306,  0.02976715,  0.03283064,  0.03593485,  0.03908115,  
-
-0.04227100,  0.04550594,  0.04878760,  0.05211771,  0.05549808,  0.05893066,  0.06241752,  0.06596086,  
-
-0.06956301,  0.07322648,  0.07695395,  0.08074829,  0.08461258,  0.08855014,  0.09256454,  0.09665964,  
-
-0.10083964,  0.10510906,  0.10947285,  0.11393641,  0.11850564,  0.12318703,  0.12798771,  0.13291561,  
-
-0.13797949,  0.14318914,  0.14855553,  0.15409101,  0.15980957,  0.16572713,  0.17186196,  0.17823519,  
-
-0.18487142,  0.19179958,  0.19905407,  0.20667625,  0.21471660,  0.22323766,  0.23231846,  0.24206109,  
-
-0.25260117,  0.26412513,  0.27690074,  0.29133574,  0.30810371,  0.32846323,  0.35532029,  0.39968469,  
-
-0.60031531,  0.64467971,  0.67153677,  0.69189629,  0.70866426,  0.72309926,  0.73587487,  0.74739883,  
-
-0.75793891,  0.76768154,  0.77676234,  0.78528340,  0.79332375,  0.80094593,  0.80820042,  0.81512858,  
-
-0.82176481,  0.82813804,  0.83427287,  0.84019043,  0.84590899,  0.85144447,  0.85681086,  0.86202051,  
-
-0.86708439,  0.87201229,  0.87681297,  0.88149436,  0.88606359,  0.89052715,  0.89489094,  0.89916036,  
-
-0.90334036,  0.90743546,  0.91144986,  0.91538742,  0.91925171,  0.92304605,  0.92677352,  0.93043699,  
-
-0.93403914,  0.93758248,  0.94106934,  0.94450192,  0.94788229,  0.95121240,  0.95449406,  0.95772900,  
-
-0.96091885,  0.96406515,  0.96716936,  0.97023285,  0.97325694,  0.97624287,  0.97919182,  0.98210491,  
-
-0.98498321,  0.98782775,  0.99063950,  0.99341939,  0.99616830,  0.99888709,  1.00000000,  1.00000000,  
-
-1.00000000,  1.00000000,  0.99888709,  0.99616830,  0.99341939,  0.99063950,  0.98782775,  0.98498321,  
-
-0.98210491,  0.97919182,  0.97624287,  0.97325694,  0.97023285,  0.96716936,  0.96406515,  0.96091885,  
-
-0.95772900,  0.95449406,  0.95121240,  0.94788229,  0.94450192,  0.94106934,  0.93758248,  0.93403914,  
-
-0.93043699,  0.92677352,  0.92304605,  0.91925171,  0.91538742,  0.91144986,  0.90743546,  0.90334036,  
-
-0.89916036,  0.89489094,  0.89052715,  0.88606359,  0.88149436,  0.87681297,  0.87201229,  0.86708439,  
-
-0.86202051,  0.85681086,  0.85144447,  0.84590899,  0.84019043,  0.83427287,  0.82813804,  0.82176481,  
-
-0.81512858,  0.80820042,  0.80094593,  0.79332375,  0.78528340,  0.77676234,  0.76768154,  0.75793891,  
-
-0.74739883,  0.73587487,  0.72309926,  0.70866426,  0.69189629,  0.67153677,  0.64467971,  0.60031531,  
-
-0.39968469,  0.35532029,  0.32846323,  0.30810371,  0.29133574,  0.27690074,  0.26412513,  0.25260117,  
-
-0.24206109,  0.23231846,  0.22323766,  0.21471660,  0.20667625,  0.19905407,  0.19179958,  0.18487142,  
-
-0.17823519,  0.17186196,  0.16572713,  0.15980957,  0.15409101,  0.14855553,  0.14318914,  0.13797949,  
-
-0.13291561,  0.12798771,  0.12318703,  0.11850564,  0.11393641,  0.10947285,  0.10510906,  0.10083964,  
-
-0.09665964,  0.09256454,  0.08855014,  0.08461258,  0.08074829,  0.07695395,  0.07322648,  0.06956301,  
-
-0.06596086,  0.06241752,  0.05893066,  0.05549808,  0.05211771,  0.04878760,  0.04550594,  0.04227100,  
-
-0.03908115,  0.03593485,  0.03283064,  0.02976715,  0.02674306,  0.02375713,  0.02080818,  0.01789509,  
-
-0.01501679,  0.01217225,  0.00936050,  0.00658061,  0.00383170,  0.00111291,  0.00000000,  0.00000000,  
-
-};
-
-// Create a 24 bit color value from R,G,B
-uint32_t Color(byte r, byte g, byte b)
-{
-  uint32_t c;
-  c = r;
-  c <<= 8;
-  c |= g;
-  c <<= 8;
-  c |= b;
-  return c;
-}
 
 //Input a value 0 to 255 to get a color value.
 //The colours are a transition g -r -b - back to g
-uint32_t Wheel(byte WheelPos)
+RGB Wheel(byte WheelPos)
 {
   if (WheelPos < 85) {
-   return Color(WheelPos * 3, 255 - WheelPos * 3, 0);
-  } else if (WheelPos < 170) {
-   WheelPos -= 85;
-   return Color(255 - WheelPos * 3, 0, WheelPos * 3);
-  } else {
-   WheelPos -= 170; 
-   return Color(0, WheelPos * 3, 255 - WheelPos * 3);
+    return (RGB){ WheelPos * 3, 255 - WheelPos * 3, 0 };
+  } 
+  else if (WheelPos < 170) {
+    WheelPos -= 85;
+    return (RGB){ 255 - WheelPos * 3, 0, WheelPos * 3 };
+  } 
+  else {
+    WheelPos -= 170; 
+    return (RGB){ 0, WheelPos * 3, 255 - WheelPos * 3 };
   }
 }
 
-//Input a value 0 to 255 to get a color value.
-//The colours are a transition g -r -b - back to g
-uint32_t Spectrum(byte SpectrumPos)
-{
-  if (WheelPos < 85) {
-   return Color(WheelPos * 3, 255 - WheelPos * 3, 0);
-  } else if (WheelPos < 170) {
-   WheelPos -= 85;
-   return Color(255 - WheelPos * 3, 0, WheelPos * 3);
-  } else {
-   WheelPos -= 170; 
-   return Color(0, WheelPos * 3, 255 - WheelPos * 3);
+void rainbow(uint8_t wait) {
+  int i, j;
+   
+  for (j=0; j < 256; j++) {     // 3 cycles of all 256 colors in the wheel
+    TCL.sendEmptyFrame();
+    for (i=0; i < LEDS; i++) {
+      RGB color = Wheel( (i + j) % 255);
+      TCL.sendColor(color.r, color.g, color.b);
+    }  
+    TCL.sendEmptyFrame();
+    delay(wait);
+  }
+}
+
+// Slightly different, this one makes the rainbow wheel equally distributed 
+// along the chain
+void rainbowCycle(uint8_t wait) {
+  int i, j;
+  
+  for (j=0; j < 256 * 5; j++) {     // 5 cycles of all 25 colors in the wheel
+    TCL.sendEmptyFrame();
+    for (i=0; i < LEDS; i++) {
+      // tricky math! we use each pixel as a fraction of the full 96-color wheel
+      // (thats the i / strip.numPixels() part)
+      // Then add in j which makes the colors go around per pixel
+      // the % 96 is to make the wheel cycle around
+      RGB color = Wheel( ((i * 256 / LEDS) + j) % 256);
+      TCL.sendColor(color.r, color.g, color.b);
+    }  
+    TCL.sendEmptyFrame();
+    delay(wait);
   }
 }
 
 void setup() {
-  Serial.begin(9600);
-  Serial.println("begin");
-
-  TCL.begin();
+  TCL.begin(TCL_CLOCKPIN, TCL_DATAPIN);
+  TCL.setAll(LEDS,0,0,0);
 }
 
-void rainbow(uint8_t wait, uint8_t wait2) {
-  int i, j, adjj, pos, pos2;
-  uint32_t r, g, b, color;
-  float alpha;
-  int ratio = wait / wait2;
-  
-  for (j=0; j < 256 * ratio; j++) {
-    TCL.sendEmptyFrame();
-    adjj = j / ratio;
-    for (i=0; i < LEDS/2; i++) {
-      pos = i + adjj;
-      pos2 = i + j;
-      alpha = pgm_read_float(&fade_table[pos2 & 0xff]);
-      color = Wheel(pos & 0xff);
-      r = (uint32_t)round(alpha * (float)((color >> 16) & 0xff));
-      g = (uint32_t)round(alpha * (float)((color >>  8) & 0xff));
-      b = (uint32_t)round(alpha * (float)((color      ) & 0xff));
-      TCL.sendColor(r, g, b);
-    }
-    for (i=LEDS/2-1; i >= 0; i--) {
-      pos = i + adjj;
-      pos2 = i + j;
-      alpha = pgm_read_float(&fade_table[pos2 & 0xff]);
-      color = Wheel(pos & 0xff);
-      r = (uint32_t)round(alpha * (float)((color >> 16) & 0xff));
-      g = (uint32_t)round(alpha * (float)((color >>  8) & 0xff));
-      b = (uint32_t)round(alpha * (float)((color      ) & 0xff));
-      TCL.sendColor(r, g, b);
-    }
-    TCL.sendEmptyFrame();
-    delay(wait2);
-  }
-  delay(wait);
+int height;
+int lvl = 0;
+int vol[SAMPLES];
+int volCount;
+int minLvlAvg, maxLvlAvg;
+int minLvl, maxLvl;
+uint16_t wheelPos;
+
+void loop1() {
+  rainbowCycle(2);
 }
 
 void loop() {
-  rainbow(80, 4);
+  height   = analogRead(MIC_PIN);                        // Raw reading from mic
+  height   = abs(height - 512 - DC_OFFSET); // Center on zero
+  height   = (height <= NOISE) ? 0 : (height - NOISE);             // Remove noise/hum
+  lvl = ((lvl * 7) + height) >> 3;    // "Dampened" reading (else looks twitchy)
+
+  vol[volCount] = height;                 // Save sample for dynamic leveling
+  if(++volCount >= SAMPLES) volCount = 0; // Advance/rollover sample counter
+
+  // Calculate bar height based on dynamic min/max levels (fixed point):
+  height = TOP * (lvl - minLvlAvg) / (long)(maxLvlAvg - minLvlAvg);
+
+  if(height < 0L)       height = 0;      // Clip output
+  else if(height > TOP) height = TOP;
+
+  // Color pixels based on rainbow gradient
+  RGB color = Wheel(wheelPos >> 2);
+  wheelPos++;
+  wheelPos %= (256 << 2);
+  TCL.sendEmptyFrame();
+  for(int i=0; i<2 ;i++) {
+    for(int x=0; x<LEDS/2; x++) {
+      if ((i == 0 && x < height) || (i == 1 && ((LEDS/2) - x - 1) < height)) {
+        TCL.sendColor(color.r, color.g, color.b);
+      } else {
+        TCL.sendColor(0, 0, 0);
+      }
+    }
+  }
+  TCL.sendEmptyFrame();
+
+  // Get volume range of prior frames
+  minLvl = maxLvl = vol[0];
+
+  for(int i=1; i<SAMPLES; i++) {
+    if(vol[i] < minLvl)      minLvl = vol[i];
+    else if(vol[i] > maxLvl) maxLvl = vol[i];
+  }
+
+  // minLvl and maxLvl indicate the volume range over prior frames, used
+  // for vertically scaling the output graph (so it looks interesting
+  // regardless of volume level).  If they're too close together though
+  // (e.g. at very low volume levels) the graph becomes super coarse
+  // and 'jumpy'...so keep some minimum distance between them (this
+  // also lets the graph go to zero when no sound is playing):
+  if((maxLvl - minLvl) < TOP) maxLvl = minLvl + TOP;
+  minLvlAvg = (minLvlAvg * 63 + minLvl) >> 6; // Dampen min/max levels
+  maxLvlAvg = (maxLvlAvg * 63 + maxLvl) >> 6; // (fake rolling average)
 }
+
