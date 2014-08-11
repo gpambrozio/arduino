@@ -69,7 +69,7 @@ void loop() {
   sensorValue = analogRead(ANALOG_IN);
   
   // Ignore anything too high
-  if (sensorValue < 1020) {
+  if (sensorValue < 1000) {
     sensorRecentSum += sensorValue;
     if (++sensorSumCount == COUNT_LIMIT) {
       sensorRecentSum >>= RECENT_COUNT_PO2;
@@ -88,7 +88,7 @@ void loop() {
   
   newState = (sensorValue < sensorThreashold);
   if (newState != prevState) {
-    debounce = loopNumber + (state ? 500 : 100) / LOOP_SLEEP;
+    debounce = loopNumber + (state ? 1200 : 500) / LOOP_SLEEP;
     prevState = newState;
   } else if (loopNumber > debounce) {
     state = newState;
@@ -111,8 +111,8 @@ void loop() {
 
   updateScratchData();
 
-  if (loopNumber > startVibration + (1000 / LOOP_SLEEP)) {  
-    Bean.setLed(0,0,0);
+  if (sensorValue >= 1000 || loopNumber > startVibration + (1000 / LOOP_SLEEP)) {  
+    Bean.setLed(0, 0, 0);
     digitalWrite(VIBRATION, LOW);
   }
   
@@ -126,15 +126,7 @@ void loop() {
     }
   }
 
-  // print the results to the serial monitor:
-//  Serial.print("sensor = ");
-//  Serial.println(sensorValue);
-//  Serial.print("    count = ");
-//  Serial.print(count);
-//  Serial.print("   state = ");
-//  Serial.println(state ? "ON" : "OFF");
-
-  Bean.sleep(LOOP_SLEEP);
+  Bean.sleep((sensorValue < 1000) ? LOOP_SLEEP : 5000);
   ++loopNumber;
 }
 
