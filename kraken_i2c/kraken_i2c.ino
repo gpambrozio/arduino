@@ -1,21 +1,32 @@
 /*****************************************************************************
  ****************************************************************************/
 
+#if defined(__AVR_ATtiny85__)    // Trinket
+
+#include "TinyWireS.h"
+#define Wire TinyWireS
+
+#else
+
+//#include "Wire.h"
+
+#endif
+
 #include <TCL.h>
-#include <Wire.h>
 #include "structs.h"
 
 #define SLAVE_ADDRESS  0x04
 
-#define TCL_CLOCKPIN 9
-#define TCL_DATAPIN  8
+#define TCL_CLOCKPIN 3
+#define TCL_DATAPIN  4
 
 #define LEDS  50
 
 void setup() {
+#ifdef Serial
   Serial.begin(9600);
   Serial.println("Starting");
-  
+#endif
   TCL.begin(TCL_CLOCKPIN, TCL_DATAPIN);
   TCL.setAll(LEDS,0,0,0);
 
@@ -54,12 +65,20 @@ void loop() {
 }
 
 // callback for received data
+#if defined(__AVR_ATtiny85__)    // Trinket
+void receivedData(uint8_t byteCount) {
+#else
 void receivedData(int byteCount) {
+#endif
+#ifdef Serial
   Serial.print("Received ");
   Serial.println(byteCount);
+#endif
   while (Wire.available()) {
     int number = Wire.read();
+#ifdef Serial
     Serial.println(number);
+#endif
     if (number == 0x55) {
       height = 0;
     } else {
