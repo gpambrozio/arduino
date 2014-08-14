@@ -31,3 +31,6 @@
 [submodule "libraries/Adafruit_WS2801_trinket_onecolor"]
 	path = libraries/Adafruit_WS2801_trinket_onecolor
 	url = git@github.com:gpambrozio/Adafruit-WS2801-Library.git
+[submodule "libraries/TinyWireM"]
+	path = libraries/TinyWireM
+	url = git@github.com:adafruit/TinyWireM.git
