@@ -34,3 +34,6 @@
 [submodule "libraries/TinyWireM"]
 	path = libraries/TinyWireM
 	url = git@github.com:adafruit/TinyWireM.git
+[submodule "libraries/TinyWireS"]
+	path = libraries/TinyWireS
+	url = git@github.com:gpambrozio/TinyWire.git
