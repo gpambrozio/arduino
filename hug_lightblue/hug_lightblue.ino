@@ -59,6 +59,7 @@ boolean state = false;
 boolean prevState = false;
 boolean newState = false;
 boolean counted = false;
+int serialCommand;
 
 unsigned long startVibration = 0;
 
@@ -117,11 +118,16 @@ void loop() {
   }
   
   if (Serial.available()) {
-    switch (Serial.read()) {
+    switch ((serialCommand = Serial.read())) {
       case 'r':
         count = 0;
         EEPROM.write(EEPROM_COUNT, 0);
         EEPROM.write(EEPROM_COUNT+1, 0);
+        break;
+
+      default:
+        Serial.write("Unknown:");
+        Serial.println(serialCommand);
         break;
     }
   }
