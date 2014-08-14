@@ -26,7 +26,7 @@
 #define DAYS_PERIOD_R1    3
 #define DAYS_PERIOD_R2    2
 #define MINUTES_R1       30
-#define MINUTES_R2       45
+#define MINUTES_R2       15
 
 #define clockAddress 0x68
 
