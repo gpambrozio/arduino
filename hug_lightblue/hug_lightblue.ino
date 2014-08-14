@@ -37,6 +37,9 @@ void setup() {
   // initialize serial communications at 9600 bps:
   Serial.begin(57600);
   
+  // on readBytes, return after 25ms or when the buffer is full
+  Serial.setTimeout(5);
+
   pinMode(ANALOG_IN, INPUT_PULLUP);
   
   pinMode(VIBRATION, OUTPUT);
@@ -59,7 +62,7 @@ boolean state = false;
 boolean prevState = false;
 boolean newState = false;
 boolean counted = false;
-int serialCommand;
+char serialCommand;
 
 unsigned long startVibration = 0;
 
@@ -118,17 +121,19 @@ void loop() {
   }
   
   if (Serial.available()) {
-    switch ((serialCommand = Serial.read())) {
-      case 'r':
-        count = 0;
-        EEPROM.write(EEPROM_COUNT, 0);
-        EEPROM.write(EEPROM_COUNT+1, 0);
-        break;
-
-      default:
-        Serial.write("Unknown:");
-        Serial.println(serialCommand);
-        break;
+    if (Serial.readBytes(&serialCommand, 1) == 1) {
+      switch (serialCommand) {
+        case 'r':
+          count = 0;
+          EEPROM.write(EEPROM_COUNT, 0);
+          EEPROM.write(EEPROM_COUNT+1, 0);
+          break;
+  
+        default:
+          Serial.print("Unknown:");
+          Serial.println(serialCommand);
+          break;
+      }
     }
   }
 
