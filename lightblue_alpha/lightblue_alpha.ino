@@ -7,7 +7,7 @@
 #include "Adafruit_GFX.h"
 
 #define LOOP_SLEEP       300
-#define LOOP_LONG_SLEEP  6000
+#define LOOP_LONG_SLEEP  600
 
 Adafruit_AlphaNum4 alpha4 = Adafruit_AlphaNum4();
 
@@ -52,7 +52,7 @@ void loop() {
     lastScratch = thisScratch;
     displayPosition = -3;
     stringSize = lastScratch.length;
-    stopDisplay = loopNumber + (10000 / LOOP_SLEEP);
+    stopDisplay = loopNumber + (stringSize + 4) * 3;
   }
 
   if (loopNumber == stopDisplay) {
@@ -76,6 +76,6 @@ void loop() {
     alpha4.writeDisplay();
   }
   
-  Bean.sleep(LOOP_SLEEP);
+  Bean.sleep(loopNumber >= stopDisplay ? LOOP_LONG_SLEEP : LOOP_SLEEP);
   ++loopNumber;
 }
