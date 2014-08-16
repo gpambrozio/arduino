@@ -9,7 +9,8 @@
 #define INITIAL_VALUE  200
 #define THRESHOLD      0.70
 
-#define LOOP_SLEEP     50
+#define LOOP_SLEEP       50
+#define LOOP_LONG_SLEEP  5000
 
 #define EEPROM_COUNT    0
 
@@ -24,20 +25,25 @@ uint8_t sensorSumCount = 0;
 uint16_t sensorThreashold;
 
 uint16_t count = 0;
-uint32_t sensorHistoryAvg;
 uint16_t sensorValue = 0; 
+uint32_t sensorHistoryAvg;
+uint32_t loopNumber = 0;
+uint32_t nextPing;
 
-#define SCRATCH_SIZE  (sizeof(count) + sizeof(sensorHistoryAvg) + sizeof(sensorValue))
+#define SCRATCH_SIZE  (sizeof(count) + sizeof(sensorHistoryAvg) + sizeof(sensorValue) + sizeof(loopNumber) + sizeof(nextPing))
 uint8_t *scratchData = (uint8_t*)&count;
 
 #define RECENT_COUNT_PO2   3
 #define COUNT_LIMIT        (1 << RECENT_COUNT_PO2)
 
+uint32_t debounce = 0;
+uint32_t startVibration = 0;
+
 void setup() {
   // initialize serial communications at 9600 bps:
   Serial.begin(57600);
   
-  // on readBytes, return after 25ms or when the buffer is full
+  // on readBytes, return after 5ms or when the buffer is full
   Serial.setTimeout(5);
 
   pinMode(ANALOG_IN, INPUT_PULLUP);
@@ -55,18 +61,15 @@ void setup() {
   sensorThreashold = (uint16_t)((float)INITIAL_VALUE * 0.75);
 
   updateScratchData();
+
+  nextPing = (60000 / LOOP_SLEEP);
 }
 
-unsigned long debounce = 0;
 boolean state = false;
 boolean prevState = false;
 boolean newState = false;
 boolean counted = false;
 char serialCommand;
-
-unsigned long startVibration = 0;
-
-uint32_t loopNumber = 0;
 
 void loop() {
   // read the analog in value:
@@ -102,21 +105,28 @@ void loop() {
       EEPROM.write(EEPROM_COUNT, count & 0xFF);
       EEPROM.write(EEPROM_COUNT+1, (count >> 8) & 0xFF);
 
-      Serial.print("count:");
-      Serial.println(count);
+      Serial.println(String("count:") + String(count));
 
       startVibration = loopNumber;
       digitalWrite(VIBRATION, HIGH);
-      Bean.setLed(0, 0, 255);
     } else if (!state) {
       counted = false;
     }
   }
+  
+  uint16_t batteryV = Bean.getBatteryVoltage();
+  if (batteryV <= 210) {
+    Serial.println("battery:0");
+  }
+  
+  if (loopNumber >= nextPing) {
+    Serial.println(String("ping:") + String(loopNumber));
+    nextPing = loopNumber + (600000 / LOOP_SLEEP);
+  } 
 
   updateScratchData();
 
   if (sensorValue >= 1000 || loopNumber > startVibration + (1000 / LOOP_SLEEP)) {  
-    Bean.setLed(0, 0, 0);
     digitalWrite(VIBRATION, LOW);
   }
   
@@ -130,15 +140,18 @@ void loop() {
           break;
   
         default:
-          Serial.print("Unknown:");
-          Serial.println(serialCommand);
+          Serial.println(String("Unknown:") + String(serialCommand));
           break;
       }
     }
   }
 
-  Bean.sleep((sensorValue < 1000) ? LOOP_SLEEP : 5000);
-  ++loopNumber;
+  Bean.sleep((sensorValue < 1000) ? LOOP_SLEEP : LOOP_LONG_SLEEP);
+  if (sensorValue < 1000) {
+    ++loopNumber;
+  } else {
+    loopNumber += LOOP_LONG_SLEEP / LOOP_SLEEP;
+  }
 }
 
 void updateScratchData() {
