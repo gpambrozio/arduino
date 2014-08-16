@@ -35,7 +35,7 @@ void setup() {
 }
 
 bool compareScratch( ScratchData * scratch1, ScratchData * scratch2 ) {
-  return (scratch1->length != scratch2->length) && 
+  return (scratch1->length == scratch2->length) && 
     (memcmp(scratch1->data, scratch2->data, scratch1->length) == 0);
 }
  
@@ -47,9 +47,8 @@ uint32_t stopDisplay = 0;
 
 void loop() {
   ScratchData thisScratch = Bean.readScratchData(1);
-  bool matched = compareScratch( &thisScratch, &lastScratch );
   
-  if ( !matched ) {
+  if (!compareScratch( &thisScratch, &lastScratch )) {
     lastScratch = thisScratch;
     displayPosition = -3;
     stringSize = lastScratch.length;
