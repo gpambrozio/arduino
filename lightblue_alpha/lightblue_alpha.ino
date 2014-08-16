@@ -35,29 +35,8 @@ void setup() {
 }
 
 bool compareScratch( ScratchData * scratch1, ScratchData * scratch2 ) {
-  bool matched = true;
-  
-  if ( scratch1->length != scratch2->length )
-  {
-    matched = false;
-  }
-  else
-  {
-    int length = min( scratch1->length, scratch2->length );
-    int i = 0;
-    
-    while ( i < length )
-    {
-      if ( scratch1->data[i] != scratch2->data[i] )
-      {
-        matched = false;
-        i = length;
-      }
-      i++;
-    }
-  }
-  
-  return matched;
+  return (scratch1->length != scratch2->length) && 
+    (memcmp(scratch1->data, scratch2->data, scratch1->length) == 0);
 }
  
 ScratchData lastScratch;
