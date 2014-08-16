@@ -1,68 +1,56 @@
 /*****************************************************************************
  ****************************************************************************/
 
+//#define BIG_LEDS
+#define TOTAL_CONTROL
+
+#define LEDS  50
+#define SLAVE_ADDRESS  0x04
+#define BUS_SYNC_COMMAND 0x55
+
+
 #if defined(__AVR_ATtiny85__)    // Trinket
 
+//#include <avr/power.h>
 #include "TinyWireS.h"
 #define Wire TinyWireS
 
 #else
 
 //#include "Wire.h"
+//#include "SPI.h"
 
 #endif
 
-#include <TCL.h>
 #include "structs.h"
 
-#define SLAVE_ADDRESS  0x04
+#ifdef BIG_LEDS
+
+#include "Adafruit_WS2801.h"
+
+#define DATA_PIN  3      // Yellow wire on Adafruit Pixels
+#define CLOCK_PIN 4      // Green wire on Adafruit Pixels
+
+// Set the first variable to the NUMBER of pixels. 25 = 25 pixels in a row
+Adafruit_WS2801 strip = Adafruit_WS2801(LEDS, DATA_PIN, CLOCK_PIN);
+
+#define C(color) (((uint32_t)color.r)<<16|((uint32_t)color.g)<<8|(uint32_t)color.b)
+
+#endif
+
+#ifdef TOTAL_CONTROL
+
+#include <TCL.h>
 
 #define TCL_CLOCKPIN 3
 #define TCL_DATAPIN  4
 
-#define LEDS  50
-
-void setup() {
-#ifdef Serial
-  Serial.begin(9600);
-  Serial.println("Starting");
 #endif
-  TCL.begin(TCL_CLOCKPIN, TCL_DATAPIN);
-  TCL.setAll(LEDS,0,0,0);
 
-  // initialize i2c as slave
-  Wire.begin(SLAVE_ADDRESS);
 
- // define callbacks for i2c communication
-  Wire.onReceive(receivedData);
-  Wire.onRequest(dataRequested);
-}
-
-int height = 2;
+int heights[2] = {2, 3};
+uint8_t receivePosition = 0;
 uint16_t wheelPos;
-
-void loop1() {
-  rainbowCycle(2);
-}
-
-void loop() {
-  // Color pixels based on rainbow gradient
-  RGB color = Wheel(wheelPos >> 2);
-  wheelPos++;
-  wheelPos %= (256 << 2);
-  TCL.sendEmptyFrame();
-  for (int i=0; i<2 ;i++) {
-    for (int x=0; x<LEDS/2; x++) {
-      if ((i == 0 && x < height) || (i == 1 && ((LEDS/2) - x - 1) < height)) {
-        TCL.sendColor(color.r, color.g, color.b);
-      } else {
-        TCL.sendColor(0, 0, 0);
-      }
-    }
-  }
-  TCL.sendEmptyFrame();
-
-}
 
 // callback for received data
 #if defined(__AVR_ATtiny85__)    // Trinket
@@ -79,17 +67,38 @@ void receivedData(int byteCount) {
 #ifdef Serial
     Serial.println(number);
 #endif
-    if (number == 0x55) {
-      height = 0;
-    } else {
-      height = number;
+    if (number == BUS_SYNC_COMMAND) {
+      receivePosition = 0;
+    } else if (receivePosition < 2) {
+      heights[receivePosition++] = number;
     }
   }
 }
 
 // callback for sending data
 void dataRequested(){
-  Wire.write(height);
+  Wire.write(BUS_SYNC_COMMAND);
+}
+
+void setup() {
+#ifdef Serial
+  Serial.begin(9600);
+  Serial.println("Starting");
+#endif
+#ifdef TOTAL_CONTROL
+  TCL.begin(TCL_CLOCKPIN, TCL_DATAPIN);
+  TCL.setAll(LEDS,0,0,0);
+#endif
+#ifdef BIG_LEDS
+  strip.begin();
+#endif
+
+  // initialize i2c as slave
+  Wire.begin(SLAVE_ADDRESS);
+
+ // define callbacks for i2c communication
+  Wire.onReceive(receivedData);
+  Wire.onRequest(dataRequested);
 }
 
 //Input a value 0 to 255 to get a color value.
@@ -109,6 +118,41 @@ RGB Wheel(byte WheelPos)
   }
 }
 
+void loop() {
+  // Color pixels based on rainbow gradient
+  RGB color = Wheel(wheelPos >> 2);
+  wheelPos++;
+  wheelPos %= (256 << 2);
+  
+#ifdef TOTAL_CONTROL
+  TCL.sendEmptyFrame();
+  for (int i=0; i<2 ;i++) {
+    for (int x=0; x<LEDS/2; x++) {
+      if ((i == 0 && x < heights[0]) || (i == 1 && ((LEDS/2) - x - 1) < heights[1])) {
+        TCL.sendColor(color.r, color.g, color.b);
+      } else {
+        TCL.sendColor(0, 0, 0);
+      }
+    }
+  }
+  TCL.sendEmptyFrame();
+#endif
+
+#ifdef BIG_LEDS
+  for (int i=0; i<2 ;i++) {
+    for (int x=0; x<LEDS/2; x++) {
+      if ((i == 0 && x < heights[0]) || (i == 1 && ((LEDS/2) - x - 1) < heights[1])) {
+        strip.setPixelColor(x+i*(LEDS/2), C(color));
+      } else {
+        strip.setPixelColor(x+i*(LEDS/2), 0);
+      }
+    }
+  }
+  strip.show();
+#endif
+}
+
+/*
 void rainbow(uint8_t wait) {
   int i, j;
    
@@ -142,4 +186,4 @@ void rainbowCycle(uint8_t wait) {
     delay(wait);
   }
 }
-
+*/
