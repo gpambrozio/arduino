@@ -6,8 +6,9 @@
 #define ANALOG_IN     A0
 #define VIBRATION     2
 
-#define INITIAL_VALUE  200
-#define THRESHOLD      0.70
+#define INITIAL_VALUE      200
+#define SENSOR_OPEN_LIMIT  1000
+#define THRESHOLD          0.70
 
 #define LOOP_SLEEP       50
 #define LOOP_LONG_SLEEP  5000
@@ -38,6 +39,8 @@ uint8_t *scratchData = (uint8_t*)&count;
 
 uint32_t debounce = 0;
 uint32_t startVibration = 0;
+boolean vibrating = false;
+boolean sentBatteryLow = false;
 
 void setup() {
   // initialize serial communications at 9600 bps:
@@ -76,7 +79,7 @@ void loop() {
   sensorValue = analogRead(ANALOG_IN);
   
   // Ignore anything too high
-  if (sensorValue < 1000) {
+  if (sensorValue < SENSOR_OPEN_LIMIT) {
     sensorRecentSum += sensorValue;
     if (++sensorSumCount == COUNT_LIMIT) {
       sensorRecentSum >>= RECENT_COUNT_PO2;
@@ -108,15 +111,24 @@ void loop() {
       Serial.println(String("count:") + String(count));
 
       startVibration = loopNumber;
+      vibrating = true;
       digitalWrite(VIBRATION, HIGH);
     } else if (!state) {
       counted = false;
     }
   }
   
-  uint16_t batteryV = Bean.getBatteryVoltage();
-  if (batteryV <= 210) {
-    Serial.println("battery:0");
+  // battery goes low while vibrating. Ignore it.
+  if (!vibrating) {
+    uint16_t batteryV = Bean.getBatteryVoltage();
+    if (batteryV <= 210) {
+      if (!sentBatteryLow) {
+        sentBatteryLow = true;
+        Serial.println("battery:0");
+      }
+    } else {
+      sentBatteryLow = false;
+    }
   }
   
   if (loopNumber >= nextPing) {
@@ -126,8 +138,9 @@ void loop() {
 
   updateScratchData();
 
-  if (sensorValue >= 1000 || loopNumber > startVibration + (1000 / LOOP_SLEEP)) {  
+  if (sensorValue >= SENSOR_OPEN_LIMIT || loopNumber > startVibration + (500 / LOOP_SLEEP)) {  
     digitalWrite(VIBRATION, LOW);
+    vibrating = false;
   }
   
   if (Serial.available()) {
@@ -146,8 +159,8 @@ void loop() {
     }
   }
 
-  Bean.sleep((sensorValue < 1000) ? LOOP_SLEEP : LOOP_LONG_SLEEP);
-  if (sensorValue < 1000) {
+  Bean.sleep((sensorValue < SENSOR_OPEN_LIMIT) ? LOOP_SLEEP : LOOP_LONG_SLEEP);
+  if (sensorValue < SENSOR_OPEN_LIMIT) {
     ++loopNumber;
   } else {
     loopNumber += LOOP_LONG_SLEEP / LOOP_SLEEP;
