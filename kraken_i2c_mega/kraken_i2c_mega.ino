@@ -13,8 +13,19 @@
 #include "Wire.h"
 #include "SPI.h"
 
-uint8_t receivePosition = 0;
-int receivedInput[NUMBER_OF_LIGHTS/8];
+typedef enum {
+  LedCommandInvalid = 0,
+  LedCommandLevel,        // Gets 1 byte: level
+  LedCommandPulse,        // Gets 2 bytes: time on, time off
+  LedCommandCount
+} LedCommand;
+
+#define MAX_COMMAND_BUFFER  10
+
+volatile uint8_t receivePosition = 0;
+volatile LedCommand command = LedCommandInvalid;
+volatile uint8_t receiveBuffer[MAX_COMMAND_BUFFER];
+volatile unsigned long pulsePosition = 0;
 
 // callback for received data
 void receivedData(int byteCount) {
@@ -22,8 +33,14 @@ void receivedData(int byteCount) {
     int number = Wire.read();
     if (number == BUS_SYNC_COMMAND) {
       receivePosition = 0;
-    } else if (receivePosition < (NUMBER_OF_LIGHTS / 8)) {
-      receivedInput[receivePosition++] = number;
+      command = LedCommandInvalid;
+    } else if (receivePosition == 0 && number >= 1 && number < LedCommandCount) {
+      command = (LedCommand)number;
+      receivePosition++;
+      pulsePosition = millis();
+    } else if (receivePosition <= MAX_COMMAND_BUFFER) {
+      receiveBuffer[receivePosition-1] = number;
+      receivePosition++;
     }
   }
 }
@@ -47,6 +64,11 @@ void setup() {
     pinMode(FIRST_LIGHT+x, OUTPUT);
   }
 
+  command = LedCommandPulse;
+  receiveBuffer[0] = 1;
+  receiveBuffer[1] = 10;
+  receivePosition = 2;
+
   // initialize i2c as slave
   Wire.begin(SLAVE_ADDRESS);
 
@@ -56,12 +78,35 @@ void setup() {
 }
 
 void loop() {
-  for(int i = 0; i < NUMBER_OF_LIGHTS / 8; i++) {
-    int number = receivedInput[i];
-    for(int x = 0; x < 8; x++) {
-      digitalWrite(FIRST_LIGHT + (i * 8) + x, (number & 1) == 1 ? LOW : HIGH);
-      number = number >> 1;
-    }
+  for(int x=0; x<NUMBER_OF_LIGHTS; x++) {
+    digitalWrite(FIRST_LIGHT+x, LOW);
+  }
+  delay(1000);
+}
+
+void loop1() {
+  switch(command) {
+    case LedCommandLevel:  // Gets 1 byte: level
+      if (receivePosition >= 1) {
+        int level = receiveBuffer[0];
+        for(int i = 0; i < NUMBER_OF_LIGHTS; i++) {
+          digitalWrite(FIRST_LIGHT + i, i < level ? LOW : HIGH);
+        }
+      }
+      break;
+      
+    case LedCommandPulse:
+      if (receivePosition >= 2) {
+        unsigned long span = (millis() - pulsePosition) / 100;
+        span %= (receiveBuffer[0] + receiveBuffer[1]);
+        int level = HIGH;
+        if (span < receiveBuffer[0])
+          level = LOW;
+        for(int i = 0; i < NUMBER_OF_LIGHTS; i++) {
+          digitalWrite(FIRST_LIGHT + i, level);
+        }
+      }
+      break;
   }
   delay(10);
 }
