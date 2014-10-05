@@ -8,7 +8,7 @@
 
 #define MOTOR         3
 #define MOTOR_MAX     255
-#define MOTOR_MIN     50
+#define MOTOR_MIN     42
 
 #define FIRST_BUTTON  5
 #define ANY_BUTTON    (FIRST_BUTTON+0)
@@ -32,7 +32,7 @@ void setup() {
   START_RADIO(radio, RADIO_MOBILE);
 }
 
-int motorPower = 0;
+int motorPower = MOTOR_MIN;
 unsigned long mirfData;
 byte inByte;
 byte buttonState = 0;
@@ -58,12 +58,12 @@ void loop() {
     
     // Button A
     if ((change & B1000) && (newButtonState & B1000)) {
-      SPEED_UP
+      SPEED_DOWN
     }
 
     // Button B
     if ((change & B0100) && (newButtonState & B0100)) {
-      SPEED_DOWN
+      SPEED_UP
     }
     
     // Button C
