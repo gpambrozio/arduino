@@ -18,20 +18,22 @@
 #include <LiquidCrystal.h>
 #include <Wire.h>
 
-#define START_HOUR        3
-
-// 1 = grass
-// 2 = drip
+// 1 = drip
+// 2 = grass
 
 #define DAYS_PERIOD_R1    3
-#define DAYS_PERIOD_R2    2
-#define MINUTES_R1       30
-#define MINUTES_R2       30
+#define DAYS_PERIOD_R2    1
+#define MINUTES_R1       15
+#define MINUTES_R2       5
+
+byte start1[] = {3};
+byte start2[] = {3, 9, 15, 21};
 
 #define clockAddress 0x68
 
 #define RELAY1   10
 #define RELAY2   11
+
 
 // initialize the library with the numbers of the interface pins
 LiquidCrystal lcd(3, 2, 6, 7, 8, 9);
@@ -149,6 +151,27 @@ int daysFromStartOfYear(byte day, byte month) {
   }
 }
 
+void check(byte force, byte starts[], byte startsSize, byte minutes, byte period, int output) {
+  boolean state = false;
+  if (force == 1) {
+    state = true;
+  } else if (force == 0 && minute < minutes && (daysFromStartOfYear(dayOfMonth, month) % period) == 0) {
+    for (byte i = 0; i < startsSize; i++) {
+      if (hour == starts[i]) {
+        state = true;
+        break;
+      }
+    }
+  }
+  if (state) {
+    digitalWrite(output, HIGH);
+    lcd.print("ON");
+  } else {
+    digitalWrite(output, LOW);
+    lcd.print("--");
+  }
+}
+
 void setup() {
   digitalWrite(RELAY1, LOW);
   digitalWrite(RELAY2, LOW);
@@ -246,23 +269,9 @@ void loop() {
   lcd.print(":");
   twoDigit(second);
   lcd.print(" ");
-  
-  if (forceR1 == 1 || (forceR1 == 0 && hour == START_HOUR && minute < MINUTES_R1 &&
-      (daysFromStartOfYear(dayOfMonth, month) % DAYS_PERIOD_R1) == 0)) {
-    digitalWrite(RELAY1, HIGH);
-    lcd.print("R1");
-  } else {
-    digitalWrite(RELAY1, LOW);
-    lcd.print("--");
-  }
+
+  check(forceR1, start1, sizeof(start1)/sizeof(byte), MINUTES_R1, DAYS_PERIOD_R1, RELAY1);
   lcd.print(" ");
-  if (forceR2 == 1 || (forceR2 == 0 && hour == START_HOUR && minute < MINUTES_R2 &&
-      (daysFromStartOfYear(dayOfMonth, month) % DAYS_PERIOD_R2) == 0)) {
-    digitalWrite(RELAY2, HIGH);
-    lcd.print("R2");
-  } else {
-    digitalWrite(RELAY2, LOW);
-    lcd.print("--");
-  }
+  check(forceR2, start2, sizeof(start2)/sizeof(byte), MINUTES_R2, DAYS_PERIOD_R2, RELAY2);
 }
 
