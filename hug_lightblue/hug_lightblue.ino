@@ -7,11 +7,14 @@
 #define VIBRATION     2
 
 #define INITIAL_VALUE      200
-#define SENSOR_OPEN_LIMIT  1000
-#define THRESHOLD          0.70
+#define SENSOR_OPEN_LIMIT  1024
+#define THRESHOLD          0.8
+#define HUG_ON_TIME        300
+#define HUG_OFF_TIME       1200
+#define VIBRATION_TIME     700
 
 #define LOOP_SLEEP       50
-#define LOOP_LONG_SLEEP  5000
+#define LOOP_LONG_SLEEP  500
 
 #define EEPROM_COUNT    0
 
@@ -61,7 +64,7 @@ void setup() {
   }
   sensorHistorySum = HISTORY_SIZE * INITIAL_VALUE;
   sensorHistoryAvg = INITIAL_VALUE;
-  sensorThreashold = (uint16_t)((float)INITIAL_VALUE * 0.75);
+  sensorThreashold = (uint16_t)((float)INITIAL_VALUE * THRESHOLD);
 
   updateScratchData();
 
@@ -92,13 +95,13 @@ void loop() {
       sensorSumCount = 0;
       sensorRecentSum = 0;
       sensorHistoryAvg = sensorHistorySum >> HISTORY_SIZE_PO2;
-      sensorThreashold = (uint16_t)((float)sensorHistoryAvg * 0.75);
+      sensorThreashold = (uint16_t)((float)sensorHistoryAvg * THRESHOLD);
     }
   }
   
   newState = (sensorValue < sensorThreashold);
   if (newState != prevState) {
-    debounce = loopNumber + (state ? 1200 : 500) / LOOP_SLEEP;
+    debounce = loopNumber + (state ? HUG_OFF_TIME : HUG_ON_TIME) / LOOP_SLEEP;
     prevState = newState;
   } else if (loopNumber > debounce) {
     state = newState;
@@ -138,7 +141,7 @@ void loop() {
 
   updateScratchData();
 
-  if (sensorValue >= SENSOR_OPEN_LIMIT || loopNumber > startVibration + (500 / LOOP_SLEEP)) {  
+  if (sensorValue >= SENSOR_OPEN_LIMIT || loopNumber > startVibration + (VIBRATION_TIME / LOOP_SLEEP)) {  
     digitalWrite(VIBRATION, LOW);
     vibrating = false;
   }
