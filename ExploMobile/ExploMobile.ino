@@ -18,6 +18,8 @@
 #define BUTTON_D      (FIRST_BUTTON+4)
 #define BUTTONS       5
 
+byte modes[] = {0, 47, 120, 170, 240};
+
 // Set up nRF24L01 radio on SPI bus plus pins 9 & 10
 // First = CE. Second = CS
 RF24 radio(2, 10);
@@ -37,11 +39,70 @@ unsigned long mirfData;
 byte inByte;
 byte buttonState = 0;
 long debounce = 0;
+int mode = -1;
+boolean bananas = false;
+long bananasTargetTime;
 
-#define SPEED_UP    { if (motorPower == 0) motorPower = MOTOR_MIN; else if (motorPower < MOTOR_MAX) motorPower++; Serial.println(motorPower); }
-#define SPEED_DOWN  { if (motorPower > MOTOR_MIN) motorPower--; else motorPower = 0; Serial.println(motorPower); };
+long rampTargetTime;
+long rampStartTime;
+byte rampStartMotor;
+byte rampTargetMotor;
+double rampMotorDelta;
+
+#define DEFAULT_RAMP    20    // Meaning this change in power per second
+
+#define SPEED_UP    { rampTargetTime = 0; mode = -1; bananas = false; if (motorPower == 0) motorPower = MOTOR_MIN; else if (motorPower < MOTOR_MAX) motorPower++; Serial.println(motorPower); }
+#define SPEED_DOWN  { rampTargetTime = 0; mode = -1; bananas = false; if (motorPower > MOTOR_MIN) motorPower--; else motorPower = 0; Serial.println(motorPower); };
+
+long rampChange(int motor) {
+  if (motor == motorPower) {
+    rampTargetTime = 0;
+    return millis();
+  }
+  rampStartMotor = motorPower;
+  rampTargetMotor = motor;
+
+  long time = (long)motor - (long)motorPower;
+  // Don' use any other operation inside of abs. See doc.
+  time = 1000 * abs(time) / DEFAULT_RAMP;
+
+  rampMotorDelta = (double)((int)rampTargetMotor - (int)rampStartMotor) / (double)time;
+  rampStartTime = millis();
+  rampTargetTime = rampStartTime + time;
+  Serial.print("New ramp ");
+  Serial.print(time);
+  Serial.print("ms ");
+  Serial.print(rampTargetMotor);
+  Serial.print("power ");
+  Serial.println(rampMotorDelta * 1000);
+  return rampTargetTime;
+}
+
+void bananasChange() {
+  bananasTargetTime = rampChange(random(MOTOR_MIN, MOTOR_MAX + 1)) + 5000;
+}
+
+void startBananas() {
+  Serial.println("Bananas");
+  mode = -1;
+  bananas = true;
+  randomSeed(millis());
+  bananasChange();
+}
 
 void loop() {
+  if (bananas && millis() > bananasTargetTime) {
+    bananasChange();
+  }
+  
+  if (rampTargetTime > 0 && rampTargetMotor != motorPower) {
+    long deltaTime = millis() - rampStartTime;
+    byte newMotorPower = rampStartMotor + (byte)(deltaTime * rampMotorDelta);
+    if (newMotorPower != motorPower) {
+      motorPower = newMotorPower;
+      Serial.println(motorPower);
+    }
+  }
   analogWrite(MOTOR, motorPower);
   
   byte newButtonState = 0;
@@ -68,18 +129,27 @@ void loop() {
     
     // Button C
     if ((change & B0010) && (newButtonState & B0010)) {
-      motorPower = 0;
-      Serial.println(motorPower);
+      startBananas();
     }
     
     // Button D
     if ((change & B0001) && (newButtonState & B0001)) {
-      motorPower = MOTOR_MAX;
-      Serial.println(motorPower);
+      bananas = false;
+      if (mode == -1) {
+        for (byte i=0;i<sizeof(modes)/sizeof(byte);i++) {
+          if (motorPower < modes[i]) {
+            mode = i;
+            break;
+          }
+        }
+      } else {
+        if (++mode >= sizeof(modes)/sizeof(byte)) mode = 0;
+      }
+      rampChange(modes[mode]);
     }
     
     buttonState = newButtonState;
-  } else if (buttonState & B10000) {
+  } else if (buttonState & B1100) {   // Only repeat for button A and B
     if (millis() - debounce > 50) {
       buttonState = 0;
     }
@@ -97,6 +167,16 @@ void loop() {
       case '-':
         Serial.println("Received -");
         SPEED_DOWN
+        break;
+        
+      case 'T':
+        mode = -1;
+        bananas = false;
+        rampChange(constrain((mirfData >> 8) & 0xFF, MOTOR_MIN, MOTOR_MAX));
+        break;
+        
+      case 'B':
+        startBananas();
         break;
         
       default:
