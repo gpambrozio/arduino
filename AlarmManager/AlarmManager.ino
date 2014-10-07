@@ -47,6 +47,14 @@ void press(int output)
   pinMode(output, INPUT);
 }
 
+void sendRadioData(int pipe)
+{
+  radio.stopListening();
+  radio.openWritingPipe(pipes[pipe]);
+  radio.write((byte *)&mirfData, sizeof(unsigned long));
+  radio.startListening();
+}
+
 void loop()
 {
   // if we get a valid byte, read analog ins:
@@ -72,10 +80,7 @@ void loop()
         mirfData += (inByte - '0');
         mirfData <<= 8;
         mirfData |= 1;
-        radio.stopListening();
-        radio.openWritingPipe(pipes[RADIO_DRAPE]);
-        radio.write((byte *)&mirfData, sizeof(unsigned long));
-        radio.startListening();
+        sendRadioData(RADIO_DRAPE);
         break;
         
       case 'C':
@@ -86,19 +91,32 @@ void loop()
         mirfData += (inByte - '0');
         mirfData <<= 8;
         mirfData |= 2;
-        radio.stopListening();
-        radio.openWritingPipe(pipes[RADIO_DRAPE]);
-        radio.write((byte *)&mirfData, sizeof(unsigned long));
-        radio.startListening();
+        sendRadioData(RADIO_DRAPE);
         break;
         
       case 'P':
         Serial.println("Received Panic");
         mirfData = 'P';
-        radio.stopListening();
-        radio.openWritingPipe(pipes[RADIO_ALARM]);
-        radio.write((byte *)&mirfData, sizeof(unsigned long));
-        radio.startListening();
+        sendRadioData(RADIO_ALARM);
+        break;
+        
+      case 'M':
+        Serial.println("Received Mobile");
+        inByte = Serial.read();
+        mirfData = (inByte - '0') * 100;
+        inByte = Serial.read();
+        mirfData += (inByte - '0') * 10;
+        inByte = Serial.read();
+        mirfData += (inByte - '0');
+        mirfData <<= 8;
+        mirfData |= 'T';
+        sendRadioData(RADIO_MOBILE);
+        break;
+        
+      case 'B':
+        Serial.println("Received Mobile Bananas");
+        mirfData = 'B';
+        sendRadioData(RADIO_MOBILE);
         break;
         
       default:
