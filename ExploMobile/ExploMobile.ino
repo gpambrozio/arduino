@@ -12,6 +12,11 @@
 #define MOTOR_MAX     255
 #define MOTOR_MIN     42
 
+#define START_TIME    9
+#define END_TIME      21
+
+#define AUTO_OFF      5   // in minutes
+
 #define FIRST_BUTTON  5
 #define ANY_BUTTON    (FIRST_BUTTON+0)
 #define BUTTON_A      (FIRST_BUTTON+1)
@@ -45,10 +50,14 @@ byte bcdToDec(byte val)
 // 1) Sets the date and time on the ds1307
 // 2) Starts the clock
 // 3) Sets hour mode to 24 hour clock
+// 4) DOW: 1 = Sun, 7 = Sat
 // Assumes you're passing in valid numbers, 
 // Probably need to put in checks for valid numbers.
 void setDateDs1307()                
 {
+  while (Serial.available() < 13) {
+    delay(1);
+  }
   // Use of (byte) type casting and ascii math to achieve result.  
   second = (byte) ((Serial.read() - '0') * 10 + (Serial.read() - '0')); 
   minute = (byte) ((Serial.read() - '0') *10 +  (Serial.read() - '0'));
@@ -185,8 +194,8 @@ void loop() {
     lastReportedMinute = minute;
   }
   
-  if ((hour >= 21 || hour < 8) && offTargetTime == 0 && motorPower != 0 && rampTargetMotor != 0) {
-    offTargetTime = millis() + 5 * 60000;
+  if ((hour >= END_TIME || hour < START_TIME) && offTargetTime == 0 && motorPower != 0 && rampTargetMotor != 0) {
+    offTargetTime = millis() + AUTO_OFF * 60000;
   }
   
   if (offTargetTime > 0 && millis() > offTargetTime) {
@@ -197,7 +206,7 @@ void loop() {
     sleeping = true;
   }
   
-  if (sleeping && hour >= 8) {
+  if (sleeping && hour >= START_TIME) {
     sleeping = false;
     startBananas();
   }
@@ -268,11 +277,10 @@ void loop() {
 
   if (Serial.available()) {  // Look for char in serial que and process if found
     int command = Serial.read();
-    Serial.print("Command: ");
-    Serial.println(command);  // Echo command CHAR in ascii that was sent
     switch (command) {
       case 'T':      //If command = "T" Set Date
         setDateDs1307();
+        Serial.println("time");
         getDateDs1307();
         printDateToSerial();
         break;
