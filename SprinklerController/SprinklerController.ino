@@ -55,10 +55,14 @@ byte bcdToDec(byte val)
 // 1) Sets the date and time on the ds1307
 // 2) Starts the clock
 // 3) Sets hour mode to 24 hour clock
+// 4) DOW: 1 = Sun, 7 = Sat
 // Assumes you're passing in valid numbers, 
 // Probably need to put in checks for valid numbers.
 void setDateDs1307()                
 {
+  while (Serial.available() < 13) {
+    delay(1);
+  }
   // Use of (byte) type casting and ascii math to achieve result.  
   second = (byte) ((Serial.read() - '0') * 10 + (Serial.read() - '0')); 
   minute = (byte) ((Serial.read() - '0') *10 +  (Serial.read() - '0'));
