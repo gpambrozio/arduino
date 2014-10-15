@@ -113,6 +113,16 @@ void loop()
         sendRadioData(RADIO_MOBILE);
         break;
         
+      case 'R':
+        Serial.println("Received Sprinkler");
+        mirfData = 'R';
+        inByte = Serial.read();
+        mirfData |= inByte << 8;
+        inByte = Serial.read();
+        mirfData |= ((unsigned long)inByte) << 16;
+        sendRadioData(RADIO_SPRINKLER);
+        break;
+        
       case 'B':
         Serial.println("Received Mobile Bananas");
         mirfData = 'B';

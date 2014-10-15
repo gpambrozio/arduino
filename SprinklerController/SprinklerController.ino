@@ -17,8 +17,12 @@
 // include the library code:
 #include <LiquidCrystal.h>
 #include <Wire.h>
+#include <SPI.h>
 
 #include "RTC.h"
+#include "RadioCommon.h"
+#include "nRF24L01.h"
+#include "RF24.h"
 
 // 1 = drip
 // 2 = grass
@@ -32,8 +36,11 @@ byte start1[] = {3};
 byte start2[] = {3, 9, 15, 21};
 
 #define RELAY1   10
-#define RELAY2   11
+#define RELAY2   14
 
+// Set up nRF24L01 radio on SPI bus plus pins 9 & 10
+// First = CE. Second = CS
+RF24 radio(5, 4);
 
 // initialize the library with the numbers of the interface pins
 LiquidCrystal lcd(3, 2, 6, 7, 8, 9);
@@ -100,20 +107,25 @@ void setup() {
   pinMode(RELAY1, OUTPUT);
   pinMode(RELAY2, OUTPUT);
   
+  Serial.begin(9600);
+  
   // set up the LCD's number of columns and rows: 
   lcd.begin(16, 2);
   
+  START_RADIO(radio, RADIO_SPRINKLER);
+
   RTCStart();
-  Serial.begin(9600);
-  
   RTCGetDateDs1307();
 }
 
 int command = 0;
 int aux1, aux2;
+byte inByte;
 
 byte forceR1 = 0;
 byte forceR2 = 0;
+
+unsigned long mirfData;
 
 void loop() {
   if (Serial.available()) {  // Look for char in serial que and process if found
@@ -139,7 +151,29 @@ void loop() {
     }
   }
 
-  command = 0;  // reset command                  
+  if (radio.available()) {
+    radio.read((byte *)&mirfData, sizeof(unsigned long));
+    inByte = mirfData & 0xFF;
+    Serial.print("Received data ");
+    Serial.print(inByte);
+    Serial.print(' ');
+    Serial.println(mirfData);
+    switch (inByte) {
+      case 'R':
+        aux1 = (mirfData >>  8) & 0xFF;
+        aux2 = (mirfData >> 16) & 0xFF;
+        Serial.print(aux1);
+        Serial.print(' ');
+        Serial.println(aux2);
+        if (aux1 == '1') {
+          forceR1 = aux2 == '1' ? 1 : aux2 == '0' ? 2 : 0;
+        } else if (aux1 == '2') {
+          forceR2 = aux2 == '1' ? 1 : aux2 == '0' ? 2 : 0;
+        }
+        break;
+    }
+  }
+
   delay(100);
 
   RTCGetDateDs1307();
