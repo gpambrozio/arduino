@@ -45,46 +45,55 @@ RF24 radio(5, 4);
 // initialize the library with the numbers of the interface pins
 LiquidCrystal lcd(3, 2, 6, 7, 8, 9);
 
-void twoDigit(byte x) {
+void twoDigit(int x) {
   if (x < 10)
     lcd.print("0");
   lcd.print(x);
 }
 
-int daysFromStartOfYear(byte day, byte month) {
+int daysFromStartOfYear() {
   switch(month) {
     case 1:
-      return day;
+      return dayOfMonth;
     case 2:
-      return 31+day;
+      return 31+dayOfMonth;
     case 3:
-      return 59+day;
+      return 59+dayOfMonth;
     case 4:
-      return 90+day;
+      return 90+dayOfMonth;
     case 5:
-      return 120+day;
+      return 120+dayOfMonth;
     case 6:
-      return 151+day;
+      return 151+dayOfMonth;
     case 7:
-      return 181+day;
+      return 181+dayOfMonth;
     case 8:
-      return 212+day;
+      return 212+dayOfMonth;
     case 9:
-      return 243+day;
+      return 243+dayOfMonth;
     case 10:
-      return 273+day;
+      return 273+dayOfMonth;
     case 11:
-      return 304+day;
+      return 304+dayOfMonth;
     case 12:
-      return 334+day;
+      return 334+dayOfMonth;
   }
 }
 
-void check(byte force, byte starts[], byte startsSize, byte minutes, byte period, int output) {
+void check(int *force, unsigned long *forceTime, byte starts[], byte startsSize, byte minutes, byte period, int output) {
   boolean state = false;
-  if (force == 1) {
+  if (*forceTime > 0 && millis() > *forceTime) {
+    *forceTime = 0;
+    if (*force > 0) *force = 0;
+  }
+  
+  if (*force == -1) {
     state = true;
-  } else if (force == 0 && minute < minutes && (daysFromStartOfYear(dayOfMonth, month) % period) == 0) {
+  } else if (*force == -2) {
+    state = false;
+  } else if (*forceTime > 0) {
+    state = ((*force) == 2) ? false : true;
+  } else if ((*force) == 0 && minute < minutes && (daysFromStartOfYear() % period) == 0) {
     for (byte i = 0; i < startsSize; i++) {
       if (hour == starts[i]) {
         state = true;
@@ -101,6 +110,15 @@ void check(byte force, byte starts[], byte startsSize, byte minutes, byte period
   }
 }
 
+int serial_putc( char c, FILE * )  {
+  Serial.write( c );
+  return c;
+}
+
+void printf_begin(void) {
+  fdevopen( &serial_putc, 0 );
+}
+
 void setup() {
   digitalWrite(RELAY1, LOW);
   digitalWrite(RELAY2, LOW);
@@ -108,22 +126,27 @@ void setup() {
   pinMode(RELAY2, OUTPUT);
   
   Serial.begin(9600);
-  
+  printf_begin();
+
   // set up the LCD's number of columns and rows: 
   lcd.begin(16, 2);
-  
-  START_RADIO(radio, RADIO_SPRINKLER);
 
   RTCStart();
   RTCGetDateDs1307();
+  
+  START_RADIO(radio, RADIO_SPRINKLER);
+  radio.printDetails();
 }
 
 int command = 0;
 int aux1, aux2;
 byte inByte;
 
-byte forceR1 = 0;
-byte forceR2 = 0;
+int forceR1 = 0;
+int forceR2 = 0;
+
+unsigned long forceT1 = 0;
+unsigned long forceT2 = 0;
 
 unsigned long mirfData;
 
@@ -143,9 +166,9 @@ void loop() {
         aux1 = Serial.read();
         aux2 = Serial.read();
         if (aux1 == '1') {
-          forceR1 = aux2 == '1' ? 1 : aux2 == '0' ? 2 : 0;
+          forceR1 = aux2 == '1' ? -1 : aux2 == '0' ? -2 : 0;
         } else if (aux1 == '2') {
-          forceR2 = aux2 == '1' ? 1 : aux2 == '0' ? 2 : 0;
+          forceR2 = aux2 == '1' ? -1 : aux2 == '0' ? -2 : 0;
         }
         break;
     }
@@ -166,9 +189,39 @@ void loop() {
         Serial.print(' ');
         Serial.println(aux2);
         if (aux1 == '1') {
-          forceR1 = aux2 == '1' ? 1 : aux2 == '0' ? 2 : 0;
+          forceR1 = aux2 == '1' ? -1 : aux2 == '0' ? -2 : 0;
         } else if (aux1 == '2') {
-          forceR2 = aux2 == '1' ? 1 : aux2 == '0' ? 2 : 0;
+          forceR2 = aux2 == '1' ? -1 : aux2 == '0' ? -2 : 0;
+        }
+        break;
+
+      case 'T':
+        aux1 = (mirfData >>  8) & 0xFF;
+        aux2 = (mirfData >> 16) & 0xFFFF;
+        Serial.print(aux1);
+        Serial.print(' ');
+        Serial.println(aux2);
+        if (aux1 == '1') {
+          forceR1 = 1;
+          forceT1 = millis() + (unsigned long)aux2 * 1000;
+        } else if (aux1 == '2') {
+          forceR2 = 1;
+          forceT2 = millis() + (unsigned long)aux2 * 1000;
+        }
+        break;
+
+      case 'D':
+        aux1 = (mirfData >>  8) & 0xFF;
+        aux2 = (mirfData >> 16) & 0xFFFF;
+        Serial.print(aux1);
+        Serial.print(' ');
+        Serial.println(aux2);
+        if (aux1 == '1') {
+          forceR1 = 2;
+          forceT1 = millis() + (unsigned long)aux2 * 60000;
+        } else if (aux1 == '2') {
+          forceR2 = 2;
+          forceT2 = millis() + (unsigned long)aux2 * 60000;
         }
         break;
     }
@@ -215,7 +268,7 @@ void loop() {
   lcd.print("/");
   twoDigit(year);
   lcd.print(" ");
-  twoDigit(daysFromStartOfYear(dayOfMonth, month));
+  twoDigit(daysFromStartOfYear());
 
   lcd.setCursor(0, 1);
   // print the number of seconds since reset:
@@ -226,8 +279,8 @@ void loop() {
   twoDigit(second);
   lcd.print(" ");
 
-  check(forceR1, start1, sizeof(start1)/sizeof(byte), MINUTES_R1, DAYS_PERIOD_R1, RELAY1);
+  check(&forceR1, &forceT1, start1, sizeof(start1)/sizeof(byte), MINUTES_R1, DAYS_PERIOD_R1, RELAY1);
   lcd.print(" ");
-  check(forceR2, start2, sizeof(start2)/sizeof(byte), MINUTES_R2, DAYS_PERIOD_R2, RELAY2);
+  check(&forceR2, &forceT2, start2, sizeof(start2)/sizeof(byte), MINUTES_R2, DAYS_PERIOD_R2, RELAY2);
 }
 

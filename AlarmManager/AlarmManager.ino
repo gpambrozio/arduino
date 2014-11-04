@@ -9,6 +9,7 @@
 #define AWAY_OUTPUT 12
 
 int inByte = 0;         // incoming serial byte
+int inByte2 = 0;
 unsigned long lastContactTime = 0;
 unsigned long mirfData;
 
@@ -120,6 +121,40 @@ void loop()
         mirfData |= inByte << 8;
         inByte = Serial.read();
         mirfData |= ((unsigned long)inByte) << 16;
+        sendRadioData(RADIO_SPRINKLER);
+        break;
+        
+      case 'T':
+        Serial.println("Received Sprinkler Time");
+        inByte2 = Serial.read();
+        inByte = Serial.read();
+        mirfData = (unsigned long)(inByte - '0') * 1000;
+        inByte = Serial.read();
+        mirfData += (unsigned long)(inByte - '0') * 100;
+        inByte = Serial.read();
+        mirfData += (unsigned long)(inByte - '0') * 10;
+        inByte = Serial.read();
+        mirfData += (unsigned long)(inByte - '0');
+        mirfData <<= 16;
+        mirfData |= inByte2 << 8;
+        mirfData |= 'T';
+        sendRadioData(RADIO_SPRINKLER);
+        break;
+        
+      case 'D':
+        Serial.println("Received Sprinkler Disable");
+        inByte2 = Serial.read();
+        inByte = Serial.read();
+        mirfData = (unsigned long)(inByte - '0') * 1000;
+        inByte = Serial.read();
+        mirfData += (unsigned long)(inByte - '0') * 100;
+        inByte = Serial.read();
+        mirfData += (unsigned long)(inByte - '0') * 10;
+        inByte = Serial.read();
+        mirfData += (unsigned long)(inByte - '0');
+        mirfData <<= 16;
+        mirfData |= inByte2 << 8;
+        mirfData |= 'D';
         sendRadioData(RADIO_SPRINKLER);
         break;
         
