@@ -1,10 +1,13 @@
 #include <Adafruit_NeoPixel.h>
+#include <avr/sleep.h>
+#include <avr/power.h>
 
-#define PIN 3
-#define BUTTON A1
+#define PIN    3
+#define BUTTON 2
 
 typedef enum {
-  ModeRainbow = 0,
+  ModeChippy = 0,
+  ModeRainbow,
   ModeRainbowCycle,
   ModeTheaterChaseRainbow,
   ModeBounce,
@@ -14,7 +17,7 @@ typedef enum {
   ModeCount
 } Mode;
 
-Mode currentMode = ModeRainbow;
+Mode currentMode = ModeChippy;
 
 // Parameter 1 = number of pixels in strip
 // Parameter 2 = Arduino pin number (most are valid)
@@ -32,7 +35,13 @@ Adafruit_NeoPixel strip = Adafruit_NeoPixel(16, PIN, NEO_GRB + NEO_KHZ800);
 
 void setup() {
   pinMode(A1, INPUT_PULLUP);
+
+  power_timer1_disable();    // Disable unused peripherals
+  power_adc_disable();       // to save power
+  attachInterrupt(0, wakeUpNow, LOW); // use interrupt 0 (pin 2) and run function
+                                      // wakeUpNow when pin 2 gets LOW 
   strip.begin();
+  strip.setBrightness(40);
   strip.show(); // Initialize all pixels to 'off'
 }
 
@@ -49,13 +58,18 @@ void loop() {
   }
 
   switch(currentMode) {
+    case ModeChippy:
+      chippy(15, counter++);
+      if (counter >= 256) counter = 0;
+      break;
+      
     case ModeRainbow:
-      rainbow(20, counter++);
+      rainbow(15, counter++);
       if (counter >= 256) counter = 0;
       break;
       
     case ModeRainbowCycle:
-      rainbowCycle(20, counter++);
+      rainbowCycle(15, counter++);
       if (counter >= 256 * 5) counter = 0;
       break;
       
@@ -87,7 +101,11 @@ void loop() {
         strip.setPixelColor(i, strip.Color(0, 0, 0));
       }
       strip.show();
-      delay(50);
+      while (digitalRead(BUTTON) == LOW) delay(10);
+      delay(10);
+      sleepNow();
+      currentMode = (Mode)0;
+
       break;
   }
 }
@@ -108,6 +126,19 @@ void rainbowCycle(uint8_t wait, uint16_t counter) {
 
   for(uint16_t i=0; i< strip.numPixels(); i++) {
     strip.setPixelColor(i, Wheel(((i * 256 / strip.numPixels()) + j) & 255));
+  }
+  strip.show();
+  delay(wait);
+}
+
+void chippy(uint8_t wait, uint16_t counter) {
+  uint16_t j = counter;
+
+  for(uint16_t i=0; i< strip.numPixels(); i++) {
+    if (i < 2 || i > 5)
+      strip.setPixelColor(i, Wheel(((i * 256 / (strip.numPixels()-5)) + j) & 255));
+    else 
+      strip.setPixelColor(i, 0);
   }
   strip.show();
   delay(wait);
@@ -169,5 +200,72 @@ uint32_t Wheel(byte WheelPos) {
    WheelPos -= 170;
    return strip.Color(0, WheelPos * 3, 255 - WheelPos * 3);
   }
+}
+
+void sleepNow()         // here we put the arduino to sleep
+{
+    /* Now is the time to set the sleep mode. In the Atmega8 datasheet
+     * http://www.atmel.com/dyn/resources/prod_documents/doc2486.pdf on page 35
+     * there is a list of sleep modes which explains which clocks and 
+     * wake up sources are available in which sleep modus.
+     *
+     * In the avr/sleep.h file, the call names of these sleep modus are to be found:
+     *
+     * The 5 different modes are:
+     *     SLEEP_MODE_IDLE         -the least power savings 
+     *     SLEEP_MODE_ADC
+     *     SLEEP_MODE_PWR_SAVE
+     *     SLEEP_MODE_STANDBY
+     *     SLEEP_MODE_PWR_DOWN     -the most power savings
+     *
+     * For now, we want as much power savings as possible, 
+     * so we choose the according sleep modus: SLEEP_MODE_PWR_DOWN
+     * 
+     */  
+    set_sleep_mode(SLEEP_MODE_PWR_DOWN);   // sleep mode is set here
+
+    sleep_enable();              // enables the sleep bit in the mcucr register
+                                 // so sleep is possible. just a safety pin 
+
+    /* Now is time to enable a interrupt. we do it here so an 
+     * accidentally pushed interrupt button doesn't interrupt 
+     * our running program. if you want to be able to run 
+     * interrupt code besides the sleep function, place it in 
+     * setup() for example.
+     * 
+     * In the function call attachInterrupt(A, B, C)
+     * A   can be either 0 or 1 for interrupts on pin 2 or 3.   
+     * 
+     * B   Name of a function you want to execute at interrupt for A.
+     *
+     * C   Trigger mode of the interrupt pin. can be:
+     *             LOW        a low level triggers
+     *             CHANGE     a change in level triggers
+     *             RISING     a rising edge of a level triggers
+     *             FALLING    a falling edge of a level triggers
+     *
+     * In all but the IDLE sleep modes only LOW can be used.
+     */
+
+    attachInterrupt(0, wakeUpNow, LOW);// use interrupt 0 (pin 2) and run function
+                                       // wakeUpNow when pin 2 gets LOW 
+
+    sleep_mode();                // here the device is actually put to sleep!!
+                                 // 
+
+    sleep_disable();             // first thing after waking from sleep:
+                                 // disable sleep...
+    detachInterrupt(0);          // disables interrupt 0 on pin 2 so the 
+                                 // wakeUpNow code will not be executed 
+                                 // during normal running time.
+    while (digitalRead(BUTTON) == LOW) delay(10);
+    delay(10);
+}
+
+void wakeUpNow()        // here the interrupt is handled after wakeup 
+{
+  //execute code here after wake-up before returning to the loop() function
+  // timers and code using timers (serial.print and more...) will not work here.
+  digitalWrite(BUTTON, HIGH);
 }
 
