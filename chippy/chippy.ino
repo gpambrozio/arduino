@@ -41,7 +41,7 @@ void setup() {
   attachInterrupt(0, wakeUpNow, LOW); // use interrupt 0 (pin 2) and run function
                                       // wakeUpNow when pin 2 gets LOW 
   strip.begin();
-  strip.setBrightness(40);
+  strip.setBrightness(32, 32, 100);
   strip.show(); // Initialize all pixels to 'off'
 }
 
