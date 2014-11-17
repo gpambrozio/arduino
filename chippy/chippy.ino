@@ -6,13 +6,14 @@
 #define BUTTON 2
 
 typedef enum {
-  ModeChippy = 0,
+  ModeChippyRandom = 0,
+  ModeRandom,
+  ModeChippy,
   ModeRainbow,
   ModeRainbowCycle,
   ModeTheaterChaseRainbow,
   ModeBounce,
   ModeJet,
-  ModeRandom,
   ModeOff,
   ModeCount
 } Mode;
@@ -58,6 +59,11 @@ void loop() {
   }
 
   switch(currentMode) {
+    case ModeChippyRandom: 
+      chippyRandom(15, counter++);
+      if (counter >= 256) counter = 0;
+      break;
+   
     case ModeChippy:
       chippy(15, counter++);
       if (counter >= 256) counter = 0;
@@ -137,6 +143,19 @@ void chippy(uint8_t wait, uint16_t counter) {
   for(uint16_t i=0; i< strip.numPixels(); i++) {
     if (i < 2 || i > 5)
       strip.setPixelColor(i, Wheel(((i * 256 / (strip.numPixels()-5)) + j) & 255));
+    else 
+      strip.setPixelColor(i, 0);
+  }
+  strip.show();
+  delay(wait);
+}
+
+void chippyRandom(uint8_t wait, uint16_t counter) {
+  uint16_t j = counter;
+
+  for(uint16_t i=0; i< strip.numPixels(); i++) {
+    if (i < 2 || i > 5)
+      strip.setPixelColor(i, Wheel(random(256)));
     else 
       strip.setPixelColor(i, 0);
   }
