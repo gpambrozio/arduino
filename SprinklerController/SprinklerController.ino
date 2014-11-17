@@ -29,11 +29,11 @@
 
 #define DAYS_PERIOD_R1    3
 #define DAYS_PERIOD_R2    1
-#define MINUTES_R1       15
-#define MINUTES_R2       5
+#define MINUTES_R1       (15 * 60)
+#define MINUTES_R2       (7 * 60)
 
 byte start1[] = {3};
-byte start2[] = {3, 9, 15, 21};
+byte start2[] = {3, 15};
 
 #define RELAY1   10
 #define RELAY2   14
@@ -80,7 +80,11 @@ int daysFromStartOfYear() {
   }
 }
 
-void check(int *force, unsigned long *forceTime, byte starts[], byte startsSize, byte minutes, byte period, int output) {
+unsigned long secondsIntoHour() {
+  return minute * 60 + second;
+}
+
+void check(int *force, unsigned long *forceTime, unsigned long *subtract, byte starts[], byte startsSize, int seconds, byte period, int output) {
   boolean state = false;
   if (*forceTime > 0 && millis() > *forceTime) {
     *forceTime = 0;
@@ -93,10 +97,14 @@ void check(int *force, unsigned long *forceTime, byte starts[], byte startsSize,
     state = false;
   } else if (*forceTime > 0) {
     state = ((*force) == 2) ? false : true;
-  } else if ((*force) == 0 && minute < minutes && (daysFromStartOfYear() % period) == 0) {
+  } else if ((*force) == 0 && (daysFromStartOfYear() % period) == 0) {
     for (byte i = 0; i < startsSize; i++) {
       if (hour == starts[i]) {
-        state = true;
+        if (secondsIntoHour() < (seconds - *subtract)) {
+          state = true;
+        } else {
+          *subtract = 0;
+        }
         break;
       }
     }
@@ -147,6 +155,9 @@ int forceR2 = 0;
 
 unsigned long forceT1 = 0;
 unsigned long forceT2 = 0;
+
+unsigned long subtractT1 = 0;
+unsigned long subtractT2 = 0;
 
 unsigned long mirfData;
 
@@ -203,10 +214,12 @@ void loop() {
         Serial.println(aux2);
         if (aux1 == '1') {
           forceR1 = 1;
-          forceT1 = millis() + (unsigned long)aux2 * 1000;
+          subtractT1 = (unsigned long)aux2;
+          forceT1 = millis() + subtractT1 * 1000;
         } else if (aux1 == '2') {
           forceR2 = 1;
-          forceT2 = millis() + (unsigned long)aux2 * 1000;
+          subtractT2 = (unsigned long)aux2;
+          forceT2 = millis() + subtractT2 * 1000;
         }
         break;
 
@@ -279,8 +292,8 @@ void loop() {
   twoDigit(second);
   lcd.print(" ");
 
-  check(&forceR1, &forceT1, start1, sizeof(start1)/sizeof(byte), MINUTES_R1, DAYS_PERIOD_R1, RELAY1);
+  check(&forceR1, &forceT1, &subtractT1, start1, sizeof(start1)/sizeof(byte), MINUTES_R1, DAYS_PERIOD_R1, RELAY1);
   lcd.print(" ");
-  check(&forceR2, &forceT2, start2, sizeof(start2)/sizeof(byte), MINUTES_R2, DAYS_PERIOD_R2, RELAY2);
+  check(&forceR2, &forceT2, &subtractT2, start2, sizeof(start2)/sizeof(byte), MINUTES_R2, DAYS_PERIOD_R2, RELAY2);
 }
 
