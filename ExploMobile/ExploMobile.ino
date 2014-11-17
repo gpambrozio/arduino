@@ -26,7 +26,7 @@
 #define BUTTON_D      (FIRST_BUTTON+4)
 #define BUTTONS       5
 
-byte modes[] = {0, 47, 120, 170, 240};
+byte modes[] = {0, 47, 120, 170, 255};
 
 // Set up nRF24L01 radio on SPI bus plus pins 9 & 10
 // First = CE. Second = CS
@@ -37,12 +37,13 @@ byte lastReportedMinute = 100;
 void setup() {
   digitalWrite(MOTOR, LOW);
   pinMode(MOTOR, OUTPUT);
-
+  
   RTCStart();
   Serial.begin(9600);           // set up Serial library at 9600 bps
-  Serial.println("Starting"); 
+  printf_begin();
 
   START_RADIO(radio, RADIO_MOBILE);
+  radio.printDetails();
 
   startBananas();
 }
@@ -65,10 +66,19 @@ double rampMotorDelta;
 
 boolean sleeping = false;
 
-#define DEFAULT_RAMP    20    // Meaning this change in power per second
+#define DEFAULT_RAMP    25    // Meaning this change in power per second
 
 #define SPEED_UP    { rampTargetTime = 0; mode = -1; bananas = false; if (motorPower == 0) motorPower = MOTOR_MIN; else if (motorPower < MOTOR_MAX) motorPower++; rampTargetMotor = motorPower; Serial.println(motorPower); }
 #define SPEED_DOWN  { rampTargetTime = 0; mode = -1; bananas = false; if (motorPower > MOTOR_MIN) motorPower--; else motorPower = 0; rampTargetMotor = motorPower; Serial.println(motorPower); };
+
+int serial_putc( char c, FILE * )  {
+  Serial.write( c );
+  return c;
+}
+
+void printf_begin(void) {
+  fdevopen( &serial_putc, 0 );
+}
 
 long rampChange(int motor) {
   if (motor == motorPower) {
