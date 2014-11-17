@@ -57,7 +57,7 @@ int mode = -1;
 boolean bananas = false;
 long bananasTargetTime;
 
-long offTargetTime;
+long offTargetTime = 0;
 long rampTargetTime;
 long rampStartTime;
 byte rampStartMotor;
@@ -124,10 +124,12 @@ void loop() {
   }
   
   if ((hour >= END_TIME || hour < START_TIME) && offTargetTime == 0 && motorPower != 0 && rampTargetMotor != 0) {
+    Serial.println("Auto-off on");
     offTargetTime = millis() + AUTO_OFF * 60000;
   }
   
   if (offTargetTime > 0 && millis() > offTargetTime) {
+    Serial.println("Auto-off");
     offTargetTime = 0;
     bananas = false;
     mode = -1;
@@ -135,7 +137,7 @@ void loop() {
     sleeping = true;
   }
   
-  if (sleeping && hour >= START_TIME) {
+  if (sleeping && hour == START_TIME) {
     sleeping = false;
     startBananas();
   }
@@ -249,12 +251,14 @@ void loop() {
         break;
         
       case 'T':
+        Serial.println("Received Speed");
         mode = -1;
         bananas = false;
         rampChange(constrain((mirfData >> 8) & 0xFF, MOTOR_MIN, MOTOR_MAX));
         break;
         
       case 'B':
+        Serial.println("Received Bananas");
         startBananas();
         break;
         
