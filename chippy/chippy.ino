@@ -1,3 +1,6 @@
+#include <Wire.h>
+#include <Adafruit_Sensor.h>
+#include <Adafruit_LSM303_U.h>
 #include <Adafruit_NeoPixel.h>
 #include <avr/sleep.h>
 #include <avr/power.h>
@@ -9,6 +12,8 @@ typedef enum {
   ModeChippyRandom = 0,
   ModeRandom,
   ModeChippy,
+  ModeGravity,
+  ModeAntiGravity,
   ModeRainbow,
   ModeRainbowCycle,
   ModeTheaterChaseRainbow,
@@ -18,7 +23,7 @@ typedef enum {
   ModeCount
 } Mode;
 
-Mode currentMode = ModeChippy;
+Mode currentMode = ModeChippyRandom;
 
 // Parameter 1 = number of pixels in strip
 // Parameter 2 = Arduino pin number (most are valid)
@@ -29,10 +34,24 @@ Mode currentMode = ModeChippy;
 //   NEO_RGB     Pixels are wired for RGB bitstream (v1 FLORA pixels, not v2)
 Adafruit_NeoPixel strip = Adafruit_NeoPixel(16, PIN, NEO_GRB + NEO_KHZ800);
 
-// IMPORTANT: To reduce NeoPixel burnout risk, add 1000 uF capacitor across
-// pixel power leads, add 300 - 500 Ohm resistor on first pixel's data input
-// and minimize distance between Arduino and first pixel.  Avoid connecting
-// on a live circuit...if you must, connect GND first.
+Adafruit_LSM303_Accel_Unified accel = Adafruit_LSM303_Accel_Unified(54321);
+Adafruit_LSM303_Mag_Unified mag = Adafruit_LSM303_Mag_Unified(12345);
+
+// Pi for calculations - not the raspberry type
+#define  Pi  3.14159
+#define increment (2 * Pi / 16) // distance between pixels in radians
+
+float pos = 8;  // Starting center position of pupil
+float MomentumH = 0; // horizontal component of pupil rotational inertia
+float MomentumV = 0; // vertical component of pupil rotational inertia
+
+// Tuning constants. (a.k.a. "Fudge Factors)  
+// These can be tweaked to adjust the liveliness and sensitivity of the eyes.
+#define friction 0.995   // frictional damping constant.  1.0 is no friction.
+#define swing    60.0    // arbitrary divisor for gravitational force
+#define gravity  200.0   // arbitrary divisor for lateral acceleration
+
+#define halfWidth  1.25 // half-width of pupil (in pixels)
 
 void setup() {
   pinMode(A1, INPUT_PULLUP);
@@ -41,6 +60,10 @@ void setup() {
   power_adc_disable();       // to save power
   attachInterrupt(0, wakeUpNow, LOW); // use interrupt 0 (pin 2) and run function
                                       // wakeUpNow when pin 2 gets LOW 
+  // Initialize the sensors
+  accel.begin();
+  mag.begin();
+
   strip.begin();
   strip.setBrightness(20, 32, 120);
   strip.show(); // Initialize all pixels to 'off'
@@ -60,7 +83,7 @@ void loop() {
 
   switch(currentMode) {
     case ModeChippyRandom: 
-      chippyRandom(15, counter++);
+      chippyRandom(100, counter++);
       if (counter >= 256) counter = 0;
       break;
    
@@ -113,6 +136,65 @@ void loop() {
       currentMode = (Mode)0;
 
       break;
+      
+    case ModeGravity:
+    case ModeAntiGravity:
+    {
+      sensors_event_t event; 
+      accel.getEvent(&event);
+
+      // apply a little frictional damping to keep things in control and prevent perpetual motion
+      MomentumH *= friction;
+      MomentumV *= friction;
+      
+      // Calculate the horizontal and vertical effect on the virtual pendulum
+      // 'pos' is a pixel address, so we multiply by 'increment' to get radians.
+      float TorqueH = cos(pos * increment);  // peaks at top and bottom of the swing
+      float TorqueV = sin(pos * increment);    // peaks when the pendulum is horizontal
+      
+      // Add the incremental acceleration to the existing momentum
+      // This code assumes that the accelerometer is mounted upside-down, level
+      // and with the X-axis pointed forward.  So the Y axis reads the horizontal
+      // acceleration and the inverse of the Z axis is gravity.
+      // For other orientations of the sensor, just change the axis to match.
+       
+      // This is horizontal acceleration
+      MomentumH -= TorqueH * event.acceleration.x / swing;
+       
+      // Below if vertical acceleration (gravity)
+      MomentumV += TorqueV * event.acceleration.y / gravity;
+      
+      // Calculate the new position
+      pos += MomentumH + MomentumV;
+       
+      // handle the wrap-arounds at the top
+      while (round(pos) < 0) pos += 16.0;
+      while (round(pos) > 15) pos -= 16.0;
+
+      if (++counter >= 1024) counter = 0;
+
+      // Now re-compute the display
+      for (int i = 0; i < 16; i++) {
+         // Compute the distance bewteen the pixel and the center
+         // point of the virtual pendulum.
+         float diff = fabs((float)i - pos);
+         if (diff > 8.0) diff = 16 - diff;  // wrap around
+
+         // Light up nearby pixels proportional to their proximity to 'pos'
+         if (diff <= halfWidth)  {
+            float proximity = (halfWidth - diff) * 200;
+
+            // pick a color based on heading & proximity to 'pos'
+            strip.setPixelColor(currentMode == ModeAntiGravity ? i : i < 8 ? i + 8 : i - 8, Wheel(counter >> 2, proximity));
+         } else {
+           // all others are off 
+           strip.setPixelColor(currentMode == ModeAntiGravity ? i : i < 8 ? i + 8 : i - 8, 0);
+         }
+      }
+      strip.show();
+      delay(1);
+      break;
+    }
   }
 }
 
@@ -218,6 +300,21 @@ uint32_t Wheel(byte WheelPos) {
   } else {
    WheelPos -= 170;
    return strip.Color(0, WheelPos * 3, 255 - WheelPos * 3);
+  }
+}
+
+// Input a value 0 to 255 to get a color value.
+// The colours are a transition r - g - b - back to r.
+uint32_t Wheel(uint16_t WheelPos, byte proximity) {
+  float p = (float)proximity / 255.0;
+  if(WheelPos < 85) {
+   return strip.Color(p * WheelPos * 3, p *(255 - WheelPos * 3), 0);
+  } else if(WheelPos < 170) {
+   WheelPos -= 85;
+   return strip.Color(p *(255 - WheelPos * 3), 0, p * WheelPos * 3);
+  } else {
+   WheelPos -= 170;
+   return strip.Color(0, p * WheelPos * 3, p * (255 - WheelPos * 3));
   }
 }
 
