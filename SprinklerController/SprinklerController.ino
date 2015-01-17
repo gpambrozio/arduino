@@ -84,19 +84,28 @@ unsigned long secondsIntoHour() {
   return minute * 60 + second;
 }
 
-void check(int *force, unsigned long *forceTime, unsigned long *subtract, byte starts[], byte startsSize, int seconds, byte period, int output) {
+void check(int *force, unsigned long *forceTimeOn, unsigned long *forceTimeOff, unsigned long *subtract, byte starts[], byte startsSize, int seconds, byte period, int output) {
   boolean state = false;
-  if (*forceTime > 0 && millis() > *forceTime) {
-    *forceTime = 0;
-    if (*force > 0) *force = 0;
+  boolean disabled = false;
+  if (*forceTimeOn > 0 && millis() > *forceTimeOn) {
+    *forceTimeOn = 0;
+  }
+  if (*forceTimeOff > 0 && millis() > *forceTimeOff) {
+    *forceTimeOff = 0;
   }
   
   if (*force == -1) {
     state = true;
   } else if (*force == -2) {
     state = false;
-  } else if (*forceTime > 0) {
-    state = ((*force) == 2) ? false : true;
+    disabled = true;
+    lcd.print("DS");
+  } else if (*forceTimeOn > 0) {
+    state = true;
+  } else if (*forceTimeOff > 0) {
+    disabled = true;
+    long disabledHours = (millis() - *forceTimeOff) / (60 * 60000);
+    twoDigit((int)disabledHours);
   } else if ((*force) == 0 && (daysFromStartOfYear() % period) == 0) {
     for (byte i = 0; i < startsSize; i++) {
       if (hour == starts[i]) {
@@ -114,7 +123,9 @@ void check(int *force, unsigned long *forceTime, unsigned long *subtract, byte s
     lcd.print("ON");
   } else {
     digitalWrite(output, LOW);
-    lcd.print("--");
+    if (!disabled) {
+      lcd.print("--");
+    }      
   }
 }
 
@@ -153,8 +164,11 @@ byte inByte;
 int forceR1 = 0;
 int forceR2 = 0;
 
-unsigned long forceT1 = 0;
-unsigned long forceT2 = 0;
+unsigned long forceOn1 = 0;
+unsigned long forceOn2 = 0;
+
+unsigned long forceOff1 = 0;
+unsigned long forceOff2 = 0;
 
 unsigned long subtractT1 = 0;
 unsigned long subtractT2 = 0;
@@ -196,7 +210,8 @@ void loop() {
       case 'R':
         aux1 = (mirfData >>  8) & 0xFF;
         aux2 = (mirfData >> 16) & 0xFF;
-        Serial.print(aux1);
+        Serial.print("Received relay ");
+        Serial.print((char)aux1);
         Serial.print(' ');
         Serial.println(aux2);
         if (aux1 == '1') {
@@ -209,32 +224,30 @@ void loop() {
       case 'T':
         aux1 = (mirfData >>  8) & 0xFF;
         aux2 = (mirfData >> 16) & 0xFFFF;
-        Serial.print(aux1);
+        Serial.print("Received time ");
+        Serial.print((char)aux1);
         Serial.print(' ');
         Serial.println(aux2);
         if (aux1 == '1') {
-          forceR1 = 1;
-          subtractT1 = (unsigned long)aux2;
-          forceT1 = millis() + subtractT1 * 1000;
+          subtractT1 += (unsigned long)aux2;
+          forceOn1 = millis() + (unsigned long)aux2 * 1000;
         } else if (aux1 == '2') {
-          forceR2 = 1;
-          subtractT2 = (unsigned long)aux2;
-          forceT2 = millis() + subtractT2 * 1000;
+          subtractT2 += (unsigned long)aux2;
+          forceOn2 = millis() + (unsigned long)aux2 * 1000;
         }
         break;
 
       case 'D':
         aux1 = (mirfData >>  8) & 0xFF;
         aux2 = (mirfData >> 16) & 0xFFFF;
-        Serial.print(aux1);
+        Serial.print("Received disable ");
+        Serial.print((char)aux1);
         Serial.print(' ');
         Serial.println(aux2);
         if (aux1 == '1') {
-          forceR1 = 2;
-          forceT1 = millis() + (unsigned long)aux2 * 60000;
+          forceOff1 = millis() + (unsigned long)aux2 * 60000;
         } else if (aux1 == '2') {
-          forceR2 = 2;
-          forceT2 = millis() + (unsigned long)aux2 * 60000;
+          forceOff2 = millis() + (unsigned long)aux2 * 60000;
         }
         break;
     }
@@ -292,8 +305,8 @@ void loop() {
   twoDigit(second);
   lcd.print(" ");
 
-  check(&forceR1, &forceT1, &subtractT1, start1, sizeof(start1)/sizeof(byte), MINUTES_R1, DAYS_PERIOD_R1, RELAY1);
+  check(&forceR1, &forceOn1, &forceOff1, &subtractT1, start1, sizeof(start1)/sizeof(byte), MINUTES_R1, DAYS_PERIOD_R1, RELAY1);
   lcd.print(" ");
-  check(&forceR2, &forceT2, &subtractT2, start2, sizeof(start2)/sizeof(byte), MINUTES_R2, DAYS_PERIOD_R2, RELAY2);
+  check(&forceR2, &forceOn2, &forceOff2, &subtractT2, start2, sizeof(start2)/sizeof(byte), MINUTES_R2, DAYS_PERIOD_R2, RELAY2);
 }
 
