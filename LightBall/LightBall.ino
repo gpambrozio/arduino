@@ -1,3 +1,7 @@
+/*
+ Based on this project: http://davidbliss.com/2014/11/18/transforming-sphere-lamp/
+ */
+
 #include <SPI.h>
 #include <Stepper.h>
 #include <EEPROM.h>
