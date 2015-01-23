@@ -11,10 +11,9 @@
 #include "RF24.h"
 
 #define SOUND_INPUT  A3
+#define EOM_INPUT    7
 #define FULL_MOVEMENT  14700
 #define INITIAL_SPEED 150
-
-#define EEPROM_STATE   0
 
 RF24 radio(9, 10);   // CE, CSN
 Stepper myStepper = Stepper(200, 4, 3, 5, 6);
@@ -40,15 +39,23 @@ void printf_begin(void) {
   fdevopen( &serial_putc, 0 );
 }
 
-void move(boolean shouldOpen) {
-  myStepper.step((shouldOpen ? 1 : -1) * FULL_MOVEMENT);
-  state = shouldOpen ? STATE_OPEN : STATE_CLOSE;
-  EEPROM.write(EEPROM_STATE, state);
+void close() {
+  myStepper.step(-FULL_MOVEMENT);
+  state = STATE_CLOSE;
+}
+
+void open() {
+  while (digitalRead(EOM_INPUT) != LOW) {
+    myStepper.step(100);
+  }
+  state = STATE_OPEN;
 }
 
 void setup() {
   Serial.begin(9600);
   printf_begin();
+  
+  pinMode(EOM_INPUT, INPUT_PULLUP);
   
   strip.begin();
   strip.show(); // Initialize all pixels to 'off'
@@ -58,8 +65,11 @@ void setup() {
   
   myStepper.setSpeed(INITIAL_SPEED);
 
-  state = EEPROM.read(EEPROM_STATE);
-  move(state != STATE_OPEN);
+  if (digitalRead(EOM_INPUT) != LOW) {
+    open();
+  } else {
+    close();
+  }
 }
 
 void loop() {
