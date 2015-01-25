@@ -12,5 +12,7 @@ void setup() {
 void loop() {
     myStepper.step(1024);
     delay(60000);
+    myStepper.step(-1024);
+    delay(60000);
 }
 
