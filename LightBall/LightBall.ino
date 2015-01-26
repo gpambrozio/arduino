@@ -5,19 +5,22 @@
 #include <SPI.h>
 #include <Stepper.h>
 #include <Adafruit_NeoPixel.h>
+#include <EEPROM.h>
 #include "RadioCommon.h"
 #include "nRF24L01.h"
 #include "RF24.h"
 
 #define SOUND_INPUT  A3
 #define EOM_INPUT    7
-#define FULL_MOVEMENT  14700
+#define FULL_MOVEMENT  14800
 #define INITIAL_SPEED 150
 
 #define DC_OFFSET  256  // DC offset in mic signal - if unusure, leave 0
 #define NOISE     10  // Noise/hum/interference in mic signal
 #define SAMPLES 16
 #define MAX_HEIGHT 255
+
+#define EEPROM_MODE  0
 
 RF24 radio(9, 10);   // CE, CSN
 Stepper myStepper = Stepper(200, 4, 3, 5, 6);
@@ -39,7 +42,7 @@ int height;
 uint16_t minLvl;
 uint16_t maxLvl;
 
-boolean openState;
+int stepperPosition = 0;
 unsigned long mirfData;
 
 typedef enum {
@@ -61,20 +64,32 @@ void printf_begin(void) {
 }
 
 void close() {
-  myStepper.step(-FULL_MOVEMENT);
-  openState = false;
+  move(-FULL_MOVEMENT);
 }
 
 void open() {
   while (digitalRead(EOM_INPUT) != LOW) {
     myStepper.step(100);
   }
-  openState = true;
+  stepperPosition = FULL_MOVEMENT;
+}
+
+void move(int steps) {
+  if (steps + stepperPosition < 0) {
+    steps = -stepperPosition;
+  } else if (steps + stepperPosition > FULL_MOVEMENT) {
+    steps = FULL_MOVEMENT - stepperPosition;
+  }
+  if (steps != 0) {
+    myStepper.step(steps);
+    stepperPosition += steps;
+  }
 }
 
 void changeMode(int newMode) {
   if (mode != newMode) {
     mode = newMode;
+    EEPROM.write(EEPROM_MODE, mode);
     switch(mode) {
       case LightModeSound:
         colorWipe(0);
@@ -88,6 +103,7 @@ void changeMode(int newMode) {
         break;
         
       case LightModeRainbow:
+        strip.setBrightness(255);
         currentColumn = 0;
         break;
         
@@ -118,9 +134,9 @@ void setup() {
   if (digitalRead(EOM_INPUT) != LOW) {
     open();
   } else {
-    close();
+    stepperPosition = FULL_MOVEMENT;
   }
-  changeMode(LightModeRainbow);
+  changeMode(EEPROM.read(EEPROM_MODE));
 }
 
 void loop() {
@@ -137,14 +153,14 @@ void loop() {
         myStepper.setSpeed(sp);
         break;
       }
-        
+
       case 'o':
       case 'c':
       {
         int steps = Serial.parseInt();
         Serial.print("Moving ");
         Serial.println(steps);
-        myStepper.step((inByte == 'c' ? -1 : 1) * steps);
+        move((inByte == 'c' ? -1 : 1) * steps);
         break;
       }
       
@@ -185,7 +201,7 @@ void loop() {
         unsigned long steps = ((mirfData >> 8) & 0xFFFF);
         Serial.print("Moving ");
         Serial.println(steps);
-        myStepper.step((inByte == 'c' ? -1 : 1) * steps);
+        move((inByte == 'c' ? -1 : 1) * steps);
         break;
       }
 
