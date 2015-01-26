@@ -164,6 +164,27 @@ void loop()
         sendRadioData(RADIO_MOBILE);
         break;
         
+      case 'L':
+        Serial.println("Received Light");
+        inByte = Serial.read();
+        if (inByte == 's') {
+          mirfData = 's';
+          sendRadioData(RADIO_LIGHTBALL);
+        } else if (inByte == 'l') {
+          mirfData = 'l';
+          sendRadioData(RADIO_LIGHTBALL);
+        } else if (inByte == 'r') {
+          mirfData = 'r';
+          sendRadioData(RADIO_LIGHTBALL);
+        } else if (inByte == 'o' || inByte == 'c') {
+          unsigned long steps = Serial.parseInt();
+          Serial.println(steps);
+          mirfData = (steps << 8) | inByte;
+          sendRadioData(RADIO_LIGHTBALL);
+        }
+      
+        break;
+        
       default:
         Serial.print("Received ");
         Serial.println(inByte);
