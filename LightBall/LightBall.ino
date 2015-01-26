@@ -105,20 +105,22 @@ void setup() {
   
   pinMode(EOM_INPUT, INPUT_PULLUP);
   
-  strip.begin();
-  colorWipe(strip.Color(255, 255, 255));
-
   START_RADIO(radio, RADIO_LIGHTBALL);
   radio.printDetails();
   
   myStepper.setSpeed(INITIAL_SPEED);
+
+  // Stabilize power, etc...
+  delay(100);
+  strip.begin();
+  colorWipe(strip.Color(255, 255, 255));
 
   if (digitalRead(EOM_INPUT) != LOW) {
     open();
   } else {
     close();
   }
-  changeMode(LightModeSound);
+  changeMode(LightModeRainbow);
 }
 
 void loop() {
@@ -168,6 +170,36 @@ void loop() {
     Serial.print(' ');
     Serial.println(mirfData);
     switch (inByte) {
+      case 'S':
+      {
+        unsigned long sp = ((mirfData >> 8) & 0xFFFF);
+        Serial.print("Setting speed to ");
+        Serial.println(sp);
+        myStepper.setSpeed(sp);
+        break;
+      }
+
+      case 'o':
+      case 'c':
+      {
+        unsigned long steps = ((mirfData >> 8) & 0xFFFF);
+        Serial.print("Moving ");
+        Serial.println(steps);
+        myStepper.step((inByte == 'c' ? -1 : 1) * steps);
+        break;
+      }
+
+      case 's':
+        changeMode(LightModeSound);
+        break;
+      
+      case 'l':
+        changeMode(LightModeLight);
+        break;
+      
+      case 'r':
+        changeMode(LightModeRainbow);
+        break;
     }
   }
   
