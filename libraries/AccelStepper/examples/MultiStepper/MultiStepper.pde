@@ -6,14 +6,14 @@
 // at the limits. Runs other steppers at the same time
 //
 // Copyright (C) 2009 Mike McCauley
-// $Id: HRFMessage.h,v 1.1 2009/08/15 05:32:58 mikem Exp mikem $
+// $Id: MultiStepper.pde,v 1.1 2011/01/05 01:51:01 mikem Exp mikem $
 
 #include <AccelStepper.h>
 
 // Define some steppers and the pins the will use
-AccelStepper stepper1; // Defaults to 4 pins on 2, 3, 4, 5
-AccelStepper stepper2(4, 6, 7, 8, 9);
-AccelStepper stepper3(2, 10, 11);
+AccelStepper stepper1; // Defaults to AccelStepper::FULL4WIRE (4 pins) on 2, 3, 4, 5
+AccelStepper stepper2(AccelStepper::FULL4WIRE, 6, 7, 8, 9);
+AccelStepper stepper3(AccelStepper::FULL2WIRE, 10, 11);
 
 void setup()
 {  

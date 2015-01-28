@@ -1,11 +1,9 @@
-// ConstantSpeed.pde
+// AFMotor_ConstantSpeed.pde
 // -*- mode: C++ -*-
 //
 // Shows how to run AccelStepper in the simplest,
 // fixed speed mode with no accelerations
 // Requires the AFMotor library (https://github.com/adafruit/Adafruit-Motor-Shield-library)
-// And AccelStepper with AFMotor support (https://github.com/adafruit/AccelStepper)
-// Public domain!
 
 #include <AccelStepper.h>
 #include <AFMotor.h>
@@ -28,6 +26,7 @@ void setup()
    Serial.begin(9600);           // set up Serial library at 9600 bps
    Serial.println("Stepper test!");
   
+   stepper.setMaxSpeed(50);	
    stepper.setSpeed(50);	
 }
 
