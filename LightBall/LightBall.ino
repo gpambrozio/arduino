@@ -21,6 +21,7 @@
 #define MAX_HEIGHT 255
 
 #define EEPROM_MODE  0
+#define EEPROM_BRIGHTNESS 1
 
 RF24 radio(9, 10);   // CE, CSN
 Stepper myStepper = Stepper(200, 4, 3, 5, 6);
@@ -43,6 +44,8 @@ uint16_t minLvl;
 uint16_t maxLvl;
 
 int stepperPosition = 0;
+int stepperGoal = 0;
+
 unsigned long mirfData;
 
 typedef enum {
@@ -53,6 +56,7 @@ typedef enum {
 } LightMode;
 
 int mode = LightModeCount;
+int brightness = 255;
 
 int serial_putc( char c, FILE * )  {
   Serial.write( c );
@@ -71,23 +75,27 @@ void open() {
   while (digitalRead(EOM_INPUT) != LOW) {
     myStepper.step(100);
   }
-  stepperPosition = FULL_MOVEMENT;
+  stepperPosition = stepperGoal = FULL_MOVEMENT;
 }
 
 void move(int steps) {
-  if (steps + stepperPosition < 0) {
-    steps = -stepperPosition;
-  } else if (steps + stepperPosition > FULL_MOVEMENT) {
-    steps = FULL_MOVEMENT - stepperPosition;
-  }
-  if (steps != 0) {
-    myStepper.step(steps);
-    stepperPosition += steps;
+  stepperGoal = stepperPosition + steps;
+  if (stepperGoal < 0) {
+    stepperGoal = 0;
+  } else if (stepperGoal > FULL_MOVEMENT) {
+    stepperGoal = FULL_MOVEMENT;
   }
 }
 
-void changeMode(int newMode) {
-  if (mode != newMode) {
+void setBrightness(int b) {
+  brightness = b;
+  strip.setBrightness(brightness);
+  strip.show();
+  EEPROM.write(EEPROM_BRIGHTNESS, brightness);
+}
+
+void changeMode(int newMode, boolean force) {
+  if (mode != newMode || force) {
     mode = newMode;
     EEPROM.write(EEPROM_MODE, mode);
     switch(mode) {
@@ -103,12 +111,10 @@ void changeMode(int newMode) {
         break;
         
       case LightModeRainbow:
-        strip.setBrightness(255);
         currentColumn = 0;
         break;
         
       case LightModeLight:
-        strip.setBrightness(255);
         colorWipe(strip.Color(255, 255, 255));
         break;
     }
@@ -116,6 +122,9 @@ void changeMode(int newMode) {
 }
 
 void setup() {
+  // Stabilize power, etc...
+  delay(200);
+
   Serial.begin(9600);
   printf_begin();
   
@@ -126,20 +135,29 @@ void setup() {
   
   myStepper.setSpeed(INITIAL_SPEED);
 
-  // Stabilize power, etc...
-  delay(100);
   strip.begin();
-  colorWipe(strip.Color(255, 255, 255));
 
   if (digitalRead(EOM_INPUT) != LOW) {
     open();
   } else {
-    stepperPosition = FULL_MOVEMENT;
+    stepperPosition = stepperGoal = FULL_MOVEMENT;
   }
-  changeMode(EEPROM.read(EEPROM_MODE));
+  setBrightness(EEPROM.read(EEPROM_BRIGHTNESS));
+  changeMode(EEPROM.read(EEPROM_MODE), true);
 }
 
 void loop() {
+  if (stepperGoal != stepperPosition) {
+    int steps = stepperGoal - stepperPosition;
+    if (steps < -10) {
+      steps = -10;
+    } else if (steps > 10) {
+      steps = 10;
+    }
+    myStepper.step(steps);
+    stepperPosition += steps;
+  }
+
   if (Serial.available()) {  // Look for char in serial que and process if found
     inByte = Serial.read();
     Serial.print("Command: ");
@@ -165,15 +183,17 @@ void loop() {
       }
       
       case 's':
-        changeMode(LightModeSound);
+        changeMode(LightModeSound, false);
         break;
       
       case 'l':
-        changeMode(LightModeLight);
+        setBrightness(255);
+        changeMode(LightModeLight, true);
         break;
       
       case 'r':
-        changeMode(LightModeRainbow);
+        setBrightness(255);
+        changeMode(LightModeRainbow, true);
         break;
     }
   }
@@ -206,15 +226,19 @@ void loop() {
       }
 
       case 's':
-        changeMode(LightModeSound);
+        changeMode(LightModeSound, false);
         break;
       
       case 'l':
-        changeMode(LightModeLight);
+      {
+        setBrightness(((mirfData >> 8) & 0xFF));
+        changeMode(LightModeLight, true);
         break;
+      }
       
       case 'r':
-        changeMode(LightModeRainbow);
+        setBrightness(((mirfData >> 8) & 0xFF));
+        changeMode(LightModeRainbow, true);
         break;
     }
   }
