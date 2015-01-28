@@ -171,14 +171,15 @@ void loop()
           mirfData = 's';
           sendRadioData(RADIO_LIGHTBALL);
         } else if (inByte == 'l') {
-          mirfData = 'l';
+          unsigned long brightness = Serial.parseInt();
+          mirfData = (brightness << 8) | inByte;
           sendRadioData(RADIO_LIGHTBALL);
         } else if (inByte == 'r') {
-          mirfData = 'r';
+          unsigned long brightness = Serial.parseInt();
+          mirfData = (brightness << 8) | inByte;
           sendRadioData(RADIO_LIGHTBALL);
         } else if (inByte == 'o' || inByte == 'c') {
           unsigned long steps = Serial.parseInt();
-          Serial.println(steps);
           mirfData = (steps << 8) | inByte;
           sendRadioData(RADIO_LIGHTBALL);
         }
