@@ -246,7 +246,6 @@ void loop() {
   switch (mode) {
     case LightModeSound:
       height   = analogRead(SOUND_INPUT);                        // Raw reading from mic
-//      Serial.println(height);
       height   = abs(height - DC_OFFSET); // Center on zero
       height   = (height <= NOISE) ? 0 : (height - NOISE);             // Remove noise/hum
       lvl = ((lvl * 7) + height) >> 3;    // "Dampened" reading (else looks twitchy)
@@ -259,11 +258,10 @@ void loop() {
       if(height < 0L)       height = 0;      // Clip output
       else if(height > MAX_HEIGHT) height = MAX_HEIGHT;
     
-      strip.setPixelColor(currentColumn, Wheel(height));
       strip.setBrightness(height);
-      strip.show();
-      if (++currentColumn >= strip.numPixels()) currentColumn = 0;
-    
+      rainbowCycle(currentColumn);
+      if (++currentColumn >= 255 * 5) currentColumn = 0;
+
       // Get volume range of prior frames
       minLvl = maxLvl = vol[0];
     
@@ -284,8 +282,9 @@ void loop() {
       break;
       
     case LightModeRainbow:
-      rainbowCycle(5, currentColumn);
+      rainbowCycle(currentColumn);
       if (++currentColumn >= 255 * 5) currentColumn = 0;
+      delay(5);
       break;
       
     case LightModeLight:
@@ -318,14 +317,13 @@ uint32_t Wheel(byte WheelPos) {
 }
 
 // Slightly different, this makes the rainbow equally distributed throughout
-void rainbowCycle(uint8_t wait, uint16_t j) {
+void rainbowCycle(uint16_t j) {
   uint16_t i;
 
   for(i=0; i< strip.numPixels(); i++) {
     strip.setPixelColor(i, Wheel(((i * 256 / strip.numPixels()) + j) & 255));
   }
   strip.show();
-  delay(wait);
 }
 
 
