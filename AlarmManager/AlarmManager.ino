@@ -25,9 +25,6 @@ void setup()
 
   // start serial port at 9600 bps:
   Serial.begin(9600);
-  while (!Serial) {
-    ; // wait for serial port to connect. Needed for Leonardo only
-  }
 
   //
   // Setup and configure rf radio
@@ -175,6 +172,10 @@ void loop()
           mirfData = (brightness << 8) | inByte;
           sendRadioData(RADIO_LIGHTBALL);
         } else if (inByte == 'r') {
+          unsigned long brightness = Serial.parseInt();
+          mirfData = (brightness << 8) | inByte;
+          sendRadioData(RADIO_LIGHTBALL);
+        } else if (inByte == 'p') {
           unsigned long brightness = Serial.parseInt();
           mirfData = (brightness << 8) | inByte;
           sendRadioData(RADIO_LIGHTBALL);

@@ -15,6 +15,8 @@
 #define FULL_MOVEMENT  14800
 #define INITIAL_SPEED 150
 
+#define PI_2   (6.28318530718)
+
 #define DC_OFFSET  256  // DC offset in mic signal - if unusure, leave 0
 #define NOISE     10  // Noise/hum/interference in mic signal
 #define SAMPLES 16
@@ -22,6 +24,7 @@
 
 #define EEPROM_MODE  0
 #define EEPROM_BRIGHTNESS 1
+#define EEPROM_PULSE_DURATION 3
 
 RF24 radio(9, 10);   // CE, CSN
 Stepper myStepper = Stepper(200, 4, 3, 5, 6);
@@ -34,6 +37,8 @@ int vol[SAMPLES];
 
 uint8_t volCount;    // Frame counter for storing past volume data
 uint8_t currentColumn;
+int pulseDuration;
+unsigned long pulseStart;
 
 int lvl;          // Current "dampened" audio level
 int minLvlAvg;    // For dynamic adjustment of graph low & high
@@ -52,6 +57,7 @@ typedef enum {
     LightModeSound = 0,
     LightModeRainbow,
     LightModeLight,
+    LightModePulse,
     LightModeCount,
 } LightMode;
 
@@ -117,6 +123,13 @@ void changeMode(int newMode, boolean force) {
       case LightModeLight:
         colorWipe(strip.Color(255, 255, 255));
         break;
+        
+      case LightModePulse:
+        setBrightness(0);
+        colorWipe(strip.Color(255, 255, 255));
+        currentColumn = 0;
+        pulseStart = millis();
+        break;
     }
   }
 }
@@ -142,6 +155,7 @@ void setup() {
   } else {
     stepperPosition = stepperGoal = FULL_MOVEMENT;
   }
+  pulseDuration = EEPROM.read(EEPROM_PULSE_DURATION) * 100;
   setBrightness(EEPROM.read(EEPROM_BRIGHTNESS));
   changeMode(EEPROM.read(EEPROM_MODE), true);
 }
@@ -195,6 +209,13 @@ void loop() {
         setBrightness(255);
         changeMode(LightModeRainbow, true);
         break;
+        
+      case 'p':
+        pulseDuration = Serial.parseInt();
+        EEPROM.write(EEPROM_PULSE_DURATION, pulseDuration);
+        pulseDuration *= 100; // Input is in tenths of a second
+        changeMode(LightModePulse, false);
+        break;
     }
   }
 
@@ -239,6 +260,13 @@ void loop() {
       case 'r':
         setBrightness(((mirfData >> 8) & 0xFF));
         changeMode(LightModeRainbow, true);
+        break;
+
+      case 'p':
+        pulseDuration = ((mirfData >> 8) & 0xFFFF);
+        EEPROM.write(EEPROM_PULSE_DURATION, pulseDuration);
+        pulseDuration *= 100; // Input is in tenths of a second
+        changeMode(LightModePulse, false);
         break;
     }
   }
@@ -289,6 +317,13 @@ void loop() {
       
     case LightModeLight:
       // Nothing to do really
+      delay(10);
+      break;
+      
+    case LightModePulse:
+      float angle = PI_2 * 2.0 * ((float)(millis() - pulseStart) / (float)pulseDuration);
+      setBrightness((int)(127.0 * (1.0 + cos(angle))));
+      colorWipe(strip.Color(255, 255, 255));
       break;
   }
 }
