@@ -15,7 +15,7 @@
 #define FULL_MOVEMENT  14800
 #define INITIAL_SPEED 150
 
-#define PI_2   (6.28318530718)
+#define PI   (3.14159265359)
 
 #define DC_OFFSET  256  // DC offset in mic signal - if unusure, leave 0
 #define NOISE     10  // Noise/hum/interference in mic signal
@@ -201,12 +201,12 @@ void loop() {
         break;
       
       case 'l':
-        setBrightness(255);
+        setBrightness(Serial.parseInt());
         changeMode(LightModeLight, true);
         break;
       
       case 'r':
-        setBrightness(255);
+        setBrightness(Serial.parseInt());
         changeMode(LightModeRainbow, true);
         break;
         
@@ -321,7 +321,7 @@ void loop() {
       break;
       
     case LightModePulse:
-      float angle = PI_2 * 2.0 * ((float)(millis() - pulseStart) / (float)pulseDuration);
+      float angle = PI + PI * 4.0 * ((float)(millis() - pulseStart) / (float)pulseDuration);
       setBrightness((int)(127.0 * (1.0 + cos(angle))));
       colorWipe(strip.Color(255, 255, 255));
       break;
