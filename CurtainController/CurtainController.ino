@@ -33,7 +33,7 @@ void setup() {
   AFMS.begin();  // create with the default frequency 1.6KHz
   
   myMotor->setSpeed(255);
-  position = EEPROM.read(EEPROM_POSITION);
+  position = min(FULL_MOTION, max(0, EEPROM.read(EEPROM_POSITION)));
 }
 
 void setPosition(int pos) {
@@ -43,6 +43,13 @@ void setPosition(int pos) {
 
 void move(int direction, int turns) {
   myMotor->run(direction);
+  int positionSignal = (direction == DIRECTION_DOWN) ? 1 : -1;
+  int finalPosition = position + turns * positionSignal;
+  if (finalPosition < 0) {
+    turns = position;
+  } else if (finalPosition > FULL_MOTION) {
+    turns = FULL_MOTION - position;
+  }
   while (turns > 0) {
     while(digitalRead(ROTATION_SENSOR) == HIGH) {
       delay(10);
@@ -51,7 +58,7 @@ void move(int direction, int turns) {
       delay(10);
     }
     turns--;
-    setPosition(position + ((direction == FORWARD) ? 1 : -1));
+    setPosition(position + positionSignal);
   }
   delay(OFF_DELAY);
   myMotor->run(RELEASE);
@@ -59,7 +66,7 @@ void move(int direction, int turns) {
 
 void loop() {
   if (digitalRead(BUTTON) == HIGH) {
-    if (position == 0) {
+    if (position <= 0) {
       move(DIRECTION_DOWN, FULL_MOTION);
     } else {
       move(DIRECTION_UP, FULL_MOTION);
