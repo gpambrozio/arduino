@@ -13,7 +13,7 @@ int inByte2 = 0;
 unsigned long lastContactTime = 0;
 unsigned long mirfData;
 
-RF24 radio(2,3);
+RF24 radio(2, 3);  // CE, CSN
 
 void setup()
 {
@@ -186,6 +186,22 @@ void loop()
         }
       
         break;
+        
+      case 'c':
+      {
+        unsigned long motorPosition = Serial.parseInt();
+        unsigned long motor = motorPosition % 10;
+        unsigned long position = motorPosition / 10;
+        if (motor < 4) {
+          mirfData = (motor << 8) | (position << 16) | 'M';
+          sendRadioData(RADIO_CURTAIN1);
+        } else if (motor < 6) {
+          mirfData = ((motor-4) << 8) | (position << 16) | 'M';
+          sendRadioData(RADIO_CURTAIN1);
+        }
+        
+        break;
+      }
         
       default:
         Serial.print("Received ");

@@ -103,15 +103,9 @@ void setPosition(int motor, int pos) {
   }
 }
 
-void move(byte motor, int direction, int turns) {
-  int finalPosition = positions[motor] + turns * direction;
-  if (finalPosition < 0) {
-    finalPosition = 0;
-  } else if (finalPosition > FULL_MOTION) {
-    finalPosition = FULL_MOTION;
-  }
-  
+void moveTo(byte motor, int finalPosition) {
   if (finalPosition != positions[motor]) {
+    int direction = (finalPosition > positions[motor]) ? DIRECTION_DOWN : DIRECTION_UP;
     targetPositions[motor] = finalPosition;
     printf_P(PSTR("Motor %d will move %c from %d to %d\n"), motor, (direction == DIRECTION_DOWN) ? 'D' : 'U', positions[motor], targetPositions[motor]);
     
@@ -127,6 +121,17 @@ void move(byte motor, int direction, int turns) {
   } else {
     printf_P(PSTR("Motor %d will not move. Position is %d\n"), motor, positions[motor]);
   }
+}
+
+void move(byte motor, int direction, int turns) {
+  int finalPosition = positions[motor] + turns * direction;
+  if (finalPosition < 0) {
+    finalPosition = 0;
+  } else if (finalPosition > FULL_MOTION) {
+    finalPosition = FULL_MOTION;
+  }
+  
+  moveTo(motor, finalPosition);
 }
 
 void loop() {
@@ -179,6 +184,11 @@ void loop() {
         move(Serial.parseInt(), Serial.parseInt(), Serial.parseInt());
         break;
       }
+      case 'M':
+      {
+        moveTo(Serial.parseInt(), Serial.parseInt());
+        break;
+      }
       case 'p':
       {
         int motor = Serial.parseInt();
@@ -192,7 +202,7 @@ void loop() {
   if (radio.available()) {
     radio.read((byte *)&mirfData, sizeof(unsigned long));
     inByte = mirfData & 0xFF;
-    printf_P(PSTR("Received radio %04x command %c\n"), mirfData, inByte);
+    printf_P(PSTR("Received radio %08x command %c\n"), mirfData, inByte);
     switch (inByte) {
       case 'm':
       {
@@ -200,6 +210,13 @@ void loop() {
         int direction = ((mirfData >> 16) & 0xFF) ? DIRECTION_DOWN : DIRECTION_UP;
         int turns = (mirfData >> 24) & 0xFF;
         move(motor, direction, turns);
+        break;
+      }
+      case 'M':
+      {
+        byte motor = (mirfData >>  8) & 0xFF;
+        int position = (mirfData >> 16) & 0xFF;
+        moveTo(motor, position);
         break;
       }
       case 'p':
