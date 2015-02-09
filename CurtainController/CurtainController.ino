@@ -23,8 +23,8 @@
 #define RADIO_CSN         10
 
 static int ROTATION_SENSORS[MOTORS]   = {A0, A1, A2, A3};
-static int MOTOR_PWMS[MOTORS]         = { 9,  6,  5,  3};
-static int MOTOR_DIRECTIONS[MOTORS*2] = {A4, A5,  4,  4,  7,  7,  2,  2};
+static int MOTOR_PWMS[MOTORS]         = { 9,  5,  6,  3};
+static int MOTOR_DIRECTIONS[MOTORS*2] = {A4, A4, A5, A5,  4,  7,  2,  2};
 
 #else
 
@@ -47,10 +47,11 @@ static int MOTOR_DIRECTIONS[MOTORS*2] = {A4, A5,  4,  7};
 
 #define EEPROM_POSITION 0
 
+RF24 radio(RADIO_CE, RADIO_CSN);
+
 int positions[MOTORS];
 int targetPositions[MOTORS];
 byte directionMask = 0xFF;
-RF24 radio(RADIO_CE, RADIO_CSN);
 
 volatile byte pinStates = 0;
 byte currentPinState = 0;
@@ -71,14 +72,9 @@ void printf_begin(void) {
 }
 
 void setup() {
-  Serial.begin(9600);           // set up Serial library at 9600 bps
-  printf_begin();
-  Serial.println("Starting");
-  
   for (int i=0;i<MOTORS;i++) {
     pinMode(ROTATION_SENSORS[i], INPUT_PULLUP);
     pciSetup(ROTATION_SENSORS[i]);
-    analogWrite(MOTOR_PWMS[i], 0);
     digitalWrite(MOTOR_PWMS[i], LOW);
     digitalWrite(MOTOR_DIRECTIONS[i*2+0], LOW);
     digitalWrite(MOTOR_DIRECTIONS[i*2+1], LOW);
@@ -88,6 +84,10 @@ void setup() {
     positions[i] = targetPositions[i] = min(FULL_MOTION, max(0, EEPROM.read(EEPROM_POSITION+i)));
   }
 
+  Serial.begin(9600);           // set up Serial library at 9600 bps
+  printf_begin();
+  Serial.println("Starting");
+  
   START_RADIO(radio, RADIO_CURTAIN);
   radio.printDetails();
   for (int i=0;i<MOTORS;i++) {
@@ -175,11 +175,17 @@ void loop() {
     printf_P(PSTR("Command %c\n"), inByte);
     switch (inByte) {
       case 'm':
+      {
         move(Serial.parseInt(), Serial.parseInt(), Serial.parseInt());
         break;
-        
-      default:
+      }
+      case 'p':
+      {
+        int motor = Serial.parseInt();
+        setPosition(motor, Serial.parseInt());
+        targetPositions[motor] = positions[motor];
         break;
+      }
     }
   }
 
@@ -188,8 +194,22 @@ void loop() {
     inByte = mirfData & 0xFF;
     printf_P(PSTR("Received radio %04x command %c\n"), mirfData, inByte);
     switch (inByte) {
-      default:
+      case 'm':
+      {
+        byte motor = (mirfData >>  8) & 0xFF;
+        int direction = ((mirfData >> 16) & 0xFF) ? DIRECTION_DOWN : DIRECTION_UP;
+        int turns = (mirfData >> 24) & 0xFF;
+        move(motor, direction, turns);
         break;
+      }
+      case 'p':
+      {
+        byte motor = (mirfData >>  8) & 0xFF;
+        int position = (mirfData >> 16) & 0xFF;
+        setPosition(motor, position);
+        targetPositions[motor] = positions[motor];
+        break;
+      }
     }
   }
 }
