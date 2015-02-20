@@ -197,7 +197,7 @@ void loop()
           sendRadioData(RADIO_CURTAIN1);
         } else if (motor < 6) {
           mirfData = ((motor-4) << 8) | (position << 16) | 'M';
-          sendRadioData(RADIO_CURTAIN1);
+          sendRadioData(RADIO_CURTAIN2);
         }
         
         break;
