@@ -8,12 +8,11 @@
 #include "nRF24L01.h"
 #include "RF24.h"
 
-#define FULL_MOTION      7    // in turns
 #define OFF_DELAY        1    // in ms
 
 #define DEBOUNCE_TIME    20   // in ms
 
-#define CURTAIN4
+#define CURTAIN2
 
 #ifdef CURTAIN4
 
@@ -25,25 +24,27 @@
 static int ROTATION_SENSORS[MOTORS]   = {A0, A1, A2, A3};
 static int MOTOR_PWMS[MOTORS]         = { 9,  5,  6,  3};
 static int MOTOR_DIRECTIONS[MOTORS*2] = {A4, A4, A5, A5,  4,  7,  2,  2};
+static byte FULL_MOTION[MOTORS]       = { 8,  8,  8,  8};
 
 #else
 
 #define RADIO_CURTAIN     RADIO_CURTAIN2
 #define MOTORS            2
 #define RADIO_CE          8
-#define RADIO_CSN         10
+#define RADIO_CSN         9
 
 static int ROTATION_SENSORS[MOTORS]   = {A0, A1};
-static int MOTOR_PWMS[MOTORS]         = { 9,  6};
-static int MOTOR_DIRECTIONS[MOTORS*2] = {A4, A5,  4,  7};
+static int MOTOR_PWMS[MOTORS]         = { 6,  3};
+static int MOTOR_DIRECTIONS[MOTORS*2] = { 7, A5,  4,  5};
+static byte FULL_MOTION[MOTORS]       = { 8,  8};
 
 #endif
 
 #define DIRECTION_DOWN  1
 #define DIRECTION_UP    -1
 
-#define SIGNAL_UP       HIGH
-#define SIGNAL_DOWN     LOW
+#define SIGNAL_UP       LOW
+#define SIGNAL_DOWN     HIGH
 
 #define EEPROM_POSITION 0
 
@@ -61,6 +62,8 @@ unsigned long debounceTimes[MOTORS];
 
 int inByte = 0;         // incoming serial byte
 unsigned long mirfData;
+
+void pciSetup(byte pin);
 
 int serial_putc( char c, FILE * )  {
   Serial.write( c );
@@ -81,7 +84,7 @@ void setup() {
     pinMode(MOTOR_PWMS[i], OUTPUT);
     pinMode(MOTOR_DIRECTIONS[i*2+0], OUTPUT);
     pinMode(MOTOR_DIRECTIONS[i*2+1], OUTPUT);
-    positions[i] = targetPositions[i] = min(FULL_MOTION, max(0, EEPROM.read(EEPROM_POSITION+i)));
+    positions[i] = targetPositions[i] = min(FULL_MOTION[i], max(0, EEPROM.read(EEPROM_POSITION+i)));
   }
 
   Serial.begin(9600);           // set up Serial library at 9600 bps
@@ -96,7 +99,7 @@ void setup() {
 }
 
 void setPosition(int motor, int pos) {
-  if (pos >= 0 && pos <= FULL_MOTION) {
+  if (pos >= 0 && pos <= FULL_MOTION[motor]) {
     positions[motor] = pos;
     EEPROM.write(EEPROM_POSITION+motor, pos);
     printf_P(PSTR("Setposition of %d to %d\n"), motor, pos);
@@ -104,6 +107,7 @@ void setPosition(int motor, int pos) {
 }
 
 void moveTo(byte motor, int finalPosition) {
+  finalPosition = min(FULL_MOTION[motor], max(0, finalPosition));
   if (finalPosition != positions[motor]) {
     int direction = (finalPosition > positions[motor]) ? DIRECTION_DOWN : DIRECTION_UP;
     targetPositions[motor] = finalPosition;
@@ -125,12 +129,6 @@ void moveTo(byte motor, int finalPosition) {
 
 void move(byte motor, int direction, int turns) {
   int finalPosition = positions[motor] + turns * direction;
-  if (finalPosition < 0) {
-    finalPosition = 0;
-  } else if (finalPosition > FULL_MOTION) {
-    finalPosition = FULL_MOTION;
-  }
-  
   moveTo(motor, finalPosition);
 }
 
