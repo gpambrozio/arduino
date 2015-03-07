@@ -188,21 +188,23 @@ void loop()
         break;
         
       case 'c':
+      case 'p':
       {
+        char command = inByte == 'c' ? 'M' : 'p';
         unsigned long motorPosition = Serial.parseInt();
         unsigned long motor = motorPosition % 10;
         unsigned long position = motorPosition / 10;
         if (motor < 4) {
-          mirfData = (motor << 8) | (position << 16) | 'M';
+          mirfData = (motor << 8) | (position << 16) | command;
           sendRadioData(RADIO_CURTAIN1);
         } else if (motor < 6) {
-          mirfData = ((motor-4) << 8) | (position << 16) | 'M';
+          mirfData = ((motor-4) << 8) | (position << 16) | command;
           sendRadioData(RADIO_CURTAIN2);
         }
         
         break;
       }
-        
+      
       default:
         Serial.print("Received ");
         Serial.println(inByte);
