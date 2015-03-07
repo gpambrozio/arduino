@@ -12,7 +12,7 @@
 
 #define DEBOUNCE_TIME    20   // in ms
 
-#define CURTAIN2
+#define CURTAIN4
 
 #ifdef CURTAIN4
 
@@ -24,7 +24,7 @@
 static int ROTATION_SENSORS[MOTORS]   = {A0, A1, A2, A3};
 static int MOTOR_PWMS[MOTORS]         = { 9,  5,  6,  3};
 static int MOTOR_DIRECTIONS[MOTORS*2] = {A4, A4, A5, A5,  4,  7,  2,  2};
-static byte FULL_MOTION[MOTORS]       = { 8,  8,  8,  8};
+static byte FULL_MOTION[MOTORS]       = {15, 18, 18, 15};
 
 #else
 
@@ -36,7 +36,7 @@ static byte FULL_MOTION[MOTORS]       = { 8,  8,  8,  8};
 static int ROTATION_SENSORS[MOTORS]   = {A0, A1};
 static int MOTOR_PWMS[MOTORS]         = { 6,  3};
 static int MOTOR_DIRECTIONS[MOTORS*2] = { 7, A5,  4,  5};
-static byte FULL_MOTION[MOTORS]       = { 8,  8};
+static byte FULL_MOTION[MOTORS]       = {18, 18};
 
 #endif
 
