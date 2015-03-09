@@ -86,9 +86,10 @@ void setup() {
     pinMode(MOTOR_PWMS[i], OUTPUT);
     pinMode(MOTOR_DIRECTIONS[i*2+0], OUTPUT);
     pinMode(MOTOR_DIRECTIONS[i*2+1], OUTPUT);
+  }
+  for (int i=0;i<MOTORS;i++) {
     positions[i] = targetPositions[i] = min(FULL_MOTION[i], max(0, EEPROM.read(EEPROM_POSITION+i)));
   }
-
   Serial.begin(9600);           // set up Serial library at 9600 bps
   printf_begin();
   Serial.println("Starting");
@@ -227,6 +228,20 @@ void loop() {
         int position = (mirfData >> 16) & 0xFF;
         setPosition(motor, position);
         targetPositions[motor] = positions[motor];
+        break;
+      }
+      case 'c':
+      {
+        for (int i=0;i<MOTORS;i++) {
+          moveTo(i, FULL_MOTION[i]);
+        }
+        break;
+      }
+      case 'o':
+      {
+        for (int i=0;i<MOTORS;i++) {
+          moveTo(i, 0);
+        }
         break;
       }
     }

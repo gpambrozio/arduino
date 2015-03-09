@@ -205,6 +205,18 @@ void loop()
         break;
       }
       
+      case '9':
+        mirfData = 'c';
+        sendRadioData(RADIO_CURTAIN1);
+        sendRadioData(RADIO_CURTAIN2);
+        break;
+        
+      case '0':
+        mirfData = 'o';
+        sendRadioData(RADIO_CURTAIN1);
+        sendRadioData(RADIO_CURTAIN2);
+        break;
+        
       default:
         Serial.print("Received ");
         Serial.println(inByte);
