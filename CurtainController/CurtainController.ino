@@ -25,6 +25,7 @@ static int ROTATION_SENSORS[MOTORS]   = {A0, A1, A2, A3};
 static int MOTOR_PWMS[MOTORS]         = { 9,  5,  6,  3};
 static int MOTOR_DIRECTIONS[MOTORS*2] = {A4, A4, A5, A5,  4,  7,  2,  2};
 static byte FULL_MOTION[MOTORS]       = {15, 18, 18, 15};
+static byte INVERT[MOTORS]            = { 1,  0,  0,  0};
 
 #else
 
@@ -37,6 +38,7 @@ static int ROTATION_SENSORS[MOTORS]   = {A0, A1};
 static int MOTOR_PWMS[MOTORS]         = { 6,  3};
 static int MOTOR_DIRECTIONS[MOTORS*2] = { 7, A5,  4,  5};
 static byte FULL_MOTION[MOTORS]       = {18, 18};
+static byte INVERT[MOTORS]            = { 0,  0};
 
 #endif
 
@@ -113,9 +115,11 @@ void moveTo(byte motor, int finalPosition) {
     targetPositions[motor] = finalPosition;
     printf_P(PSTR("Motor %d will move %c from %d to %d\n"), motor, (direction == DIRECTION_DOWN) ? 'D' : 'U', positions[motor], targetPositions[motor]);
     
-    digitalWrite(MOTOR_DIRECTIONS[motor*2+0], (direction == DIRECTION_DOWN) ? SIGNAL_DOWN : SIGNAL_UP);
+    int signal = ((direction == DIRECTION_DOWN && INVERT[motor] == 0) || 
+                  (direction == DIRECTION_UP && INVERT[motor] == 1)) ? SIGNAL_DOWN : SIGNAL_UP;
+    digitalWrite(MOTOR_DIRECTIONS[motor*2+0], signal);
     if (MOTOR_DIRECTIONS[motor*2+0] != MOTOR_DIRECTIONS[motor*2+1]) {
-      digitalWrite(MOTOR_DIRECTIONS[motor*2+1], (direction == DIRECTION_DOWN) ? SIGNAL_UP : SIGNAL_DOWN);
+      digitalWrite(MOTOR_DIRECTIONS[motor*2+1], (signal == SIGNAL_DOWN) ? SIGNAL_UP : SIGNAL_DOWN);
     }
     digitalWrite(MOTOR_PWMS[motor], HIGH);
     directionMask &= 0xFF ^ (1 << motor);
