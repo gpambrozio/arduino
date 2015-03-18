@@ -8,8 +8,6 @@
 #include "nRF24L01.h"
 #include "RF24.h"
 
-#define OFF_DELAY        1    // in ms
-
 #define DEBOUNCE_TIME    20   // in ms
 
 #define CURTAIN4
@@ -61,6 +59,7 @@ byte currentPinState = 0;
 byte finalPinState = 0;
 byte lastPinState = 0;
 unsigned long debounceTimes[MOTORS];
+bool isMoving[MOTORS];
 
 int inByte = 0;         // incoming serial byte
 unsigned long mirfData;
@@ -79,7 +78,6 @@ void printf_begin(void) {
 void setup() {
   for (int i=0;i<MOTORS;i++) {
     pinMode(ROTATION_SENSORS[i], INPUT_PULLUP);
-    pciSetup(ROTATION_SENSORS[i]);
     digitalWrite(MOTOR_PWMS[i], LOW);
     digitalWrite(MOTOR_DIRECTIONS[i*2+0], LOW);
     digitalWrite(MOTOR_DIRECTIONS[i*2+1], LOW);
@@ -87,18 +85,19 @@ void setup() {
     pinMode(MOTOR_DIRECTIONS[i*2+0], OUTPUT);
     pinMode(MOTOR_DIRECTIONS[i*2+1], OUTPUT);
   }
-  for (int i=0;i<MOTORS;i++) {
-    positions[i] = targetPositions[i] = min(FULL_MOTION[i], max(0, EEPROM.read(EEPROM_POSITION+i)));
-  }
   Serial.begin(9600);           // set up Serial library at 9600 bps
   printf_begin();
   Serial.println("Starting");
   
-  START_RADIO(radio, RADIO_CURTAIN);
-  radio.printDetails();
   for (int i=0;i<MOTORS;i++) {
+    isMoving[i] = false;
+    pciSetup(ROTATION_SENSORS[i]);
+    positions[i] = targetPositions[i] = min(FULL_MOTION[i], max(0, EEPROM.read(EEPROM_POSITION+i)));
     printf_P(PSTR("Position of %d is %d\n"), i, positions[i]);
   }
+
+  START_RADIO(radio, RADIO_CURTAIN);
+  radio.printDetails();
 }
 
 void setPosition(int motor, int pos) {
@@ -122,7 +121,8 @@ void moveTo(byte motor, int finalPosition) {
     if (MOTOR_DIRECTIONS[motor*2+0] != MOTOR_DIRECTIONS[motor*2+1]) {
       digitalWrite(MOTOR_DIRECTIONS[motor*2+1], (signal == SIGNAL_DOWN) ? SIGNAL_UP : SIGNAL_DOWN);
     }
-    digitalWrite(MOTOR_PWMS[motor], HIGH);
+    analogWrite(MOTOR_PWMS[motor], 255);
+    isMoving[motor] = true;
     directionMask &= 0xFF ^ (1 << motor);
     if (direction == DIRECTION_DOWN) {
       directionMask |= (1 << motor);
@@ -166,11 +166,19 @@ void loop() {
     byte currentMask = 1;
     for (int i = 0; i < MOTORS; i++) {
       if ((diff & currentMask) && ((finalPinState & currentMask) == 0)) {
-        printf_P(PSTR("Press of on %d\n"), i);
-        setPosition(i, positions[i] + ((directionMask & currentMask) ? DIRECTION_DOWN : DIRECTION_UP));
-        if (targetPositions[i] == positions[i]) {
-          digitalWrite(MOTOR_PWMS[i], LOW);
-          printf_P(PSTR("Stopping motor %d\n"), i);
+        if (isMoving[i]) {
+          printf_P(PSTR("Press of on %d\n"), i);
+          setPosition(i, positions[i] + ((directionMask & currentMask) ? DIRECTION_DOWN : DIRECTION_UP));
+          if (targetPositions[i] == positions[i]) {
+            analogWrite(MOTOR_PWMS[i], 0);
+            digitalWrite(MOTOR_PWMS[i], LOW);
+            isMoving[i] = false;
+            printf_P(PSTR("Stopping motor %d\n"), i);
+          } else if (targetPositions[i] == positions[i] + ((directionMask & currentMask) ? DIRECTION_DOWN : 0)) {
+            analogWrite(MOTOR_PWMS[i], 150);
+          }
+        } else {
+          printf_P(PSTR("Ignoring press of on %d due to not being moved\n"), i);
         }
       }
       currentMask <<= 1;
