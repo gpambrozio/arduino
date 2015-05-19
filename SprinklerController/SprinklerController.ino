@@ -28,12 +28,12 @@
 // 2 = grass
 
 #define DAYS_PERIOD_R1    3
-#define DAYS_PERIOD_R2    1
+#define DAYS_PERIOD_R2    2
 #define MINUTES_R1       (15 * 60)
 #define MINUTES_R2       (7 * 60)
 
 byte start1[] = {3};
-byte start2[] = {3, 15};
+byte start2[] = {3};
 
 #define RELAY1   10
 #define RELAY2   14
