@@ -9,6 +9,7 @@
 #include "RF24.h"
 
 #define DEBOUNCE_TIME    20   // in ms
+#define MOVE_TOLERANCE    2000  // in ms
 
 #define CURTAIN4
 
@@ -59,6 +60,7 @@ byte currentPinState = 0;
 byte finalPinState = 0;
 byte lastPinState = 0;
 unsigned long debounceTimes[MOTORS];
+unsigned long lastMove[MOTORS];
 bool isMoving[MOTORS];
 
 int inByte = 0;         // incoming serial byte
@@ -91,6 +93,7 @@ void setup() {
   
   for (int i=0;i<MOTORS;i++) {
     isMoving[i] = false;
+    lastMove[i] = 0;
     pciSetup(ROTATION_SENSORS[i]);
     positions[i] = targetPositions[i] = min(FULL_MOTION[i], max(0, EEPROM.read(EEPROM_POSITION+i)));
     printf_P(PSTR("Position of %d is %d\n"), i, positions[i]);
@@ -101,7 +104,8 @@ void setup() {
 }
 
 void setPosition(int motor, int pos) {
-  if (pos >= 0 && pos <= FULL_MOTION[motor]) {
+  // + 1 because we allow it to move further than it should (it happens...)
+  if (pos >= 0 && pos <= FULL_MOTION[motor] + 1) {
     positions[motor] = pos;
     EEPROM.write(EEPROM_POSITION+motor, pos);
     printf_P(PSTR("Setposition of %d to %d\n"), motor, pos);
@@ -173,10 +177,14 @@ void loop() {
             analogWrite(MOTOR_PWMS[i], 0);
             digitalWrite(MOTOR_PWMS[i], LOW);
             isMoving[i] = false;
+            lastMove[i] = millis();
             printf_P(PSTR("Stopping motor %d\n"), i);
           } else if (targetPositions[i] == positions[i] + ((directionMask & currentMask) ? DIRECTION_DOWN : 0)) {
-            analogWrite(MOTOR_PWMS[i], 150);
+            // Almost there, slow down.
+            analogWrite(MOTOR_PWMS[i], 140);
           }
+        } else if (millis() - lastMove[i] < MOVE_TOLERANCE) {
+          setPosition(i, positions[i] + ((directionMask & currentMask) ? DIRECTION_DOWN : DIRECTION_UP));
         } else {
           printf_P(PSTR("Ignoring press of on %d due to not being moved\n"), i);
         }
