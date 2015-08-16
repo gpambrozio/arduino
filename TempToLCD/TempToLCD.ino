@@ -39,6 +39,8 @@ void loop() {
 
   slcd.home();
   slcd.print("Temp: ");
-  slcd.print(int(temperature), 10);
-  slcd.print("    ");
+  slcd.print(int(temperature * 10), 10);
+  slcd.print("C ");
+  slcd.print(int(temperature * 9 / 5 + 32), 10);
+  slcd.print("F    ");
 }
