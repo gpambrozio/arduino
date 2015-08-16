@@ -67,24 +67,24 @@ inputs than others.  The software works at making the graph interesting,
 but some columns will always be less lively than others, especially
 comparing live speech against ambient music of varying genres.
 */
-PROGMEM uint8_t
+ 
   // This is low-level noise that's subtracted from each FFT output column:
-  noise[64]={ 8,6,6,5,3,4,4,4,3,4,4,3,2,3,3,4,
+uint8_t const noise[64] PROGMEM = { 8,6,6,5,3,4,4,4,3,4,4,3,2,3,3,4,
               2,1,2,1,3,2,3,2,1,2,3,1,2,3,4,4,
               3,2,2,2,2,2,2,1,3,2,2,2,2,2,2,2,
-              2,2,2,2,2,2,2,2,2,2,2,2,2,3,3,4 },
+              2,2,2,2,2,2,2,2,2,2,2,2,2,3,3,4 };
   // These are scaling quotients for each FFT output column, sort of a
   // graphic EQ in reverse.  Most music is pretty heavy at the bass end.
-  eq[64]={
+uint8_t const eq[64] PROGMEM = {
     255, 175,218,225,220,198,147, 99, 68, 47, 33, 22, 14,  8,  4,  2,
       0,   0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
       0,   0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
-      0,   0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0 },
+      0,   0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0 };
   // When filtering down to 8 columns, these tables contain indexes
   // and weightings of the FFT spectrum output values to use.  Not all
   // buckets are used -- the bottom-most and several at the top are
   // either noisy or out of range or generally not good for a graph.
-  col0data[] = {  2,  1,  // # of spectrum bins to merge, index of first
+uint8_t const col0data[] PROGMEM = {  2,  1,  // # of spectrum bins to merge, index of first
     111,   8 },           // Weights for each bin
   col1data[] = {  4,  1,  // 4 bins, starting at index 1
      19, 186,  38,   2 }, // Weights for 4 bins.  Got it now?
@@ -115,7 +115,7 @@ PROGMEM uint8_t
 #define CLOCK_PIN 11   // Green
 
 // Set the first variable to the NUMBER of pixels. 25 = 25 pixels in a row
-Adafruit_WS2801 strip = Adafruit_WS2801(5, 5, DATA_PIN, CLOCK_PIN, WS2801_RGB);
+Adafruit_WS2801 strip = Adafruit_WS2801(25, DATA_PIN, CLOCK_PIN);
 
 void setup() {
   uint8_t i, j, nBins, binNum, *data;
@@ -167,9 +167,9 @@ void setup() {
 void drawLine(uint16_t x, uint16_t height, uint32_t color) {
   for (int i=0;i<5;i++) {
     if (i<height) {
-      strip.setPixelColor(4-i, 4-x, color);
+      strip.setPixelColor((x % 2 == 1 ? (4 - i) : i) + x * 5, color);
     } else {
-      strip.setPixelColor(4-i, 4-x, 0);
+      strip.setPixelColor((x % 2 == 1 ? (4 - i) : i) + x * 5, 0);
     }
   }
 }
@@ -195,7 +195,7 @@ void loop() {
   }
 
   // Downsample spectrum output to 8 columns:
-  for(x=0; x<5; x++) {
+  for(x=2; x<7; x++) {
     data   = (uint8_t *)pgm_read_word(&colData[x]);
     nBins  = pgm_read_byte(&data[0]) + 2;
     binNum = pgm_read_byte(&data[1]);
@@ -226,7 +226,7 @@ void loop() {
     else if(level > 255)  c = 255; // Allow dot to go a couple pixels off top
     else                  c = (uint8_t)level;
 
-    drawLine(x, map(c, 0, 100, 0, 7), Wheel(c));
+    drawLine(x-2, map(c, 0, 255, 0, 7), Wheel(c));
 
   }
 
