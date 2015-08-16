@@ -125,22 +125,20 @@ These tables were arrived at through testing, modeling and trial and error,
  but some columns will always be less lively than others, especially
  comparing live speech against ambient music of varying genres.
  */
-PROGMEM uint8_t
+
 // This is low-level noise that's subtracted from each FFT output column:
-noise[64]={
+uint8_t const noise[64] PROGMEM ={
   8,6,6,5,3,4,4,4,3,4,4,3,2,3,3,4,
   2,1,2,1,3,2,3,2,1,2,3,1,2,3,4,4,
   3,2,2,2,2,2,2,1,3,2,2,2,2,2,2,2,
-  2,2,2,2,2,2,2,2,2,2,2,2,2,3,3,4}
-,
+  2,2,2,2,2,2,2,2,2,2,2,2,2,3,3,4};
 // These are scaling quotients for each FFT output column, sort of a
 // graphic EQ in reverse.  Most music is pretty heavy at the bass end.
-eq[64]={
+uint8_t const eq[64] PROGMEM={
   255,175,218,225,220,198,147, 99, 68, 47, 33, 22, 14,  8,  4,  2,
     0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
     0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
-    0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0 }
-//,
+    0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0 };
 // When filtering down to 8 columns, these tables contain indexes
 // and weightings of the FFT spectrum output values to use.  Not all
 // buckets are used -- the bottom-most and several at the top are
@@ -179,7 +177,7 @@ eq[64]={
 //    col4data, col5data, col6data, col7data };
 //*colData[] = {
 //  col4data, col5data, col7data }
-;
+
 
 #ifdef NEOPIXEL || BIG_LEDS
 
