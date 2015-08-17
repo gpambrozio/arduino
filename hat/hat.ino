@@ -45,7 +45,6 @@ typedef enum {
     HatCommandSetColor,
     HatCommandChangeMode,
     HatCommandSetBrightness,
-    HatCommandSetCount,
 } HatCommand;
 
 //#define MARK  {Serial.print("Running line ");Serial.println(__LINE__);}
@@ -68,7 +67,6 @@ CapacitiveSensor  cs2 = CapacitiveSensor(CAP2_IN, CAP2_SENSOR);
 // HUG COUNTER STUFF ----------------------------------------------------------
 
 uint16_t count = 0;
-unsigned long back_to_text = 0;
 
 // NEOPIXEL STUFF ----------------------------------------------------------
 
@@ -179,7 +177,6 @@ void setup() {
 typedef enum {
   MODE_SOUND = 0,
   MODE_TEXT,
-  MODE_COUNTER,
   MODE_LIGHT,
   MODE_LAST,
 } modes;
@@ -242,12 +239,6 @@ void loop() {
         matrix.show();
         break;
         
-      case HatCommandSetCount:
-        count = BTLEserial.read() + (BTLEserial.read() << 8);
-        mode = MODE_COUNTER;
-        back_to_text = millis() + 10000;
-        break;
-        
       default:
         prevMode = mode = MODE_TEXT;
         msgLen = command;
@@ -280,13 +271,6 @@ void loop() {
   
   digitalWrite(MOTOR, motor_end > t ? HIGH : LOW);
   
-  if (back_to_text && t > back_to_text) {
-    back_to_text = 0;
-    if (mode == MODE_COUNTER) {
-      mode = MODE_TEXT;
-    }
-  }
-  
   if (prevMode != mode) {
     if (mode == MODE_TEXT) {
       strcpy(msg, "HUG ME!");
@@ -300,7 +284,6 @@ void loop() {
       lvl       = 10;
       minLvlAvg = 0;
       maxLvlAvg = 512;
-    } else if (mode == MODE_COUNTER) {
     } else if (mode == MODE_LIGHT) {
       matrix.fillScreen(0);
       matrix.fillRect(12, 0, 11, NEO_HEIGHT, matrix.Color(255, 255, 255));
@@ -357,15 +340,6 @@ void loop() {
     if((maxLvl - minLvl) < TOP) maxLvl = minLvl + TOP;
     minLvlAvg = (minLvlAvg * 63 + minLvl) >> 6; // Dampen min/max levels
     maxLvlAvg = (maxLvlAvg * 63 + maxLvl) >> 6; // (fake rolling average)
-
-  } else if (mode == MODE_COUNTER) {
-    sprintf(msg, "%d", count);
-    msgLen = strlen(msg);
-    msgLen = (NEO_WIDTH - 4 * msgLen) >> 1;
-    matrix.fillScreen(0);
-    matrix.setCursor(msgLen - 1, 0);
-    matrix.printSmallNumber(count);
-    matrix.show();
   }
   
   // For some reason there needs to be a delay here.
