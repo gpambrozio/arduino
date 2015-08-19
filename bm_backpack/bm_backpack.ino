@@ -24,11 +24,9 @@ in any redistribution.
 #include <SPI.h>
 #include <Adafruit_WS2801.h>
 
-#define MIC_PIN      A2  // Microphone is attached to this analog pin
+#include "SimpleVolume.h"
 
 #define AGC_CONTROL  17
-
-#define TOP   6  // A bit more to go off scale.
 
 #define DATA_PIN  10   // Yellow
 #define CLOCK_PIN 11   // Green
@@ -37,22 +35,11 @@ in any redistribution.
 Adafruit_WS2801 strip = Adafruit_WS2801(25, DATA_PIN, CLOCK_PIN);
 
 // MUSIC STUFF  ---------------------------------------------------------
-#define DC_OFFSET  0  // DC offset in mic signal - if unusure, leave 0
-#define NOISE     10  // Noise/hum/interference in mic signal
 #define SAMPLES   12  // Length of buffer for dynamic level adjustment
+#define MIC_PIN      A2  // Microphone is attached to this analog pin
+#define TOP   6  // A bit more to go off scale.
 
-int vol[SAMPLES];
-
-uint8_t volCount;    // Frame counter for storing past volume data
-uint8_t currentColumn;
-
-int lvl;          // Current "dampened" audio level
-int minLvlAvg;    // For dynamic adjustment of graph low & high
-int maxLvlAvg;
-int height;
-
-uint16_t minLvl;
-uint16_t maxLvl;
+SimpleVolume sv = SimpleVolume(MIC_PIN, SAMPLES, TOP, 256);
 
 void setup() {
   pinMode(AGC_CONTROL, INPUT);
@@ -60,60 +47,30 @@ void setup() {
   strip.begin();
   strip.show();
 
-  memset(vol, 0, sizeof(int) * SAMPLES);
+  Serial.begin(9600);
 }
 
 void drawLine(uint16_t x, uint16_t height, uint32_t color) {
   for (int i=0;i<5;i++) {
     if (i<height) {
-      strip.setPixelColor((x % 2 == 1 ? (4 - i) : i) + x * 5, 0);
-    } else {
       strip.setPixelColor((x % 2 == 1 ? (4 - i) : i) + x * 5, color);
+    } else {
+      strip.setPixelColor((x % 2 == 1 ? (4 - i) : i) + x * 5, 0);
     }
   }
   strip.show();
 }
 
 int i;
+uint8_t currentColumn;
 
 void loop() {
-
-  height   = analogRead(MIC_PIN);                        // Raw reading from mic
-  height   = abs(height - 512 - DC_OFFSET); // Center on zero
-  height   = (height <= NOISE) ? 0 : (height - NOISE);             // Remove noise/hum
-  lvl = ((lvl * 7) + height) >> 3;    // "Dampened" reading (else looks twitchy)
-
-  vol[volCount] = height;                 // Save sample for dynamic leveling
-  if(++volCount >= SAMPLES) volCount = 0; // Advance/rollover sample counter
- 
-  // Calculate bar height based on dynamic min/max levels (fixed point):
-  height = TOP * (lvl - minLvlAvg) / (long)(maxLvlAvg - minLvlAvg);
-
-  if(height < 0L)       height = 0;      // Clip output
-  else if(height > TOP) height = TOP;
+  int height = sv.getVolume();
 
   // Color pixels based on rainbow gradient
   drawLine(currentColumn, height, Wheel(map(height,0,TOP,30,150)));
   if (++currentColumn >= 5) currentColumn = 0;
 
-  // Get volume range of prior frames
-  minLvl = maxLvl = vol[0];
-
-  for(i=1; i<SAMPLES; i++) {
-    if(vol[i] < minLvl)      minLvl = vol[i];
-    else if(vol[i] > maxLvl) maxLvl = vol[i];
-  }
-
-  // minLvl and maxLvl indicate the volume range over prior frames, used
-  // for vertically scaling the output graph (so it looks interesting
-  // regardless of volume level).  If they're too close together though
-  // (e.g. at very low volume levels) the graph becomes super coarse
-  // and 'jumpy'...so keep some minimum distance between them (this
-  // also lets the graph go to zero when no sound is playing):
-  if((maxLvl - minLvl) < TOP) maxLvl = minLvl + TOP;
-  minLvlAvg = (minLvlAvg * 63 + minLvl) >> 6; // Dampen min/max levels
-  maxLvlAvg = (maxLvlAvg * 63 + maxLvl) >> 6; // (fake rolling average)
-  
   delay(2);
 }
 
