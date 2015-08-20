@@ -18,17 +18,18 @@ Adafruit_NeoPixel strip = Adafruit_NeoPixel(39, PIN, NEO_GRB + NEO_KHZ800);
 // on a live circuit...if you must, connect GND first.
 
 // MUSIC STUFF  ---------------------------------------------------------
-#define SAMPLES    12  // Length of buffer for dynamic level adjustment
-#define MIC_PIN    A6  // Microphone is attached to this analog pin
-#define TOP        150
+#define SAMPLES    60   // Length of buffer for dynamic level adjustment
+#define MIC_PIN    A0  // Microphone is attached to this analog pin
+#define TOP        100
 
-SimpleVolume sv = SimpleVolume(MIC_PIN, SAMPLES, TOP);
+SimpleVolume sv = SimpleVolume(MIC_PIN, SAMPLES, TOP, 270);
 
 void setup() {
   strip.begin();
   strip.show(); // Initialize all pixels to 'off'
   
   Serial.begin(9600);
+  sv.start();
 }
 
 uint16_t currentCycle = 0;
@@ -52,14 +53,12 @@ void loop() {
 
   int height = sv.getVolume();
   strip.setBrightness(height);
-  if (cycleCount++ > 10) {
+  if (++cycleCount > 10) {
     if (++currentCycle >= 256*5) currentCycle = 0;
     cycleCount = 0;
   }
-  colorWipe(strip.Color(255, 255, 255), 0); // Red
-//  rainbowCycleStep(currentCycle);
-
-  delay(2);
+//  colorWipe(strip.Color(255, 255, 255), 0);
+  rainbowCycleStep(currentCycle);
 }
 
 // Fill the dots one after the other with a color
