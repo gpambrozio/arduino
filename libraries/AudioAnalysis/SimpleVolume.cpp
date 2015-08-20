@@ -3,37 +3,53 @@
 #define DC_OFFSET  0  // DC offset in mic signal - if unusure, leave 0
 #define NOISE     10  // Noise/hum/interference in mic signal
 
+// #define DEBUG(n)    {Serial.print(n);Serial.print(' ');}
+// #define DEBUGEND()  Serial.println(' ');
+
+#define DEBUG(n)
+#define DEBUGEND()
+
 SimpleVolume::SimpleVolume(uint8_t volumePin, uint8_t samples, int maxSignal, int center) :
 volumePin(volumePin), maxSignal(maxSignal), samples(samples), center(center) {
     if ((vol = (int *)malloc(samples * sizeof(int)))) {
         memset(vol, 0, samples * sizeof(int));
     }
-    volCount = 
+    lvl = 10;
 
-    lvl = 
-    minLvlAvg = 
-    height = 0;
-    maxLvlAvg = 1;
+    volCount = 
+    minLvlAvg = 0;
+    maxLvlAvg = center;
 }
 
 SimpleVolume::~SimpleVolume() {
     if (vol) free(vol);
 }
 
-int SimpleVolume::getVolume() {
-    height = analogRead(volumePin);                        // Raw reading from mic
-    height = abs(height - center - DC_OFFSET); // Center on zero
-    height = (height <= NOISE) ? 0 : (height - NOISE);             // Remove noise/hum
-    lvl = ((lvl * 7) + height) >> 3;    // "Dampened" reading (else looks twitchy)
+void SimpleVolume::start() {
+    pinMode(volumePin, INPUT);
+}
 
-    vol[volCount] = height;                 // Save sample for dynamic leveling
+// Code here was based on https://learn.adafruit.com/led-ampli-tie/the-code
+int SimpleVolume::getVolume() {
+    int n = analogRead(volumePin);
+    DEBUG(n);
+    n = abs(n - center - DC_OFFSET);         // Center on zero
+    DEBUG(n);
+    n = (n <= NOISE) ? 0 : (n - NOISE);      // Remove noise/hum
+    DEBUG(n);
+    lvl = ((lvl * 3) + n) >> 2;              // "Dampened" reading (else looks twitchy)
+    DEBUG(lvl);
+
+    vol[volCount] = n;                       // Save sample for dynamic leveling
     if (++volCount >= samples) volCount = 0; // Advance/rollover sample counter
  
     // Calculate bar height based on dynamic min/max levels (fixed point):
-    height = maxSignal * (lvl - minLvlAvg) / (long)(maxLvlAvg - minLvlAvg);
+    n = maxSignal * (lvl - minLvlAvg) / (long)(maxLvlAvg - minLvlAvg);
 
-    if (height < 0L)       height = 0;      // Clip output
-    else if (height > maxSignal) height = maxSignal;
+    if (n < 0L)             n = 0;      // Clip output
+    else if (n > maxSignal) n = maxSignal;
+    DEBUG(n);
+    DEBUGEND();
 
     // Get volume range of prior frames
     minLvl = maxLvl = vol[0];
@@ -53,5 +69,5 @@ int SimpleVolume::getVolume() {
     minLvlAvg = (minLvlAvg * 63 + minLvl) >> 6; // Dampen min/max levels
     maxLvlAvg = (maxLvlAvg * 63 + maxLvl) >> 6; // (fake rolling average)
         
-    return height;
+    return n;
 }

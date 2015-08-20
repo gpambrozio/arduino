@@ -8,6 +8,7 @@ public:
     SimpleVolume(uint8_t volumePin, uint8_t samples, int maxSignal, int center = 512);
     ~SimpleVolume();
     
+    void start();
     int getVolume();
     
 private:
@@ -21,7 +22,6 @@ private:
     int lvl;          // Current "dampened" audio level
     int minLvlAvg;    // For dynamic adjustment of graph low & high
     int maxLvlAvg;
-    int height;
     
     int center;
 
