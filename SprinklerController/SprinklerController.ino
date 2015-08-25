@@ -24,13 +24,13 @@
 #include "nRF24L01.h"
 #include "RF24.h"
 
-// 1 = drip
-// 2 = grass
+// 1 = grass
+// 2 = drip
 
-#define DAYS_PERIOD_R1    3
-#define DAYS_PERIOD_R2    2
-#define MINUTES_R1       (15 * 60)
-#define MINUTES_R2       (7 * 60)
+#define DAYS_PERIOD_R1    2
+#define DAYS_PERIOD_R2    3
+#define MINUTES_R1       (7 * 60)
+#define MINUTES_R2       (15 * 60)
 
 byte start1[] = {3};
 byte start2[] = {3};
