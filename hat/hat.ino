@@ -41,8 +41,7 @@
 #define LED          13     // Onboard LED (not NeoPixel) pin
 
 typedef enum {
-    HatCommandGetCount = 50,
-    HatCommandSetColor,
+    HatCommandSetColor = 51,
     HatCommandChangeMode,
     HatCommandSetBrightness,
 } HatCommand;
@@ -217,9 +216,6 @@ void loop() {
   if ((state == ACI_EVT_CONNECTED) && BTLEserial.available()) {
     int command = BTLEserial.read();
     switch (command) {
-      case HatCommandGetCount:
-        break;
-        
       case HatCommandSetColor:
         char color[3];
         readStr(color, 3);
