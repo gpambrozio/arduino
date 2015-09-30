@@ -9,7 +9,7 @@
 #include "RF24.h"
 
 #define DEBOUNCE_TIME    20   // in ms
-#define MOVE_TOLERANCE    2000  // in ms
+#define MOVE_TOLERANCE    5000  // in ms
 
 #define CURTAIN4
 
@@ -171,7 +171,7 @@ void loop() {
     for (int i = 0; i < MOTORS; i++) {
       if ((diff & currentMask) && ((finalPinState & currentMask) == 0)) {
         if (isMoving[i]) {
-          printf_P(PSTR("Press of on %d\n"), i);
+          printf_P(PSTR("Press on %d\n"), i);
           setPosition(i, positions[i] + ((directionMask & currentMask) ? DIRECTION_DOWN : DIRECTION_UP));
           if (targetPositions[i] == positions[i]) {
             analogWrite(MOTOR_PWMS[i], 0);
@@ -184,6 +184,7 @@ void loop() {
             analogWrite(MOTOR_PWMS[i], 140);
           }
         } else if (millis() - lastMove[i] < MOVE_TOLERANCE) {
+          printf_P(PSTR("Press (after) on %d\n"), i);
           setPosition(i, positions[i] + ((directionMask & currentMask) ? DIRECTION_DOWN : DIRECTION_UP));
         } else {
           printf_P(PSTR("Ignoring press of on %d due to not being moved\n"), i);
