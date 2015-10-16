@@ -8,6 +8,7 @@ extern byte second, minute, hour, dayOfWeek, dayOfMonth, month, year;
 void RTCStart();
 void RTCGetDateDs1307();
 void RTCSetDateDs1307();
+void RTCWriteDateToDs1307();
 void RTCPrintDateToSerial();
 
 #endif

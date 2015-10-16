@@ -25,7 +25,7 @@ byte bcdToDec(byte val) {
 // 4) DOW: 1 = Sun, 7 = Sat
 // Assumes you're passing in valid numbers, 
 // Probably need to put in checks for valid numbers.
-void RTCSetDateDs1307() {
+void RTCSetDateFromSerial() {
   while (Serial.available() < 13) {
     delay(1);
   }
@@ -37,6 +37,9 @@ void RTCSetDateDs1307() {
   dayOfMonth = (byte) ((Serial.read() - '0') *10 +  (Serial.read() - '0'));
   month = (byte) ((Serial.read() - '0') *10 +  (Serial.read() - '0'));
   year= (byte) ((Serial.read() - '0') *10 +  (Serial.read() - '0'));
+}
+
+void RTCWriteDateToDs1307() {
   Wire.beginTransmission(clockAddress);
   Wire.write(byte(0x00));
   Wire.write(decToBcd(second));  // 0 to bit 7 starts the clock
@@ -49,6 +52,11 @@ void RTCSetDateDs1307() {
   Wire.write(decToBcd(year));
   Wire.write(byte(0x00));
   Wire.endTransmission();
+}
+
+void RTCSetDateDs1307() {
+  RTCSetDateFromSerial();
+  RTCWriteDateToDs1307();
 }
 
 // Gets the date and time from the ds1307 and prints result
