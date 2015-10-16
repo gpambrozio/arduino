@@ -57,6 +57,7 @@
 #include <SPI.h>
 #include <Wire.h>
 #include <RTC.h>
+#include <EEPROM.h>
 #include "utility/debug.h"
 #include "utility/socket.h"
 
@@ -70,7 +71,7 @@
 
 #define LED_PIN   7
 
-Adafruit_NeoPixel strip = Adafruit_NeoPixel(40, LED_PIN, NEO_GRB + NEO_KHZ800);
+Adafruit_NeoPixel strip = Adafruit_NeoPixel(44, LED_PIN, NEO_GRB + NEO_KHZ800);
 
 Adafruit_CC3000 cc3000 = Adafruit_CC3000(ADAFRUIT_CC3000_CS, ADAFRUIT_CC3000_IRQ, ADAFRUIT_CC3000_VBAT,
                                          SPI_CLOCK_DIVIDER); // you can change this clock speed
@@ -109,8 +110,23 @@ Adafruit_CC3000 cc3000 = Adafruit_CC3000(ADAFRUIT_CC3000_CS, ADAFRUIT_CC3000_IRQ
 Adafruit_CC3000_Server httpServer(LISTEN_PORT);
 uint8_t buffer[BUFFER_SIZE+1];
 int bufindex = 0;
-char action[MAX_ACTION+1];
-char path[MAX_PATH+1];
+char *action;
+char *path;
+
+uint32_t ip;
+
+bool should_grab_bart_times;
+uint16_t rainbow_index;
+
+#define MAX_RAINBOW_INDEX   (256*5)
+
+uint32_t last_color;
+uint16_t last_brightness;
+bool should_rainbow;
+
+#define EEPROM_COLOR         0
+#define EEPROM_BRIGHTNESS    (EEPROM_COLOR + sizeof(last_color))
+#define EEPROM_RAINBOW       (EEPROM_BRIGHTNESS + sizeof(last_brightness))
 
 void setup(void)
 {
@@ -121,8 +137,12 @@ void setup(void)
   RTCGetDateDs1307();
   RTCPrintDateToSerial();
 
+  EEPROM.get(EEPROM_COLOR, last_color);
+  EEPROM.get(EEPROM_BRIGHTNESS, last_brightness);
+  EEPROM.get(EEPROM_RAINBOW, should_rainbow);
   strip.begin();
-  colorWipe(strip.Color(255, 255, 255)); // Initialize all pixels to white
+  strip.setBrightness(last_brightness);
+  colorWipe(last_color);
   strip.show(); 
 
   Serial.print(F("Free RAM: ")); Serial.println(getFreeRam(), DEC);
@@ -160,8 +180,6 @@ void setup(void)
   Serial.println(F("Listening for connections..."));
 }
 
-uint32_t ip;
-
 void loop(void)
 {
   if (Serial.available()) {  // Look for char in serial que and process if found
@@ -188,57 +206,20 @@ void loop(void)
         break;
         
       case 'W':
-      {
-        ip = 0;
-        // Try looking up the website's IP address
-        Serial.print(WEBSITE); Serial.print(F(" -> "));
-        while (ip == 0) {
-          if (! cc3000.getHostByName(WEBSITE, &ip)) {
-            Serial.println(F("Couldn't resolve!"));
-          }
-          delay(500);
-        }
-      
-        cc3000.printIPdotsRev(ip);
-        
-        // Optional: Do a ping test on the website
-        /*
-        Serial.print(F("\n\rPinging ")); cc3000.printIPdotsRev(ip); Serial.print("...");  
-        replies = cc3000.ping(ip, 5);
-        Serial.print(replies); Serial.println(F(" replies"));
-        */  
-      
-        /* Try connecting to the website.
-           Note: HTTP/1.1 protocol is used to keep the server from closing the connection before all data is read.
-        */
-        Adafruit_CC3000_Client www = cc3000.connectTCP(ip, 80);
-        if (www.connected()) {
-          www.fastrprint(F("GET "));
-          www.fastrprint(WEBPAGE);
-          www.fastrprint(F(" HTTP/1.1\r\n"));
-          www.fastrprint(F("Host: ")); www.fastrprint(WEBSITE); www.fastrprint(F("\r\n"));
-          www.fastrprint(F("\r\n"));
-          www.println();
-        } else {
-          Serial.println(F("Connection failed"));    
-          return;
-        }
-      
-        Serial.println(F("-------------------------------------"));
-        
-        /* Read data until either the connection is closed, or the idle timeout is reached. */ 
-        unsigned long lastRead = millis();
-        while (www.connected() && (millis() - lastRead < IDLE_TIMEOUT_MS)) {
-          while (www.available()) {
-            char c = www.read();
-            Serial.print(c);
-            lastRead = millis();
-          }
-        }
-        www.close();
-        Serial.println(F("-------------------------------------"));
+        grabBartTimes();
         break;
-      }
+    }
+  }
+  
+  if (should_grab_bart_times) {
+    should_grab_bart_times = false;
+    grabBartTimes();
+  }
+  
+  if (should_rainbow) {
+    rainbowCycle(rainbow_index);
+    if (++rainbow_index >= MAX_RAINBOW_INDEX) {
+      rainbow_index = 0;
     }
   }
 
@@ -253,10 +234,6 @@ void loop(void)
     bufindex = 0;
     memset(&buffer, 0, sizeof(buffer));
     
-    // Clear action and path strings.
-    memset(&action, 0, sizeof(action));
-    memset(&path,   0, sizeof(path));
-
     // Set a timeout for reading all the incoming data.
     unsigned long endtime = millis() + TIMEOUT_MS;
     
@@ -266,7 +243,7 @@ void loop(void)
       if (client.available()) {
         buffer[bufindex++] = client.read();
       }
-      parsed = parseRequest(buffer, bufindex, action, path);
+      parsed = parseRequest(buffer, bufindex, &action, &path);
     }
 
     // Handle the request if it was parsed.
@@ -283,12 +260,57 @@ void loop(void)
         // the connection will not be held open.
         client.fastrprintln(F("Content-Type: text/plain"));
         client.fastrprintln(F("Connection: close"));
-        client.fastrprintln(F("Server: Adafruit CC3000"));
         // Send an empty line to signal start of body.
         client.fastrprintln(F(""));
+
+        switch(path[0]) {
+          case 'i':    // identify yourself!
+            client.fastrprintln(F("lithoplane here"));
+            break;
+
+          case 't':    // Set time
+            second = (byte) ((path[1] - '0') * 10 + (path[2] - '0')); 
+            minute = (byte) ((path[3] - '0') *10 +  (path[4] - '0'));
+            hour  = (byte) ((path[5] - '0') *10 +  (path[6] - '0'));
+            dayOfWeek = (byte) (path[7] - '0');
+            dayOfMonth = (byte) ((path[8] - '0') *10 +  (path[9] - '0'));
+            month = (byte) ((path[10] - '0') *10 +  (path[11] - '0'));
+            year= (byte) ((path[12] - '0') *10 +  (path[13] - '0'));
+            RTCWriteDateToDs1307();
+            client.fastrprintln(F("Date set"));
+            break;
+            
+          case 'b':    // Brightness
+            last_brightness = String(path+1).toInt();
+            EEPROM.put(EEPROM_BRIGHTNESS, last_brightness);
+            strip.setBrightness(last_brightness);
+            colorWipe(last_color);
+            strip.show();
+            client.fastrprintln(F("Brightness set"));
+            break;
+            
+          case 'c':    // Color
+            should_rainbow = false;
+            last_color = String(path+1).toInt();
+            EEPROM.put(EEPROM_COLOR, last_color);
+            EEPROM.put(EEPROM_RAINBOW, should_rainbow);
+            colorWipe(last_color);
+            strip.show(); 
+            break;
+            
+          case 'r':    // Rainbow
+            should_rainbow = true;
+            EEPROM.put(EEPROM_RAINBOW, should_rainbow);
+            break;
+            
+          case 'B':    // Bart
+            // Can' grab bart times cause WiFi in use now. Do it later.
+            should_grab_bart_times = true;
+            break;
+        }
+        
         // Now send the response data.
-        client.fastrprintln(F("Hello world!"));
-        client.fastrprint(F("You accessed path: ")); client.fastrprintln(path);
+        client.fastrprintln(F("OK"));
       }
       else {
         // Unsupported action, respond with an HTTP 405 method not allowed error.
@@ -307,6 +329,52 @@ void loop(void)
   }
 }
 
+void grabBartTimes() {
+  ip = 0;
+  // Try looking up the website's IP address
+  Serial.print(WEBSITE); Serial.print(F(" -> "));
+  while (ip == 0) {
+    if (! cc3000.getHostByName(WEBSITE, &ip)) {
+      Serial.println(F("Couldn't resolve!"));
+    }
+    delay(500);
+  }
+
+  cc3000.printIPdotsRev(ip);
+  
+  /* Try connecting to the website.
+     Note: HTTP/1.1 protocol is used to keep the server from closing the connection before all data is read.
+  */
+  Adafruit_CC3000_Client www = cc3000.connectTCP(ip, 80);
+  if (www.connected()) {
+    www.fastrprint(F("GET "));
+    www.fastrprint(WEBPAGE);
+    www.fastrprint(F(" HTTP/1.1\r\n"));
+    www.fastrprint(F("Host: ")); www.fastrprint(WEBSITE); www.fastrprint(F("\r\n"));
+    www.fastrprint(F("\r\n"));
+    www.println();
+  } else {
+    Serial.println(F("Connection failed"));    
+    return;
+  }
+
+  bufindex = 0;
+  memset(&buffer, 0, sizeof(buffer));
+  
+  /* Read data until either the connection is closed, or the idle timeout is reached. */ 
+  unsigned long lastRead = millis();
+  while (www.connected() && (millis() - lastRead < IDLE_TIMEOUT_MS)) {
+    while (www.available()) {
+      char c = www.read();
+      buffer[bufindex++] = c;
+      Serial.print(c);
+      lastRead = millis();
+    }
+  }
+  buffer[bufindex] = 0;
+  www.close();
+}
+
 // Return true if the buffer contains an HTTP request.  Also returns the request
 // path and action strings if the request was parsed.  This does not attempt to
 // parse any HTTP headers because there really isn't enough memory to process
@@ -317,7 +385,7 @@ void loop(void)
 //  ...
 //  Header_key_n: Header_value_n \r\n
 //  \r\n
-bool parseRequest(uint8_t* buf, int bufSize, char* action, char* path) {
+bool parseRequest(uint8_t* buf, int bufSize, char** action, char** path) {
   // Check if the request ends with \r\n to signal end of first line.
   if (bufSize < 2)
     return false;
@@ -329,34 +397,26 @@ bool parseRequest(uint8_t* buf, int bufSize, char* action, char* path) {
 }
 
 // Parse the action and path from the first line of an HTTP request.
-void parseFirstLine(char* line, char* action, char* path) {
+void parseFirstLine(char* line, char** action, char** path) {
   // Parse first word up to whitespace as action.
   char* lineaction = strtok(line, " ");
   if (lineaction != NULL)
-    strncpy(action, lineaction, MAX_ACTION);
+    *action = lineaction;
   // Parse second word up to whitespace as path.
   char* linepath = strtok(NULL, " ");
   if (linepath != NULL)
-    strncpy(path, linepath, MAX_PATH);
+    *path = linepath + 1; // Remove slash
 }
 
 // Tries to read the IP address and other connection details
-bool displayConnectionDetails(void)
-{
+bool displayConnectionDetails(void) {
   uint32_t ipAddress, netmask, gateway, dhcpserv, dnsserv;
   
-  if(!cc3000.getIPAddress(&ipAddress, &netmask, &gateway, &dhcpserv, &dnsserv))
-  {
+  if (!cc3000.getIPAddress(&ipAddress, &netmask, &gateway, &dhcpserv, &dnsserv)) {
     Serial.println(F("Unable to retrieve the IP Address!\r\n"));
     return false;
-  }
-  else
-  {
+  } else {
     Serial.print(F("\nIP Addr: ")); cc3000.printIPdotsRev(ipAddress);
-    Serial.print(F("\nNetmask: ")); cc3000.printIPdotsRev(netmask);
-    Serial.print(F("\nGateway: ")); cc3000.printIPdotsRev(gateway);
-    Serial.print(F("\nDHCPsrv: ")); cc3000.printIPdotsRev(dhcpserv);
-    Serial.print(F("\nDNSserv: ")); cc3000.printIPdotsRev(dnsserv);
     Serial.println();
     return true;
   }
@@ -367,6 +427,31 @@ void colorWipe(uint32_t c) {
   for(uint16_t i=0; i<strip.numPixels(); i++) {
       strip.setPixelColor(i, c);
       strip.show();
+  }
+}
+
+// Slightly different, this makes the rainbow equally distributed throughout
+void rainbowCycle(uint16_t j) {
+  uint16_t i;
+
+  for(i=0; i< strip.numPixels(); i++) {
+    strip.setPixelColor(i, Wheel(((i * 256 / strip.numPixels()) + j) & 255));
+  }
+  strip.show();
+}
+
+// Input a value 0 to 255 to get a color value.
+// The colours are a transition r - g - b - back to r.
+uint32_t Wheel(byte WheelPos) {
+  WheelPos = 255 - WheelPos;
+  if(WheelPos < 85) {
+   return strip.Color(255 - WheelPos * 3, 0, WheelPos * 3);
+  } else if(WheelPos < 170) {
+    WheelPos -= 85;
+   return strip.Color(0, WheelPos * 3, 255 - WheelPos * 3);
+  } else {
+   WheelPos -= 170;
+   return strip.Color(WheelPos * 3, 255 - WheelPos * 3, 0);
   }
 }
 
