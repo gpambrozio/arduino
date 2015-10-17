@@ -110,10 +110,10 @@ Adafruit_CC3000 cc3000 = Adafruit_CC3000(ADAFRUIT_CC3000_CS, ADAFRUIT_CC3000_IRQ
 
 // What page to grab!
 #define WEBSITE      "trans-anchor-110020.appspot.com"
-#define WEBPAGE      F("/bart?s=mont&d=s&t=5")
+#define WEBPAGE      F("/bart?s=16th&d=n&t=6")
 
 #define BART_CHECK_PERIOD   (30 * 1000)
-#define BART_MAX_CHECK      (2 * 60000)
+#define BART_MAX_CHECK      (10 * 60000)
 
 uint8_t const sin_table[] PROGMEM={
   128,129,131,132,134,135,137,138,140,142,143,145,146,148,149,151,
@@ -439,7 +439,7 @@ void grabBartTimes() {
     }
   }
   buffer[bufindex] = 0;
-  next_bart_time = max(1, parseInt((char*)buffer));
+  next_bart_time = parseInt((char*)buffer);
   Serial.print(F("Next bart: ")); Serial.println(next_bart_time);
   www.close();
 }
