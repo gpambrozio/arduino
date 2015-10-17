@@ -58,6 +58,7 @@
 #include <Wire.h>
 #include <RTC.h>
 #include <EEPROM.h>
+#include <CapacitiveSensor.h>
 #include "utility/debug.h"
 
 // These are the interrupt and control pins
@@ -68,7 +69,12 @@
 // Use hardware SPI for the remaining pins
 // On an UNO, SCK = 13, MISO = 12, and MOSI = 11
 
-#define LED_PIN   7
+#define LED_PIN       7
+
+#define CAP1_IN       4
+#define CAP1_SENSOR   5
+
+CapacitiveSensor  cs1 = CapacitiveSensor(CAP1_IN, CAP1_SENSOR);
 
 Adafruit_NeoPixel strip = Adafruit_NeoPixel(44, LED_PIN, NEO_GRB + NEO_KHZ800);
 
@@ -98,13 +104,16 @@ Adafruit_CC3000 cc3000 = Adafruit_CC3000(ADAFRUIT_CC3000_CS, ADAFRUIT_CC3000_IRQ
                                      // an incoming request to finish.  Don't set this
                                      // too high or your server could be slow to respond.
 
-#define IDLE_TIMEOUT_MS  3000      // Amount of time to wait (in milliseconds) with no data 
+#define IDLE_TIMEOUT_MS  1000      // Amount of time to wait (in milliseconds) with no data 
                                    // received before closing the connection.  If you know the server
                                    // you're accessing is quick to respond, you can reduce this value.
 
 // What page to grab!
 #define WEBSITE      "trans-anchor-110020.appspot.com"
 #define WEBPAGE      F("/bart?s=mont&d=s&t=5")
+
+#define BART_CHECK_PERIOD   (30 * 1000)
+#define BART_MAX_CHECK      (2 * 60000)
 
 uint8_t const sin_table[] PROGMEM={
   128,129,131,132,134,135,137,138,140,142,143,145,146,148,149,151,
@@ -147,11 +156,15 @@ int bufindex = 0;
 char *action;
 char *path;
 
-uint16_t rainbow_index;
+bool last_sensor_state;
+
+#define SENSOR_THRESHOLD  200
 
 uint32_t next_bart_check;
 uint32_t max_bart_check;
 long next_bart_time;
+
+uint16_t rainbow_index;
 
 #define MAX_RAINBOW_INDEX   (256*5)
 
@@ -214,6 +227,15 @@ void setup(void)
 
 void loop(void)
 {
+  long cap_sensor =  cs1.capacitiveSensor(30);
+  bool sensor_state = cap_sensor > SENSOR_THRESHOLD;
+  if (last_sensor_state != sensor_state) {
+    last_sensor_state = sensor_state;
+    if (sensor_state) {
+      startBartCheck();
+    }
+  }
+  
   if (Serial.available()) {  // Look for char in serial que and process if found
     int command = Serial.read();
     Serial.print(F("Command: "));
@@ -248,7 +270,7 @@ void loop(void)
       max_bart_check = 0;
       next_bart_time = 0;
     } else {
-      next_bart_check = millis() + 30000;
+      next_bart_check = millis() + BART_CHECK_PERIOD;
       grabBartTimes();
     }
   }
@@ -265,6 +287,10 @@ void loop(void)
     if (++rainbow_index >= MAX_RAINBOW_INDEX) {
       rainbow_index = 0;
     }
+  } else {
+    strip.setBrightness(last_brightness);
+    colorWipe(last_color);
+    strip.show();
   }
 
   // Try to get a client which is connected.
@@ -327,9 +353,6 @@ void loop(void)
           case 'b':    // Brightness
             last_brightness = parseInt(path+1);
             EEPROM.put(EEPROM_BRIGHTNESS, last_brightness);
-            strip.setBrightness(last_brightness);
-            colorWipe(last_color);
-            strip.show();
             client.fastrprintln(F("Brightness set"));
             break;
             
@@ -338,8 +361,6 @@ void loop(void)
             last_color = parseInt(path+1);
             EEPROM.put(EEPROM_COLOR, last_color);
             EEPROM.put(EEPROM_RAINBOW, should_rainbow);
-            colorWipe(last_color);
-            strip.show(); 
             break;
             
           case 'r':    // Rainbow
@@ -364,7 +385,7 @@ void loop(void)
 
 void startBartCheck() {
   next_bart_check = millis();
-  max_bart_check = next_bart_check + 600000;
+  max_bart_check = next_bart_check + BART_MAX_CHECK;
 }
 
 void grabBartTimes() {
