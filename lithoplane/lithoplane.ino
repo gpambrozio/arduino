@@ -59,7 +59,6 @@
 #include <RTC.h>
 #include <EEPROM.h>
 #include "utility/debug.h"
-#include "utility/socket.h"
 
 // These are the interrupt and control pins
 #define ADAFRUIT_CC3000_IRQ   3  // MUST be an interrupt pin!
@@ -131,8 +130,7 @@ bool should_rainbow;
 void setup(void)
 {
   Serial.begin(115200);
-  Serial.println(F("Hello, CC3000!\n")); 
-
+  
   RTCStart();
   RTCGetDateDs1307();
   RTCPrintDateToSerial();
@@ -149,9 +147,8 @@ void setup(void)
   
   // Initialise the module
   Serial.println(F("\nInitializing..."));
-  if (!cc3000.begin())
-  {
-    Serial.println(F("Couldn't begin()! Check your wiring?"));
+  if (!cc3000.begin()) {
+    Serial.println(F("Couldn't begin()!"));
     while(1);
   }
   
@@ -164,9 +161,8 @@ void setup(void)
   Serial.println(F("Connected!"));
   
   Serial.println(F("Request DHCP"));
-  while (!cc3000.checkDHCP())
-  {
-    delay(100); // ToDo: Insert a DHCP timeout!
+  while (!cc3000.checkDHCP()) {
+    delay(1000); // ToDo: Insert a DHCP timeout!
   }  
 
   // Display the IP address DNS, Gateway, etc.
@@ -177,7 +173,7 @@ void setup(void)
   // Start listening for connections
   httpServer.begin();
   
-  Serial.println(F("Listening for connections..."));
+  Serial.println(F("Listening for connections"));
 }
 
 void loop(void)
@@ -232,7 +228,6 @@ void loop(void)
 
     // Clear the incoming data buffer and point to the beginning of it.
     bufindex = 0;
-    memset(&buffer, 0, sizeof(buffer));
     
     // Set a timeout for reading all the incoming data.
     unsigned long endtime = millis() + TIMEOUT_MS;
@@ -243,14 +238,15 @@ void loop(void)
       if (client.available()) {
         buffer[bufindex++] = client.read();
       }
+      buffer[bufindex] = 0;
       parsed = parseRequest(buffer, bufindex, &action, &path);
     }
 
     // Handle the request if it was parsed.
     if (parsed) {
-      Serial.println(F("Processing request"));
-      Serial.print(F("Action: ")); Serial.println(action);
-      Serial.print(F("Path: ")); Serial.println(path);
+      Serial.println(F("Action:"));
+      Serial.println(action); 
+      Serial.println(path);
       // Check the action to see if it was a GET request.
       if (strcmp(action, "GET") == 0) {
         // Respond with the path that was accessed.
@@ -265,7 +261,7 @@ void loop(void)
 
         switch(path[0]) {
           case 'i':    // identify yourself!
-            client.fastrprintln(F("lithoplane here"));
+            client.fastrprintln(F("hi"));
             break;
 
           case 't':    // Set time
@@ -281,7 +277,7 @@ void loop(void)
             break;
             
           case 'b':    // Brightness
-            last_brightness = String(path+1).toInt();
+            last_brightness = parseInt(path+1);
             EEPROM.put(EEPROM_BRIGHTNESS, last_brightness);
             strip.setBrightness(last_brightness);
             colorWipe(last_color);
@@ -291,7 +287,7 @@ void loop(void)
             
           case 'c':    // Color
             should_rainbow = false;
-            last_color = String(path+1).toInt();
+            last_color = parseInt(path+1);
             EEPROM.put(EEPROM_COLOR, last_color);
             EEPROM.put(EEPROM_RAINBOW, should_rainbow);
             colorWipe(last_color);
@@ -312,11 +308,6 @@ void loop(void)
         // Now send the response data.
         client.fastrprintln(F("OK"));
       }
-      else {
-        // Unsupported action, respond with an HTTP 405 method not allowed error.
-        client.fastrprintln(F("HTTP/1.1 405 Method Not Allowed"));
-        client.fastrprintln(F(""));
-      }
     }
 
     // Wait a short period to make sure the response had time to send before
@@ -324,7 +315,6 @@ void loop(void)
     delay(100);
 
     // Close the connection when done.
-    Serial.println(F("Client disconnected"));
     client.close();
   }
 }
@@ -359,7 +349,6 @@ void grabBartTimes() {
   }
 
   bufindex = 0;
-  memset(&buffer, 0, sizeof(buffer));
   
   /* Read data until either the connection is closed, or the idle timeout is reached. */ 
   unsigned long lastRead = millis();
@@ -373,6 +362,14 @@ void grabBartTimes() {
   }
   buffer[bufindex] = 0;
   www.close();
+}
+
+int parseInt(const char *buffer) {
+  int ret = 0;
+  while (*buffer >= '0' && *buffer <= '9') {
+    ret = ret * 10 + (*buffer++ - '0');
+  }
+  return ret;
 }
 
 // Return true if the buffer contains an HTTP request.  Also returns the request
@@ -413,11 +410,10 @@ bool displayConnectionDetails(void) {
   uint32_t ipAddress, netmask, gateway, dhcpserv, dnsserv;
   
   if (!cc3000.getIPAddress(&ipAddress, &netmask, &gateway, &dhcpserv, &dnsserv)) {
-    Serial.println(F("Unable to retrieve the IP Address!\r\n"));
+    Serial.println(F("No IP"));
     return false;
   } else {
-    Serial.print(F("\nIP Addr: ")); cc3000.printIPdotsRev(ipAddress);
-    Serial.println();
+    Serial.print(F("IP: ")); cc3000.printIPdotsRev(ipAddress);
     return true;
   }
 }
