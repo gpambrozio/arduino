@@ -27,7 +27,13 @@ CapacitiveSensor::CapacitiveSensor(uint8_t sendPin, uint8_t receivePin)
 	error = 1;
 	loopTimingFactor = 310;		// determined empirically -  a hack
 	
-	CS_Timeout_Millis = (2000 * (float)loopTimingFactor * (float)F_CPU) / 16000000;
+#if F_CPU == 16000000
+	CS_Timeout_Millis = 2000 * loopTimingFactor;
+#elif F_CPU > 16000000
+	CS_Timeout_Millis = 2000 * loopTimingFactor * (F_CPU / 16000000);
+#else
+	CS_Timeout_Millis = 2000 * loopTimingFactor / (16000000 / F_CPU);
+#endif
 	CS_AutocaL_Millis = 20000;
     
 	// Serial.print("timwOut =  ");
@@ -76,7 +82,7 @@ long CapacitiveSensor::capacitiveSensor(uint8_t samples)
 		// only calibrate if time is greater than CS_AutocaL_Millis and total is less than 10% of baseline
 		// this is an attempt to keep from calibrating when the sensor is seeing a "touched" signal
 
-		if ( (millis() - lastCal > CS_AutocaL_Millis) && abs(total  - leastTotal) < (int)(.10 * (float)leastTotal) ) {
+		if ( (millis() - lastCal > CS_AutocaL_Millis) && abs(total  - leastTotal) < (leastTotal / 10) ) {
 
 			// Serial.println();               // debugging
 			// Serial.println("auto-calibrate");
@@ -130,7 +136,13 @@ void CapacitiveSensor::set_CS_AutocaL_Millis(unsigned long autoCal_millis){
 }
 
 void CapacitiveSensor::set_CS_Timeout_Millis(unsigned long timeout_millis){
-	CS_Timeout_Millis = (timeout_millis * (float)loopTimingFactor * (float)F_CPU) / 16000000;  // floats to deal with large numbers
+#if F_CPU == 16000000
+	CS_Timeout_Millis = timeout_millis * loopTimingFactor;
+#elif F_CPU > 16000000
+	CS_Timeout_Millis = timeout_millis * loopTimingFactor * (F_CPU / 16000000);
+#else
+	CS_Timeout_Millis = timeout_millis * loopTimingFactor / (16000000 / F_CPU);
+#endif
 }
 
 // Private Methods /////////////////////////////////////////////////////////////
