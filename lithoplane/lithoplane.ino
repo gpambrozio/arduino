@@ -1,4 +1,3 @@
-
 /***************************************************
   Adafruit CC3000 Breakout/Shield Simple HTTP Server
     
@@ -141,8 +140,18 @@ char *action;
 char *path;
 
 bool last_sensor_state;
+long last_switch_time;
+long on_time;
+int number_of_taps;
+bool hold;
+bool hold_triggered;
+int number_of_taps_triggered;
 
-#define SENSOR_THRESHOLD  200
+#define SENSOR_THRESHOLD  60
+
+#define BOUNCE_TIME       20
+#define SINGLE_TAP_TIME   200
+#define HOLD_TIME         1500
 
 uint32_t next_bart_check;
 uint32_t max_bart_check;
@@ -155,6 +164,7 @@ uint16_t rainbow_index;
 uint32_t last_color;
 uint16_t last_brightness;
 bool should_rainbow;
+bool should_off;
 
 #define EEPROM_COLOR         0
 #define EEPROM_BRIGHTNESS    (EEPROM_COLOR + sizeof(last_color))
@@ -209,15 +219,62 @@ void setup(void)
 
 void loop(void)
 {
-  long cap_sensor =  cs1.capacitiveSensor(30);
+  long cap_sensor =  cs1.capacitiveSensor(20);
   bool sensor_state = cap_sensor > SENSOR_THRESHOLD;
-  if (last_sensor_state != sensor_state) {
-    last_sensor_state = sensor_state;
-    if (sensor_state) {
-      startBartCheck();
+
+  //first pressed
+  if (sensor_state && !last_sensor_state) {
+    on_time = millis();
+  }
+  
+  //held
+  if (sensor_state && last_sensor_state) {
+    if ((millis() - on_time) > HOLD_TIME && !hold) {
+      hold = true;
+      hold_triggered = true;
     }
   }
   
+  //released
+  if (!sensor_state && last_sensor_state) {
+    if (hold) {
+      hold = false;
+      number_of_taps = 0;
+    } else if ((millis() - on_time) > BOUNCE_TIME) {
+      number_of_taps++;
+    }
+    last_switch_time = millis();
+  }
+  
+  if (!sensor_state && !last_sensor_state) {
+    if ((millis() - last_switch_time) > SINGLE_TAP_TIME && number_of_taps > 0) {
+      number_of_taps_triggered = number_of_taps;
+      number_of_taps = 0;
+    }
+  }
+  last_sensor_state = sensor_state;
+  
+  if (hold_triggered) {
+    hold_triggered = false;
+    should_off = true;
+  } else if (number_of_taps_triggered > 0) {
+    switch (number_of_taps_triggered) {
+      case 1:
+        if (should_off) {
+          should_off = false;
+        } else {
+          startBartCheck();
+        }
+        break;
+        
+      case 2:
+        should_rainbow = !should_rainbow;
+        EEPROM.put(EEPROM_RAINBOW, should_rainbow);
+        break;
+    }
+    number_of_taps_triggered = 0;
+  }
+
   if (Serial.available()) {  // Look for char in serial que and process if found
     int command = Serial.read();
     Serial.print(F("cmd:"));
@@ -263,7 +320,12 @@ void loop(void)
     strip.setBrightness(brightness/2);
     colorWipe(last_color);
     strip.show();
+  } else if (should_off) {
+    strip.setBrightness(0);
+    colorWipe(0);
+    strip.show();
   } else if (should_rainbow) {
+    strip.setBrightness(last_brightness);
     rainbowCycle(rainbow_index);
     if (++rainbow_index >= MAX_RAINBOW_INDEX) {
       rainbow_index = 0;
