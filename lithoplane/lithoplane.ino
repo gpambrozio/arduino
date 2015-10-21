@@ -109,7 +109,8 @@ Adafruit_CC3000 cc3000 = Adafruit_CC3000(ADAFRUIT_CC3000_CS, ADAFRUIT_CC3000_IRQ
 
 // What page to grab!
 #define WEBSITE      "trans-anchor-110020.appspot.com"
-#define WEBPAGE      F("/bart?s=16th&d=n&t=6")
+
+#define BART_URL     F("/bart?s=16th&d=n&t=6")
 
 #define BART_CHECK_PERIOD   (30 * 1000)
 #define BART_MAX_CHECK      (10 * 60000)
@@ -432,12 +433,20 @@ void startBartCheck() {
 }
 
 void grabBartTimes() {
+  if (grabWebPage(WEBSITE, BART_URL)) {
+    next_bart_time = parseInt((char*)buffer);
+    Serial.print(F("Next bart: ")); Serial.println(next_bart_time);
+  }
+}
+
+bool grabWebPage(const char *site, const __FlashStringHelper *url) {
   uint32_t ip = 0;
   // Try looking up the website's IP address
-  Serial.print(WEBSITE); Serial.print(F(" -> "));
+  Serial.print(site); Serial.print(F(" -> "));
   while (ip == 0) {
-    if (!cc3000.getHostByName(WEBSITE, &ip)) {
+    if (!cc3000.getHostByName(site, &ip)) {
       Serial.println(F("Couldn't resolve!"));
+      return false;
     }
     delay(500);
   }
@@ -450,14 +459,14 @@ void grabBartTimes() {
   Adafruit_CC3000_Client www = cc3000.connectTCP(ip, 80);
   if (www.connected()) {
     www.fastrprint(F("GET "));
-    www.fastrprint(WEBPAGE);
+    www.fastrprint(url);
     www.fastrprint(F(" HTTP/1.1\r\n"));
-    www.fastrprint(F("Host: ")); www.fastrprint(WEBSITE); www.fastrprint(F("\r\n"));
+    www.fastrprint(F("Host: ")); www.fastrprint(url); www.fastrprint(F("\r\n"));
     www.fastrprint(F("\r\n"));
     www.println();
   } else {
     Serial.println(F("Connection failed"));    
-    return;
+    return false;
   }
 
   bufindex = 0;
@@ -482,9 +491,8 @@ void grabBartTimes() {
     }
   }
   buffer[bufindex] = 0;
-  next_bart_time = parseInt((char*)buffer);
-  Serial.print(F("Next bart: ")); Serial.println(next_bart_time);
   www.close();
+  return true;
 }
 
 int parseInt(const char *buffer) {
