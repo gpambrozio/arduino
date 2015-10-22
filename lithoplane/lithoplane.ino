@@ -461,7 +461,7 @@ bool grabWebPage(const char *site, const __FlashStringHelper *url) {
     www.fastrprint(F("GET "));
     www.fastrprint(url);
     www.fastrprint(F(" HTTP/1.1\r\n"));
-    www.fastrprint(F("Host: ")); www.fastrprint(url); www.fastrprint(F("\r\n"));
+    www.fastrprint(F("Host: ")); www.fastrprint(site); www.fastrprint(F("\r\n"));
     www.fastrprint(F("\r\n"));
     www.println();
   } else {
