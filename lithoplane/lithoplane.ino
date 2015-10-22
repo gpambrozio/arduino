@@ -57,7 +57,6 @@
 #include <Wire.h>
 #include <RTC.h>
 #include <EEPROM.h>
-#include <CapacitiveSensor.h>
 #include "utility/debug.h"
 
 // These are the interrupt and control pins
@@ -70,10 +69,7 @@
 
 #define LED_PIN       7
 
-#define CAP1_IN       4
-#define CAP1_SENSOR   5
-
-CapacitiveSensor  cs1 = CapacitiveSensor(CAP1_IN, CAP1_SENSOR);
+#define BUTTON_PIN    2
 
 Adafruit_NeoPixel strip = Adafruit_NeoPixel(44, LED_PIN, NEO_GRB + NEO_KHZ800);
 
@@ -150,9 +146,7 @@ bool hold;
 bool hold_triggered;
 int number_of_taps_triggered;
 
-#define SENSOR_THRESHOLD  60
-
-#define BOUNCE_TIME       20
+#define BOUNCE_TIME       50
 #define SINGLE_TAP_TIME   200
 #define HOLD_TIME         1500
 
@@ -179,6 +173,8 @@ bool should_off;
 void setup(void)
 {
   Serial.begin(115200);
+  
+  pinMode(BUTTON_PIN, INPUT_PULLUP);
   
   RTCStart();
   RTCGetDateDs1307();
@@ -225,8 +221,7 @@ void setup(void)
 
 void loop(void)
 {
-  long cap_sensor =  cs1.capacitiveSensor(20);
-  bool sensor_state = cap_sensor > SENSOR_THRESHOLD;
+  bool sensor_state = digitalRead(BUTTON_PIN) == LOW;
 
   //first pressed
   if (sensor_state && !last_sensor_state) {
