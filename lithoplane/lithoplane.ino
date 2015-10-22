@@ -59,6 +59,8 @@
 #include <EEPROM.h>
 #include "utility/debug.h"
 
+#define GUSTAVO
+
 // These are the interrupt and control pins
 #define ADAFRUIT_CC3000_IRQ   3  // MUST be an interrupt pin!
 // These can be any two pins
@@ -106,30 +108,39 @@ Adafruit_CC3000 cc3000 = Adafruit_CC3000(ADAFRUIT_CC3000_CS, ADAFRUIT_CC3000_IRQ
 // What page to grab!
 #define WEBSITE      "trans-anchor-110020.appspot.com"
 
+#ifdef GUSTAVO
+
+#define BART_URL     F("/bart?s=woak&d=s&t=11")
+#define WEATHER_URL  F("/weather?i=5378538")
+
+#else
+
 #define BART_URL     F("/bart?s=16th&d=n&t=6")
-#define WEATHER_URL  F("/weather?z=94111")
+#define WEATHER_URL  F("/weather?i=5391959")
+
+#endif
 
 #define BART_CHECK_PERIOD   (30 * 1000)
 #define BART_MAX_CHECK      (10 * 60000)
 #define WEATHER_MAX_CHECK   (1 * 60000)
 
 uint8_t const sin_table[] PROGMEM={
-  64,66,67,69,70,72,73,75,76,78,80,81,83,84,86,87,
-  88,90,91,93,94,96,97,98,100,101,102,103,105,106,107,108,
-  109,110,111,112,113,114,115,116,117,118,119,120,120,121,122,123,
-  123,124,124,125,125,126,126,126,127,127,127,128,128,128,128,128,
-  128,128,128,128,128,128,127,127,127,126,126,126,125,125,124,124,
-  123,123,122,121,120,120,119,118,117,116,115,114,113,112,111,110,
-  109,108,107,106,105,103,102,101,100,98,97,96,94,93,91,90,
-  88,87,86,84,83,81,80,78,76,75,73,72,70,69,67,66,
-  64,62,61,59,58,56,55,53,52,50,48,47,45,44,42,41,
-  40,38,37,35,34,32,31,30,28,27,26,25,23,22,21,20,
-  19,18,17,16,15,14,13,12,11,10,9,8,8,7,6,5,
-  5,4,4,3,3,2,2,2,1,1,1,0,0,0,0,0,
-  0,0,0,0,0,0,1,1,1,2,2,2,3,3,4,4,
-  5,5,6,7,8,8,9,10,11,12,13,14,15,16,17,18,
-  19,20,21,22,23,25,26,27,28,30,31,32,34,35,37,38,
-  40,41,42,44,45,47,48,50,52,53,55,56,58,59,61,62,
+  128,131,134,137,140,143,146,149,152,155,158,162,165,167,170,173,
+  176,179,182,185,188,190,193,196,198,201,203,206,208,211,213,215,
+  218,220,222,224,226,228,230,232,234,235,237,238,240,241,243,244,
+  245,246,248,249,250,250,251,252,253,253,254,254,254,255,255,255,
+  255,255,255,255,254,254,254,253,253,252,251,250,250,249,248,246,
+  245,244,243,241,240,238,237,235,234,232,230,228,226,224,222,220,
+  218,215,213,211,208,206,203,201,198,196,193,190,188,185,182,179,
+  176,173,170,167,165,162,158,155,152,149,146,143,140,137,134,131,
+  128,124,121,118,115,112,109,106,103,100,97,93,90,88,85,82,
+  79,76,73,70,67,65,62,59,57,54,52,49,47,44,42,40,
+  37,35,33,31,29,27,25,23,21,20,18,17,15,14,12,11,
+  10,9,7,6,5,5,4,3,2,2,1,1,1,0,0,0,
+  0,0,0,0,1,1,1,2,2,3,4,5,5,6,7,9,
+  10,11,12,14,15,17,18,20,21,23,25,27,29,31,33,35,
+  37,40,42,44,47,49,52,54,57,59,62,65,67,70,73,76,
+  79,82,85,88,90,93,97,100,103,106,109,112,115,118,121,124,
 };
 
 Adafruit_CC3000_Server httpServer(LISTEN_PORT);
@@ -154,11 +165,15 @@ uint32_t next_bart_check;
 uint32_t max_bart_check;
 long next_bart_time;
 
-uint16_t rainbow_index;
-
 #define MAX_RAINBOW_INDEX   (256*5)
 
-uint32_t weather_color;
+uint16_t rainbow_index;
+
+#define WEATHER_COLORS_CYCLE_TIME  1000
+
+uint32_t weather_color_min;
+uint32_t weather_color_max;
+long weather_color_cycle;
 long weather_color_end;
 
 uint32_t last_color;
@@ -184,8 +199,8 @@ void setup(void)
   EEPROM.get(EEPROM_BRIGHTNESS, last_brightness);
   EEPROM.get(EEPROM_RAINBOW, should_rainbow);
   strip.begin();
-  strip.setBrightness(last_brightness);
-  colorWipe(last_color);
+  strip.setBrightness(50);
+  colorWipe(strip.Color(255, 0, 0));
   strip.show(); 
 
   Serial.print(F("RAM:")); Serial.println(getFreeRam(), DEC);
@@ -258,10 +273,9 @@ void loop(void)
   if (hold_triggered) {
     hold_triggered = false;
     should_off = true;
-    weather_color_end = 0;
-    next_bart_time = 0;
-    max_bart_check = 0;
+    resetModes();
   } else if (number_of_taps_triggered > 0) {
+    resetModes();
     if (should_off) {
       should_off = false;
     } else {
@@ -330,7 +344,20 @@ void loop(void)
     strip.show();
   } else if (weather_color_end > 0) {
     strip.setBrightness(last_brightness);
-    colorWipe(weather_color);
+    uint8_t min_color_r = (weather_color_min >> 16) & 0xff;
+    uint8_t max_color_r = (weather_color_max >> 16) & 0xff;
+    uint8_t min_color_b = weather_color_min & 0xff;
+    uint8_t max_color_b = weather_color_max & 0xff;
+    long cycle_position = (millis() - weather_color_cycle) % (WEATHER_COLORS_CYCLE_TIME * 2);
+    if (cycle_position < WEATHER_COLORS_CYCLE_TIME) {
+      min_color_r = map(cycle_position, 0, WEATHER_COLORS_CYCLE_TIME, min_color_r, max_color_r);
+      min_color_b = map(cycle_position, 0, WEATHER_COLORS_CYCLE_TIME, min_color_b, max_color_b);
+    } else {
+      min_color_r = map(cycle_position, WEATHER_COLORS_CYCLE_TIME, 2 * WEATHER_COLORS_CYCLE_TIME, max_color_r, min_color_r);
+      min_color_b = map(cycle_position, WEATHER_COLORS_CYCLE_TIME, 2 * WEATHER_COLORS_CYCLE_TIME, max_color_b, min_color_b);
+    }
+    
+    colorWipe(strip.Color(min_color_r, 0, min_color_b));
     strip.show();
     if (millis() > weather_color_end) {
       weather_color_end = 0;
@@ -432,6 +459,12 @@ void loop(void)
   }
 }
 
+void resetModes() {
+  weather_color_end = 0;
+  next_bart_time = 0;
+  max_bart_check = 0;
+}
+
 void startBartCheck() {
   next_bart_check = millis();
   max_bart_check = next_bart_check + BART_MAX_CHECK;
@@ -445,8 +478,12 @@ void grabBartTimes() {
 
 void getWeather() {
   if (grabWebPage(WEBSITE, WEATHER_URL)) {
-    weather_color = parseInt((char*)buffer);
+    char* color = strtok((char*)buffer, ",");
+    weather_color_min = parseInt(color);
+    color = strtok(NULL, ",");
+    weather_color_max = parseInt(color);
     weather_color_end = millis() + WEATHER_MAX_CHECK;
+    weather_color_cycle = millis();
   }
 }
 
