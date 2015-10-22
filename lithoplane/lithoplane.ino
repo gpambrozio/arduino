@@ -111,9 +111,11 @@ Adafruit_CC3000 cc3000 = Adafruit_CC3000(ADAFRUIT_CC3000_CS, ADAFRUIT_CC3000_IRQ
 #define WEBSITE      "trans-anchor-110020.appspot.com"
 
 #define BART_URL     F("/bart?s=16th&d=n&t=6")
+#define WEATHER_URL  F("/weather?z=94111")
 
 #define BART_CHECK_PERIOD   (30 * 1000)
 #define BART_MAX_CHECK      (10 * 60000)
+#define WEATHER_MAX_CHECK   (1 * 60000)
 
 uint8_t const sin_table[] PROGMEM={
   64,66,67,69,70,72,73,75,76,78,80,81,83,84,86,87,
@@ -161,6 +163,9 @@ long next_bart_time;
 uint16_t rainbow_index;
 
 #define MAX_RAINBOW_INDEX   (256*5)
+
+uint32_t weather_color;
+long weather_color_end;
 
 uint32_t last_color;
 uint16_t last_brightness;
@@ -258,20 +263,27 @@ void loop(void)
   if (hold_triggered) {
     hold_triggered = false;
     should_off = true;
+    weather_color_end = 0;
+    next_bart_time = 0;
+    max_bart_check = 0;
   } else if (number_of_taps_triggered > 0) {
-    switch (number_of_taps_triggered) {
-      case 1:
-        if (should_off) {
-          should_off = false;
-        } else {
+    if (should_off) {
+      should_off = false;
+    } else {
+      switch (number_of_taps_triggered) {
+        case 1:
           startBartCheck();
-        }
-        break;
-        
-      case 2:
-        should_rainbow = !should_rainbow;
-        EEPROM.put(EEPROM_RAINBOW, should_rainbow);
-        break;
+          break;
+         
+        case 2:
+          getWeather();
+          break;
+          
+        case 3:
+          should_rainbow = !should_rainbow;
+          EEPROM.put(EEPROM_RAINBOW, should_rainbow);
+          break;
+      }
     }
     number_of_taps_triggered = 0;
   }
@@ -281,25 +293,21 @@ void loop(void)
     Serial.print(F("cmd:"));
     Serial.println(command);  // Echo command CHAR in ascii that was sent
     switch (command) {
-      case 'T':      //If command = "T" Set Date
-        RTCSetDateDs1307();
-        RTCGetDateDs1307();
-        RTCPrintDateToSerial();
-        Serial.println("");
-        break;
-        
-      case 't':
-        RTCGetDateDs1307();
-        RTCPrintDateToSerial();
-        Serial.println("");
-        break;
-        
+//      case 'T':      //If command = "T" Set Date
+//        RTCSetDateDs1307();
+//        RTCGetDateDs1307();
+//        RTCPrintDateToSerial();
+//        Serial.println("");
+//        break;
+//        
+//      case 't':
+//        RTCGetDateDs1307();
+//        RTCPrintDateToSerial();
+//        Serial.println("");
+//        break;
+//        
       case 'm':
-        Serial.print(F("RAM:")); Serial.println(getFreeRam(), DEC);
-        break;
-        
-      case 'b':
-        startBartCheck();
+        Serial.println(getFreeRam(), DEC);
         break;
     }
   }
@@ -314,17 +322,24 @@ void loop(void)
     }
   }
   
-  if (next_bart_time > 0) {
+  if (should_off) {
+    strip.setBrightness(0);
+    colorWipe(0);
+    strip.show();
+  } else if (next_bart_time > 0) {
     long next_bart_time_millis = 1000 * next_bart_time;
     long cycle_position = sizeof(sin_table) * (millis() % next_bart_time_millis) / next_bart_time_millis;
     uint8_t brightness = pgm_read_byte(&sin_table[cycle_position]);
     strip.setBrightness(brightness/2);
     colorWipe(last_color);
     strip.show();
-  } else if (should_off) {
-    strip.setBrightness(0);
-    colorWipe(0);
+  } else if (weather_color_end > 0) {
+    strip.setBrightness(last_brightness);
+    colorWipe(weather_color);
     strip.show();
+    if (millis() > weather_color_end) {
+      weather_color_end = 0;
+    }
   } else if (should_rainbow) {
     strip.setBrightness(last_brightness);
     rainbowCycle(rainbow_index);
@@ -362,9 +377,6 @@ void loop(void)
 
     // Handle the request if it was parsed.
     if (parsed) {
-      Serial.println(F("Action:"));
-      Serial.println(action); 
-      Serial.println(path);
       // Check the action to see if it was a GET request.
       if (strcmp(action, "GET") == 0) {
         // Respond with the path that was accessed.
@@ -379,7 +391,7 @@ void loop(void)
 
         switch(path[0]) {
           case 'i':    // identify yourself!
-            client.fastrprintln(F("hi"));
+            // No need for anything. OK below will do.
             break;
 
           case 't':    // Set time
@@ -391,13 +403,11 @@ void loop(void)
             month = (byte) ((path[10] - '0') *10 +  (path[11] - '0'));
             year= (byte) ((path[12] - '0') *10 +  (path[13] - '0'));
             RTCWriteDateToDs1307();
-            client.fastrprintln(F("Date set"));
             break;
             
           case 'b':    // Brightness
             last_brightness = parseInt(path+1);
             EEPROM.put(EEPROM_BRIGHTNESS, last_brightness);
-            client.fastrprintln(F("Brightness set"));
             break;
             
           case 'c':    // Color
@@ -435,7 +445,13 @@ void startBartCheck() {
 void grabBartTimes() {
   if (grabWebPage(WEBSITE, BART_URL)) {
     next_bart_time = parseInt((char*)buffer);
-    Serial.print(F("Next bart: ")); Serial.println(next_bart_time);
+  }
+}
+
+void getWeather() {
+  if (grabWebPage(WEBSITE, WEATHER_URL)) {
+    weather_color = parseInt((char*)buffer);
+    weather_color_end = millis() + WEATHER_MAX_CHECK;
   }
 }
 
@@ -445,7 +461,7 @@ bool grabWebPage(const char *site, const __FlashStringHelper *url) {
   Serial.print(site); Serial.print(F(" -> "));
   while (ip == 0) {
     if (!cc3000.getHostByName(site, &ip)) {
-      Serial.println(F("Couldn't resolve!"));
+      Serial.println(F("rslv"));
       return false;
     }
     delay(500);
@@ -495,8 +511,8 @@ bool grabWebPage(const char *site, const __FlashStringHelper *url) {
   return true;
 }
 
-int parseInt(const char *buffer) {
-  int ret = 0;
+long parseInt(const char *buffer) {
+  long ret = 0;
   while (*buffer >= '0' && *buffer <= '9') {
     ret = ret * 10 + (*buffer++ - '0');
   }
