@@ -78,8 +78,6 @@ Adafruit_NeoPixel strip = Adafruit_NeoPixel(44, LED_PIN, NEO_GRB + NEO_KHZ800);
 Adafruit_CC3000 cc3000 = Adafruit_CC3000(ADAFRUIT_CC3000_CS, ADAFRUIT_CC3000_IRQ, ADAFRUIT_CC3000_VBAT,
                                          SPI_CLOCK_DIVIDER); // you can change this clock speed
 
-#define WLAN_SSID       "myNetwork"   // cannot be longer than 32 characters!
-#define WLAN_PASS       "myPassword"
 // Security can be WLAN_SEC_UNSEC, WLAN_SEC_WEP, WLAN_SEC_WPA or WLAN_SEC_WPA2
 #define WLAN_SECURITY   WLAN_SEC_WPA2
 
@@ -110,10 +108,16 @@ Adafruit_CC3000 cc3000 = Adafruit_CC3000(ADAFRUIT_CC3000_CS, ADAFRUIT_CC3000_IRQ
 
 #ifdef GUSTAVO
 
+#define WLAN_SSID       "myNetwork"   // cannot be longer than 32 characters!
+#define WLAN_PASS       "myPassword"
+
 #define BART_URL     F("/bart?s=woak&d=s&t=11")
 #define WEATHER_URL  F("/weather?i=5378538")
 
 #else
+
+#define WLAN_SSID       "myNetwork"   // cannot be longer than 32 characters!
+#define WLAN_PASS       "myPassword"
 
 #define BART_URL     F("/bart?s=16th&d=n&t=6")
 #define WEATHER_URL  F("/weather?i=5391959")
@@ -123,6 +127,10 @@ Adafruit_CC3000 cc3000 = Adafruit_CC3000(ADAFRUIT_CC3000_CS, ADAFRUIT_CC3000_IRQ
 #define BART_CHECK_PERIOD   (30 * 1000)
 #define BART_MAX_CHECK      (10 * 60000)
 #define WEATHER_MAX_CHECK   (1 * 60000)
+
+#define HOLD_TIME         1500
+
+#define WEATHER_COLORS_CYCLE_TIME  1000
 
 uint8_t const sin_table[] PROGMEM={
   128,131,134,137,140,143,146,149,152,155,158,162,165,167,170,173,
@@ -159,7 +167,6 @@ int number_of_taps_triggered;
 
 #define BOUNCE_TIME       50
 #define SINGLE_TAP_TIME   200
-#define HOLD_TIME         1500
 
 uint32_t next_bart_check;
 uint32_t max_bart_check;
@@ -168,8 +175,6 @@ long next_bart_time;
 #define MAX_RAINBOW_INDEX   (256*5)
 
 uint16_t rainbow_index;
-
-#define WEATHER_COLORS_CYCLE_TIME  1000
 
 uint32_t weather_color_min;
 uint32_t weather_color_max;
