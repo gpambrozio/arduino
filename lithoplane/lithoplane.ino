@@ -128,7 +128,9 @@ Adafruit_CC3000 cc3000 = Adafruit_CC3000(ADAFRUIT_CC3000_CS, ADAFRUIT_CC3000_IRQ
 #define BART_MAX_CHECK      (10 * 60000)
 #define WEATHER_MAX_CHECK   (1 * 60000)
 
-#define HOLD_TIME         1500
+#define SLEEP_TIME          (8 * 60000)
+#define WAKE_SECONDS        (10 * 60)
+#define HOLD_TIME           1500
 
 #define WEATHER_COLORS_CYCLE_TIME  1000
 
@@ -170,7 +172,11 @@ int number_of_taps_triggered;
 
 uint32_t next_bart_check;
 uint32_t max_bart_check;
-long next_bart_time;
+uint8_t next_bart_time;
+
+long sleep_start;
+
+long wake_second;
 
 #define MAX_RAINBOW_INDEX   (256*5)
 
@@ -199,6 +205,8 @@ void setup(void)
   RTCStart();
   RTCGetDateDs1307();
   RTCPrintDateToSerial();
+  
+  wake_second = -1;
 
   EEPROM.get(EEPROM_COLOR, last_color);
   EEPROM.get(EEPROM_BRIGHTNESS, last_brightness);
@@ -297,6 +305,10 @@ void loop(void)
           should_rainbow = !should_rainbow;
           EEPROM.put(EEPROM_RAINBOW, should_rainbow);
           break;
+          
+        case 4:
+          sleep_start = millis();
+          break;
       }
     }
     number_of_taps_triggered = 0;
@@ -337,14 +349,45 @@ void loop(void)
   }
   
   if (should_off) {
-    strip.setBrightness(0);
-    colorWipe(0);
+    uint8_t brightness = 0;
+    if (wake_second >= 0) {
+      RTCGetDateDs1307();
+      long current_second = hour * 3600 + minute * 60 + second;
+      if (current_second >= wake_second) {
+        should_off = false;
+        wake_second = 0;
+        brightness = last_brightness;
+      } else {
+        long start_wake = wake_second - WAKE_SECONDS;
+        if (start_wake < 0) {
+          start_wake = wake_second;
+          current_second = (current_second + WAKE_SECONDS) % (24 * 3600);
+        }
+        if (current_second > start_wake) {
+          long elapsed = current_second - start_wake;
+          brightness = map(elapsed, 0, WAKE_SECONDS, 0, last_brightness);
+        }
+      }
+    }
+    strip.setBrightness(brightness);
+    colorWipe(strip.Color(255, 255, 255));
     strip.show();
+  } else if (sleep_start > 0) {
+    long elapsed = millis() - sleep_start;
+    if (elapsed >= SLEEP_TIME) {
+      sleep_start = 0;
+      should_off = true;
+    } else {
+      uint8_t brightness = map(elapsed, 0, SLEEP_TIME, last_brightness, 0);
+      strip.setBrightness(brightness);
+      colorWipe(last_color);
+      strip.show();
+    }
   } else if (next_bart_time > 0) {
     long next_bart_time_millis = 1000 * next_bart_time;
     long cycle_position = sizeof(sin_table) * (millis() % next_bart_time_millis) / next_bart_time_millis;
     uint8_t brightness = pgm_read_byte(&sin_table[cycle_position]);
-    strip.setBrightness(brightness/2);
+    strip.setBrightness(brightness);
     colorWipe(last_color);
     strip.show();
   } else if (weather_color_end > 0) {
@@ -416,6 +459,7 @@ void loop(void)
         // Send an empty line to signal start of body.
         client.fastrprintln(F(""));
 
+        bool ok = true;
         switch(path[0]) {
           case 'i':    // identify yourself!
             // No need for anything. OK below will do.
@@ -448,10 +492,18 @@ void loop(void)
             should_rainbow = true;
             EEPROM.put(EEPROM_RAINBOW, should_rainbow);
             break;
+            
+          case 'w':    // Wake
+            wake_second = parseInt(path+1);
+            break;
+            
+          default:
+            ok = false;
+            break;
         }
         
         // Now send the response data.
-        client.fastrprintln(F("OK"));
+        client.fastrprintln(ok ? F("OK") : F("?"));
       }
     }
 
@@ -468,6 +520,7 @@ void resetModes() {
   weather_color_end = 0;
   next_bart_time = 0;
   max_bart_check = 0;
+  sleep_start = 0;
 }
 
 void startBartCheck() {
