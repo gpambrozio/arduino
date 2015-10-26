@@ -352,7 +352,7 @@ void loop(void)
     uint8_t brightness = 0;
     if (wake_second >= 0) {
       RTCGetDateDs1307();
-      long current_second = hour * 3600 + minute * 60 + second;
+      long current_second = (long)hour * 3600 + (long)minute * 60 + second;
       if (current_second >= wake_second) {
         should_off = false;
         wake_second = 0;
