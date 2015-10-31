@@ -235,7 +235,14 @@ void setup(void)
   while (!cc3000.checkDHCP()) {
     delay(1000); // ToDo: Insert a DHCP timeout!
   }  
-
+//  uint32_t ipAddress = cc3000.IP2U32(192, 168, 29, 233);
+//  uint32_t netMask = cc3000.IP2U32(255, 255, 255, 0);
+//  uint32_t defaultGateway = cc3000.IP2U32(192, 168, 29, 1);
+//  uint32_t dns = cc3000.IP2U32(8, 8, 4, 4);
+//  if (!cc3000.setStaticIPAddress(ipAddress, netMask, defaultGateway, dns)) {
+//    Serial.println(F("Failed"));
+//    while(1);
+//  }
   // Display the IP address DNS, Gateway, etc.
   while (!displayConnectionDetails()) {
     delay(1000);
