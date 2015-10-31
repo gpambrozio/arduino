@@ -560,15 +560,14 @@ void getWeather() {
 bool grabWebPage(const char *site, const __FlashStringHelper *url) {
   uint32_t ip = 0;
   // Try looking up the website's IP address
-  Serial.print(site); Serial.print(F(" -> "));
   while (ip == 0) {
+    Serial.print(site); Serial.print(F(" -> "));
     if (!cc3000.getHostByName(site, &ip)) {
       Serial.println(F("rslv"));
       return false;
     }
     delay(500);
   }
-
   cc3000.printIPdotsRev(ip);
   
   /* Try connecting to the website.
@@ -662,7 +661,12 @@ bool displayConnectionDetails(void) {
     Serial.println(F("No IP"));
     return false;
   } else {
-    Serial.print(F("IP: ")); cc3000.printIPdotsRev(ipAddress);
+    Serial.print(F("\nIP Addr: ")); cc3000.printIPdotsRev(ipAddress);
+    Serial.print(F("\nNetmask: ")); cc3000.printIPdotsRev(netmask);
+    Serial.print(F("\nGateway: ")); cc3000.printIPdotsRev(gateway);
+    Serial.print(F("\nDHCPsrv: ")); cc3000.printIPdotsRev(dhcpserv);
+    Serial.print(F("\nDNSserv: ")); cc3000.printIPdotsRev(dnsserv);
+    Serial.println();
     return true;
   }
 }
