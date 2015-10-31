@@ -321,11 +321,11 @@ void loop(void)
     number_of_taps_triggered = 0;
   }
 
-  if (Serial.available()) {  // Look for char in serial que and process if found
-    int command = Serial.read();
-    Serial.print(F("cmd:"));
-    Serial.println(command);  // Echo command CHAR in ascii that was sent
-    switch (command) {
+//  if (Serial.available()) {  // Look for char in serial que and process if found
+//    int command = Serial.read();
+//    Serial.print(F("cmd:"));
+//    Serial.println(command);  // Echo command CHAR in ascii that was sent
+//    switch (command) {
 //      case 'T':      //If command = "T" Set Date
 //        RTCSetDateDs1307();
 //        RTCGetDateDs1307();
@@ -339,11 +339,11 @@ void loop(void)
 //        Serial.println("");
 //        break;
 //        
-      case 'm':
-        Serial.println(getFreeRam(), DEC);
-        break;
-    }
-  }
+//      case 'm':
+//        Serial.println(getFreeRam(), DEC);
+//        break;
+//    }
+//  }
   
   if (max_bart_check > 0 && millis() >= next_bart_check) {
     if (millis() >= max_bart_check) {
