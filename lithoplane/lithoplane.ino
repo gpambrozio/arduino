@@ -675,7 +675,7 @@ void rainbowCycle(uint16_t j) {
   uint16_t i;
 
   for(i=0; i< strip.numPixels(); i++) {
-    strip.setPixelColor(i, Wheel(((i * 256 / strip.numPixels()) + j) & 255));
+    strip.setPixelColor(strip.numPixels() - i - 1, Wheel(((i * 256 / strip.numPixels()) + j) & 255));
   }
   strip.show();
 }
