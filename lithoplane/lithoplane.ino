@@ -471,6 +471,11 @@ void loop(void)
           case 'i':    // identify yourself!
             // No need for anything. OK below will do.
             break;
+            
+          case 'p':    // power
+            should_off = !should_off;
+            resetModes();
+            break;
 
           case 't':    // Set time
             second = (byte) ((path[1] - '0') * 10 + (path[2] - '0')); 
