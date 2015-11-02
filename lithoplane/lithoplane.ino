@@ -111,16 +111,16 @@ Adafruit_CC3000 cc3000 = Adafruit_CC3000(ADAFRUIT_CC3000_CS, ADAFRUIT_CC3000_IRQ
 #define WLAN_SSID       "myNetwork"   // cannot be longer than 32 characters!
 #define WLAN_PASS       "myPassword"
 
-#define BART_URL     F("/bart?s=woak&d=s&t=11")
-#define WEATHER_URL  F("/weather?i=5378538")
+#define BART_URL     F("/b?w=g")
+#define WEATHER_URL  F("/w?w=g")
 
 #else
 
 #define WLAN_SSID       "myNetwork"   // cannot be longer than 32 characters!
 #define WLAN_PASS       "myPassword"
 
-#define BART_URL     F("/bart?s=16th&d=n&t=6")
-#define WEATHER_URL  F("/weather?i=5391959")
+#define BART_URL     F("/b?w=n")
+#define WEATHER_URL  F("/w?w=n")
 
 #endif
 
