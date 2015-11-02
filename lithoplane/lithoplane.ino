@@ -489,12 +489,16 @@ void loop(void)
             break;
             
           case 'b':    // Brightness
+            should_off = false;
+            resetModes();
             last_brightness = parseInt(path+1);
             EEPROM.put(EEPROM_BRIGHTNESS, last_brightness);
             break;
             
           case 'c':    // Color
             should_rainbow = false;
+            should_off = false;
+            resetModes();
             last_color = parseInt(path+1);
             EEPROM.put(EEPROM_COLOR, last_color);
             EEPROM.put(EEPROM_RAINBOW, should_rainbow);
@@ -502,6 +506,8 @@ void loop(void)
             
           case 'r':    // Rainbow
             should_rainbow = true;
+            should_off = false;
+            resetModes();
             EEPROM.put(EEPROM_RAINBOW, should_rainbow);
             break;
             
