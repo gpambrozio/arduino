@@ -216,7 +216,7 @@ void setup(void)
   colorWipe(strip.Color(255, 0, 0));
   strip.show(); 
 
-  Serial.print(F("RAM:")); Serial.println(getFreeRam(), DEC);
+//  Serial.print(F("RAM:")); Serial.println(getFreeRam(), DEC);
   
   // Initialise the module
   Serial.println(F("Init"));
@@ -231,18 +231,24 @@ void setup(void)
     while(1);
   }
    
+#ifdef GUSTAVO
   Serial.println(F("DHCP"));
+//  cc3000.setDHCP();
   while (!cc3000.checkDHCP()) {
     delay(1000); // ToDo: Insert a DHCP timeout!
   }  
-//  uint32_t ipAddress = cc3000.IP2U32(192, 168, 29, 233);
-//  uint32_t netMask = cc3000.IP2U32(255, 255, 255, 0);
-//  uint32_t defaultGateway = cc3000.IP2U32(192, 168, 29, 1);
-//  uint32_t dns = cc3000.IP2U32(8, 8, 4, 4);
-//  if (!cc3000.setStaticIPAddress(ipAddress, netMask, defaultGateway, dns)) {
-//    Serial.println(F("Failed"));
-//    while(1);
-//  }
+#else
+  Serial.println(F("Static"));
+  uint32_t ipAddress = cc3000.IP2U32(192, 168, 29, 233);
+  uint32_t netMask = cc3000.IP2U32(255, 255, 255, 0);
+  uint32_t defaultGateway = cc3000.IP2U32(192, 168, 29, 1);
+  uint32_t dns = cc3000.IP2U32(8, 8, 4, 4);
+  if (!cc3000.setStaticIPAddress(ipAddress, netMask, defaultGateway, dns)) {
+    Serial.println(F("Failed"));
+    while(1);
+  }
+#endif
+
   // Display the IP address DNS, Gateway, etc.
   while (!displayConnectionDetails()) {
     delay(1000);
