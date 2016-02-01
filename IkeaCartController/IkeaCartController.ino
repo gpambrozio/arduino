@@ -7,10 +7,10 @@
 #define PWM_1       6
 #define PWM_2       5
 
-#define FORWARD_1   4
-#define REVERSE_1   3
-#define FORWARD_2   A5
-#define REVERSE_2   A4
+#define FORWARD_1   3
+#define REVERSE_1   4
+#define FORWARD_2   A4
+#define REVERSE_2   A5
 
 #define IR_IN       7
 
@@ -141,41 +141,46 @@ void retract() {
   }
 }
 
-void move(boolean motor1, boolean reverse) {
+#define LEFT true
+#define RIGHT false
+#define FORWARD true
+#define REVERSE false
+
+void move(boolean left, boolean forward, int power) {
   lower();
   lastMove = millis();
   
-  int f = reverse ? HIGH : LOW;
-  int r = reverse ? LOW : HIGH;
-  if (motor1) {
+  int f = forward ? HIGH : LOW;
+  int r = forward ? LOW : HIGH;
+  if (left) {
     digitalWrite(FORWARD_1, f);
     digitalWrite(REVERSE_1, r);
-    analogWrite(PWM_1, 255);
+    analogWrite(PWM_1, power);
   } else {
     digitalWrite(FORWARD_2, f);
     digitalWrite(REVERSE_2, r);
-    analogWrite(PWM_2, 255);
+    analogWrite(PWM_2, power);
   }
 }
 
 void forward() {
-  move(true, true);
-  move(false, true);
+  move(LEFT, FORWARD, 255);
+  move(RIGHT, FORWARD, 255);
 }
 
 void reverse() {
-  move(true, false);
-  move(false, false);
+  move(LEFT, REVERSE, 255);
+  move(RIGHT, REVERSE, 255);
 }
 
 void right() {
-  move(true, true);
-  move(false, false);
+  move(LEFT, FORWARD, 20);
+  move(RIGHT, FORWARD, 255);
 }
 
 void left() {
-  move(true, false);
-  move(false, true);
+  move(LEFT, FORWARD, 255);
+  move(RIGHT, FORWARD, 20);
 }
 
 void stop() {
