@@ -9,8 +9,9 @@
 #include <ESP8266WiFi.h>
 #include <Adafruit_NeoPixel.h>
 
-const char* ssid     = "network";
-const char* password = "password";
+#define WLAN_GUSTAVO
+
+#include "Passwords.h"
 
 #define BART_CHECK_PERIOD   (30 * 1000)
 #define BART_MAX_CHECK      (10 * 60000)
@@ -56,9 +57,9 @@ void setup() {
   Serial.println();
   Serial.println();
   Serial.print("Connecting to ");
-  Serial.println(ssid);
+  Serial.println(WLAN_SSID);
   
-  WiFi.begin(ssid, password);
+  WiFi.begin(WLAN_SSID, WLAN_PASS);
   
   while (WiFi.status() != WL_CONNECTED) {
     delay(500);
