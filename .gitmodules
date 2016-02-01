@@ -40,3 +40,6 @@ url=git@github.com:gpambrozio/Adafruit_NeoPixel.git
 [submodule "libraries/Adafruit_LED_Backpack_Library"]
 	path = libraries/Adafruit_LED_Backpack_Library
 	url = git@github.com:adafruit/Adafruit-LED-Backpack-Library.git
+[submodule "libraries/ThingSpeak"]
+	path = libraries/ThingSpeak
+	url = https://github.com/mathworks/thingspeak-arduino.git
