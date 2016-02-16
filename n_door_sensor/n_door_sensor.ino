@@ -3,7 +3,7 @@
   systems that collect, analyze, and react to their environments.
 */
 
-#define ENABLE_PIN    2
+#define ENABLE_PIN    0
 
 //#define PRINT_DEBUG_MESSAGES 1
 
@@ -50,7 +50,7 @@ void loop() {
   int result = ThingSpeak.writeField(myChannelNumber, 1, (long)millis(), N_DOOR_THINGSPEAK_ID);
   Serial.print("Result: ");
   Serial.println(result);
-  pinMode(ENABLE_PIN, INPUT);
-  ESP.deepSleep(30000000);
+  digitalWrite(ENABLE_PIN, LOW);
+  ESP.deepSleep(1 * 60 * 1000000);
 }
 
