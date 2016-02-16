@@ -1,7 +1,6 @@
 /* 
 */
 
-#include <Stepper.h>
 #include <IRremote.h>
 
 #define PWM_1       6
@@ -13,15 +12,6 @@
 #define REVERSE_2   A5
 
 #define IR_IN       7
-
-/*-----( Declare Constants, Pin Numbers )-----*/
-//---( Number of steps per revolution of INTERNAL motor in 4-step mode )---
-#define STEPS_PER_MOTOR_REVOLUTION 32   
-
-//---( Steps per OUTPUT SHAFT of gear reduction )---
-#define STEPS_PER_OUTPUT_REVOLUTION 32 * 64  //2048
-
-Stepper myStepper = Stepper(STEPS_PER_MOTOR_REVOLUTION, 12, 10, 11, 9);
 
 /* Define the IR remote button codes. We're only using the
    least signinficant two bytes of these codes. Each one 
@@ -43,7 +33,6 @@ IRrecv irrecv(IR_IN);
 void setup() {
   Serial.begin(115200);  
 
-  myStepper.setSpeed(500);  // rpm
   irrecv.enableIRIn(); // Start the receiver
 
   digitalWrite(PWM_1, LOW);
@@ -61,8 +50,6 @@ void setup() {
   pinMode(REVERSE_2, OUTPUT);
 }
 
-unsigned long lastMove = 0;
-bool isDown = false;
 decode_results results;
 uint16_t lastCode = 0;
 unsigned long lastCodeTime = 0;
@@ -88,7 +75,6 @@ void loop() {
     {
       case BUTTON_POWER:
         Serial.println("Power");
-        retract();
         break;
       case BUTTON_A:
         Serial.println("A");
@@ -120,36 +106,15 @@ void loop() {
     Serial.println("Stop");
     stop();
     lastCodeTime = 0;
-    lastMove = millis();
-  } else if (lastMove > 0 && millis() - lastMove > 5000) {
-    lastMove = 0;
-    retract();
   }
 }
 
-void lower() {
-  if (!isDown) {
-    isDown = true;
-//    myStepper.step(STEPS_PER_OUTPUT_REVOLUTION/4);
-  }
-}
-
-void retract() {
-  if (isDown) {
-    isDown = false;
-//    myStepper.step(-STEPS_PER_OUTPUT_REVOLUTION/4);
-  }
-}
-
-#define LEFT true
-#define RIGHT false
+#define LEFT false
+#define RIGHT right
 #define FORWARD true
 #define REVERSE false
 
 void move(boolean left, boolean forward, int power) {
-  lower();
-  lastMove = millis();
-  
   int f = forward ? HIGH : LOW;
   int r = forward ? LOW : HIGH;
   if (left) {
@@ -173,14 +138,14 @@ void reverse() {
   move(RIGHT, REVERSE, 255);
 }
 
-void right() {
-  move(LEFT, FORWARD, 20);
+void left() {
+  move(LEFT, REVERSE, 255);
   move(RIGHT, FORWARD, 255);
 }
 
-void left() {
+void right() {
   move(LEFT, FORWARD, 255);
-  move(RIGHT, FORWARD, 20);
+  move(RIGHT, REVERSE, 255);
 }
 
 void stop() {
