@@ -6,10 +6,10 @@
 #define PWM_1       6
 #define PWM_2       5
 
-#define FORWARD_1   3
-#define REVERSE_1   4
-#define FORWARD_2   A4
-#define REVERSE_2   A5
+#define FORWARD_1   4
+#define REVERSE_1   3
+#define FORWARD_2   A5
+#define REVERSE_2   A4
 
 #define IR_IN       7
 
@@ -109,8 +109,8 @@ void loop() {
   }
 }
 
-#define LEFT false
-#define RIGHT right
+#define LEFT true
+#define RIGHT false
 #define FORWARD true
 #define REVERSE false
 
