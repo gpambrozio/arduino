@@ -16,9 +16,6 @@ url=git@github.com:gpambrozio/Adafruit_NeoPixel.git
 [submodule "libraries/Adafruit_nRF8001"]
 	path = libraries/Adafruit_nRF8001
 	url = git@github.com:adafruit/Adafruit_nRF8001.git
-[submodule "libraries/Adafruit_Sensor"]
-	path = libraries/Adafruit_Sensor
-	url = git@github.com:adafruit/Adafruit_Sensor.git
 [submodule "libraries/Adafruit_WS2801"]
 	path = libraries/Adafruit_WS2801
 	url = git@github.com:adafruit/Adafruit-WS2801-Library.git
