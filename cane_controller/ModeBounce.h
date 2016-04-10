@@ -4,6 +4,12 @@
 #include "Mode.h"
 #include "CaneCommon.h"
 
+#ifdef IS_BEAN
+#define SCALE 1
+#else
+#define SCALE 2
+#endif
+
 class ModeBounce : public Mode
 {
   public:
@@ -20,12 +26,12 @@ class ModeBounce : public Mode
     }
 
     virtual bool step(unsigned long dt) {
-      if (cycleIndex % 2 == 0) {
-        int j = cycleIndex / 2;
+      if (cycleIndex % SCALE == 0) {
+        int j = cycleIndex / SCALE;
         strip.setPixelColor(j<(LEDS-INITIAL_LEDS) ? j : (LEDS*2-INITIAL_LEDS-j-1), 0);
         strip.setPixelColor(j<(LEDS-INITIAL_LEDS) ? (j+INITIAL_LEDS) : ((LEDS-INITIAL_LEDS)*2-j-1), wheel(j*3));
       }
-      if (++cycleIndex >= (LEDS-INITIAL_LEDS)*4) {
+      if (++cycleIndex >= (LEDS-INITIAL_LEDS)*2*SCALE) {
         cycleIndex = 0;
         return true;
       }
