@@ -8,6 +8,8 @@
 #include <Adafruit_LSM303_U.h>
 #endif
 
+#define TEST_TAPS  0
+
 #include "CaneCommon.h"
 
 #include "Mode.h"
@@ -41,6 +43,14 @@ Adafruit_NeoPixel strip = Adafruit_NeoPixel(LEDS, NEOPIXEL_PIN, NEO_GRB + NEO_KH
 #ifndef IS_BEAN
 /* Assign a unique ID to these sensors */
 Adafruit_LSM303_Accel_Unified accel = Adafruit_LSM303_Accel_Unified(54321);
+#endif
+
+#if TEST_TAPS
+#define MAX_TAPS   10
+
+unsigned long tapTimes[MAX_TAPS];
+float tapDeltas[MAX_TAPS][2];
+
 #endif
 
 /*
@@ -154,7 +164,13 @@ void loop() {
 
   float diff = currentX - lastX;
   if (diff > TAP_THRESHOLD) {
-//    Serial.print("Tap detected: "); Serial.print(currentX); Serial.print(','); Serial.print(lastX); Serial.print(','); Serial.println(diff);
+    #if TEST_TAPS
+      if (numberOfTaps < MAX_TAPS) {
+        tapTimes[numberOfTaps] = millis();
+        tapDeltas[numberOfTaps][0] = lastX;
+        tapDeltas[numberOfTaps][1] = currentX;
+      }
+    #endif
     numberOfTaps++;
     tapStart = millis();
   } else if (tapStart > 0 && millis() - tapStart > 500) {
@@ -163,7 +179,12 @@ void loop() {
   }
 
   if (detectedTap) {
-    Serial.print("Taps detected: "); Serial.println(numberOfTaps);
+    #if TEST_TAPS
+      Serial.print("Taps detected: "); Serial.println(numberOfTaps);
+      for (int i=0;i<numberOfTaps;i++) {
+        Serial.print(tapTimes[i]); Serial.print(','); Serial.print(tapDeltas[i][0]); Serial.print(','); Serial.print(tapDeltas[i][1]); Serial.print(','); Serial.println(tapDeltas[i][1] - tapDeltas[i][0]);
+      }
+    #endif
     if (numberOfTaps >= 3) {
       if (++mode >= NUMBER_OF_MODES) mode = 0;
     }
