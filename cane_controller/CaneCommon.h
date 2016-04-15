@@ -8,7 +8,7 @@
 
 #define ONE_G 10.0
 
-#define TAP_THRESHOLD  (ONE_G/5)
+#define TAP_THRESHOLD  (ONE_G/6)
 
 #define NUMBER_OF_AXIS  3
 
