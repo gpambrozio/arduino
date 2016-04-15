@@ -65,6 +65,7 @@ float sreadings[NUMBER_OF_AXIS][NUMBER_OF_READINGS];
 float currentX;
 unsigned long invertedStart = 0;
 unsigned long tapStart = 0;
+boolean tapUp = false;
 boolean detectedInversion = false;
 boolean detectedLongInversion = false;
 boolean resetLongInversion = false;
@@ -144,7 +145,7 @@ void loop() {
   unsigned long invertedTime = millis() - invertedStart;
   if ((currentX > 0.0 && lastX < 0.0) ||
       (currentX < 0.0 && lastX > 0.0)) {
-    Serial.print("Inverted: "); Serial.println(invertedTime);
+//    Serial.print("Inverted: "); Serial.println(invertedTime);
     invertedStart = millis();
     resetLongInversion = false;
   } else if (invertedStart > 0) {
@@ -163,7 +164,7 @@ void loop() {
   }
 
   float diff = currentX - lastX;
-  if (diff > TAP_THRESHOLD) {
+  if (diff > TAP_THRESHOLD && !tapUp) {
     #if TEST_TAPS
       if (numberOfTaps < MAX_TAPS) {
         tapTimes[numberOfTaps] = millis();
@@ -172,7 +173,10 @@ void loop() {
       }
     #endif
     numberOfTaps++;
+    tapUp = true;
     tapStart = millis();
+  } else if (-diff > TAP_THRESHOLD && tapUp) {
+    tapUp = false;
   } else if (tapStart > 0 && millis() - tapStart > 500) {
     tapStart = 0;
     detectedTap = true;
@@ -180,9 +184,11 @@ void loop() {
 
   if (detectedTap) {
     #if TEST_TAPS
-      Serial.print("Taps detected: "); Serial.println(numberOfTaps);
-      for (int i=0;i<numberOfTaps;i++) {
-        Serial.print(tapTimes[i]); Serial.print(','); Serial.print(tapDeltas[i][0]); Serial.print(','); Serial.print(tapDeltas[i][1]); Serial.print(','); Serial.println(tapDeltas[i][1] - tapDeltas[i][0]);
+      if (Bean.getConnectionState()) {
+        Serial.print("Taps detected: "); Serial.println(numberOfTaps);
+        for (int i=0;i<numberOfTaps;i++) {
+          Serial.print(tapTimes[i]); Serial.print(','); Serial.print(tapDeltas[i][0]); Serial.print(','); Serial.print(tapDeltas[i][1]); Serial.print(','); Serial.println(tapDeltas[i][1] - tapDeltas[i][0]);
+        }
       }
     #endif
     if (numberOfTaps >= 3) {
