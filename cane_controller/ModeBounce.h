@@ -10,28 +10,31 @@
 #define SCALE 2
 #endif
 
+#define BOUNCE_SIZE  10
+
 class ModeBounce : public Mode
 {
   public:
     using Mode::Mode;
     virtual void init() {
       cycleIndex = 0;
-      for (int i=0;i<LEDS;i++) {
-        if (i < INITIAL_LEDS) {
-          strip.setPixelColor(i, wheel(i*3));
-        } else {
-          strip.setPixelColor(i, 0);
-        }
-      }
     }
 
     virtual bool step(unsigned long dt) {
       if (cycleIndex % SCALE == 0) {
         int j = cycleIndex / SCALE;
-        strip.setPixelColor(j<(LEDS-INITIAL_LEDS) ? j : (LEDS*2-INITIAL_LEDS-j-1), 0);
-        strip.setPixelColor(j<(LEDS-INITIAL_LEDS) ? (j+INITIAL_LEDS) : ((LEDS-INITIAL_LEDS)*2-j-1), wheel(j*3));
+        if (j >= LEDS) j = LEDS * 2 - j - 1;
+        for (int16_t i=0; i<LEDS; i++) {
+          int distance = abs(j - i);
+          float brightness = ((float)map(distance, 0, BOUNCE_SIZE, 255, 0) / 255.0);
+          if (brightness <= 0.0) {
+            strip.setPixelColor(i, 0);
+          } else {
+            strip.setPixelColor(i, wheel(i*3, brightness));
+          }
+        }
       }
-      if (++cycleIndex >= (LEDS-INITIAL_LEDS)*2*SCALE) {
+      if (++cycleIndex >= LEDS*2*SCALE) {
         cycleIndex = 0;
         return true;
       }
