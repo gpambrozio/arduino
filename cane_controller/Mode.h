@@ -11,7 +11,7 @@ class Mode
     virtual bool step(unsigned long dt);
   protected:
     uint32_t wheel(byte WheelPos);
-    uint32_t wheel(byte WheelPos, float brightness);
+    uint32_t wheel(byte WheelPos, int brightness);
 };
 
 #endif

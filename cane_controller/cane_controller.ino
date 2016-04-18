@@ -114,7 +114,6 @@ void setup() {
   for (int i=0;i<2;) {
     strip.show();
     if (bounce.step(10)) i++;
-    delay(3);
   }
 }
 

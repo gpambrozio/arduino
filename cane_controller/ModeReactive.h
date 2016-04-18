@@ -6,7 +6,7 @@
 
 #define ZERO_LEDS  12
 #define DOTS_SCALE  3
-#define DOT_ENCOUNTER_RIPPLE 12
+#define DOT_ENCOUNTER_RIPPLE 10
 
 class ModeReactive : public Mode
 {
@@ -20,7 +20,7 @@ class ModeReactive : public Mode
         if (i >= lights || distance == 0) {
           strip.setPixelColor(i, wheel(((cycleIndex/2)+i) & 0xFF));
         } else if (abs(fallingDot[0] - fallingDot[1]) <= 1 && distance <= DOT_ENCOUNTER_RIPPLE) {
-          float brightness = ((float)map(distance, 0, DOT_ENCOUNTER_RIPPLE, 255, 40) / 255.0);
+          int brightness = map(distance, 0, DOT_ENCOUNTER_RIPPLE, 255, 40);
           strip.setPixelColor(i, wheel(((cycleIndex/2)+i) & 0xFF, brightness));
         } else {
           strip.setPixelColor(i, 0x0);

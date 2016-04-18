@@ -26,7 +26,7 @@ class ModeBounce : public Mode
         if (j >= LEDS) j = LEDS * 2 - j - 1;
         for (int16_t i=0; i<LEDS; i++) {
           int distance = abs(j - i);
-          float brightness = ((float)map(distance, 0, BOUNCE_SIZE, 255, 0) / 255.0);
+          int brightness = map(distance, 0, BOUNCE_SIZE, 255, 0);
           if (brightness <= 0.0) {
             strip.setPixelColor(i, 0);
           } else {
