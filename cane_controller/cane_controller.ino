@@ -211,10 +211,31 @@ void loop() {
     detectedLongInversion = false;
   }
 
+  if (Serial.available()) {
+    char received[10];
+    byte bytesRead = Serial.readBytesUntil('\n', received, 10);
+    if (bytesRead >= 2) {
+      switch (received[0]) {
+        case 'M':
+        {
+          byte receivedMode = received[1] - '0';
+          if (receivedMode < NUMBER_OF_MODES) {
+            mode = receivedMode;
+          }
+          break;
+        }
+      }
+    }
+  }
+  
   if (mode != lastMode) {
     modes[mode]->init();
     lastMode = mode;
     strip.setBrightness(40);
+#ifdef IS_BEAN
+    Bean.setScratchData(1, &mode, 1);
+#endif
+    Serial.println(String("Mode:") + mode);
   }
   modes[mode]->step(10);
   strip.show();
