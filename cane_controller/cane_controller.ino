@@ -21,7 +21,7 @@
 #include "ModeSound.h"
 
 #ifdef IS_BEAN
-#define NEOPIXEL_PIN 2
+#define NEOPIXEL_PIN 4
 #else
 #define NEOPIXEL_PIN 8
 #endif
