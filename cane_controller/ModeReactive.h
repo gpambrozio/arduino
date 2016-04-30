@@ -12,19 +12,33 @@ class ModeReactive : public Mode
 {
   public:
     using Mode::Mode;
-    virtual void init() { cycleIndex = 0; fallingDot[0] = 0; dotRising[0] = false; fallingDot[0] = LEDS; dotRising[1] = false; }
+    virtual void init() { cycleIndex = 0; fallingDot[0] = 0; dotRising[0] = false; fallingDot[1] = LEDS; dotRising[1] = false; stableStart = 0;}
     virtual bool step(unsigned long dt) {
       int lights = (int)((currentX < 0 ? -currentX : currentX) * (LEDS - ZERO_LEDS) / ONE_G);
+      int dotDistance = abs(fallingDot[0] - fallingDot[1]);
       for (int16_t i=0; i<LEDS; i++) {
         int distance = min(abs(fallingDot[0]/DOTS_SCALE - i), abs(fallingDot[1]/DOTS_SCALE - i));
         if (i >= lights || distance == 0) {
           strip.setPixelColor(i, wheel(((cycleIndex/2)+i) & 0xFF));
-        } else if (abs(fallingDot[0] - fallingDot[1]) <= 1 && distance <= DOT_ENCOUNTER_RIPPLE) {
+        } else if (dotDistance <= 1 && distance <= DOT_ENCOUNTER_RIPPLE) {
           int brightness = map(distance, 0, DOT_ENCOUNTER_RIPPLE, 255, 40);
           strip.setPixelColor(i, wheel(((cycleIndex/2)+i) & 0xFF, brightness));
         } else {
           strip.setPixelColor(i, 0x0);
         }
+      }
+      if (dotDistance <= 1 && dotRising[0] == dotRising[1]) {
+        if (stableStart == 0) {
+          stableStart = millis();
+        } else if (millis() - stableStart > 15000) {
+          stableStart = 0;
+          fallingDot[0] = 0; 
+          dotRising[0] = false;
+          fallingDot[1] = lights; 
+          dotRising[1] = true;
+        }
+      } else {
+        stableStart = 0;
       }
       for (uint16_t i=0; i<2; i++) {
         if (dotRising[i]) {
@@ -47,6 +61,7 @@ class ModeReactive : public Mode
     int cycleIndex;
     int fallingDot[2];
     boolean dotRising[2];
+    unsigned long stableStart;
 };
 
 #endif
