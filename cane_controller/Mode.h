@@ -2,6 +2,7 @@
 #define Mode_h
 
 #include "Arduino.h"
+#include "CaneCommon.h"
 
 class Mode
 {
@@ -10,8 +11,8 @@ class Mode
     virtual void init();
     virtual bool step(unsigned long dt);
   protected:
-    uint32_t wheel(byte WheelPos);
-    uint32_t wheel(byte WheelPos, int brightness);
+    CHSV wheel(byte WheelPos);
+    CHSV wheel(byte WheelPos, int brightness);
 };
 
 #endif

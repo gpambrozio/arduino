@@ -18,8 +18,12 @@ class ModeTheaterChaseRainbow : public Mode
     virtual bool step(unsigned long dt) {
       int cycleMod = (cycleIndex % (3*SCALE)) / SCALE;
       int j = cycleIndex / (3*SCALE);
-      for (int i=0; i < LEDS; i++) {
-        strip.setPixelColor(i, i % 3 == cycleMod ? wheel( (i+j) % 255) : 0);    //turn every third pixel on
+      for (int i=0; i < NUM_LEDS; i++) {
+        if (i % 3 == cycleMod) {
+          leds[i] = wheel((i+j) % 255);    //turn every third pixel on
+        } else {
+          leds[i] = CRGB::Black;
+        }
       }
       if (++cycleIndex >= 256*3*SCALE) {
         cycleIndex = 0;

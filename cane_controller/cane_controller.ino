@@ -1,5 +1,4 @@
 #include <Wire.h>
-#include <Adafruit_NeoPixel.h>
 
 #ifdef IS_BEAN
 #include "Bean.h"
@@ -26,19 +25,10 @@
 #define NEOPIXEL_PIN 8
 #endif
 
-// Parameter 1 = number of pixels in strip
-// Parameter 2 = Arduino pin number (most are valid)
-// Parameter 3 = pixel type flags, add together as needed:
-//   NEO_KHZ800  800 KHz bitstream (most NeoPixel products w/WS2812 LEDs)
-//   NEO_KHZ400  400 KHz (classic 'v1' (not v2) FLORA pixels, WS2811 drivers)
-//   NEO_GRB     Pixels are wired for GRB bitstream (most NeoPixel products)
-//   NEO_RGB     Pixels are wired for RGB bitstream (v1 FLORA pixels, not v2)
-Adafruit_NeoPixel strip = Adafruit_NeoPixel(LEDS, NEOPIXEL_PIN, NEO_GRB + NEO_KHZ800);
+#define LED_TYPE    WS2812
+#define COLOR_ORDER GRB
 
-// IMPORTANT: To reduce NeoPixel burnout risk, add 1000 uF capacitor across
-// pixel power leads, add 300 - 500 Ohm resistor on first pixel's data input
-// and minimize distance between Arduino and first pixel.  Avoid connecting
-// on a live circuit...if you must, connect GND first.
+CRGB leds[NUM_LEDS];
 
 #ifndef IS_BEAN
 /* Assign a unique ID to these sensors */
@@ -80,7 +70,7 @@ Mode *modes[] = {
   new ModeRainbow(),
   new ModeTheaterChaseRainbow(),
   new ModeBounce(),
-  new ModeSimple(70, 0xffffff, LEDS/2),
+  new ModeSimple(70, 0xffffff, NUM_LEDS/2),
 };
 
 #define NUMBER_OF_MODES  (sizeof(modes) / sizeof(Mode *))
@@ -106,13 +96,16 @@ void setup() {
   randomSeed(10000 * accevent.acceleration.x);
 #endif
 
-  strip.begin();
-  strip.setBrightness(40);
+  // tell FastLED about the LED strip configuration
+  FastLED.addLeds<LED_TYPE,NEOPIXEL_PIN,COLOR_ORDER>(leds, NUM_LEDS).setCorrection(TypicalLEDStrip);
+
+  // set master brightness control
+  FastLED.setBrightness(40);
 
   ModeBounce bounce = ModeBounce();
   bounce.init();
   for (int i=0;i<2;) {
-    strip.show();
+    FastLED.show();
     if (bounce.step(10)) i++;
   }
 }
@@ -231,14 +224,14 @@ void loop() {
   if (mode != lastMode) {
     modes[mode]->init();
     lastMode = mode;
-    strip.setBrightness(40);
+    FastLED.setBrightness(40);
 #ifdef IS_BEAN
     Bean.setScratchData(1, &mode, 1);
 #endif
     Serial.println(String("Mode:") + mode);
   }
   modes[mode]->step(10);
-  strip.show();
+  FastLED.show();  
   lastX = currentX;
 }
 

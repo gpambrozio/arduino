@@ -10,9 +10,9 @@ class ModeSimple : public Mode
     explicit ModeSimple(byte b, uint32_t c, int p) : brightness(b), color(c), pixels(p) {};
     virtual void init() {}
     virtual bool step(unsigned long dt) {
-      strip.setBrightness(brightness);
-      for (uint16_t i=0; i<LEDS; i++) {
-        strip.setPixelColor(i, i<pixels ? 0 : color);
+      FastLED.setBrightness(brightness);
+      for (uint16_t i=0; i<NUM_LEDS; i++) {
+        leds[i] =  i<pixels ? CRGB::Black : color;
       }
       return true;
     }

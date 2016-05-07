@@ -1,9 +1,15 @@
 #ifndef CaneCommon_h
 #define CaneCommon_h
 
-#include <Adafruit_NeoPixel.h>
+#include "FastLED.h"
 
-#define LEDS  66
+#if defined(FASTLED_VERSION) && (FASTLED_VERSION < 3001000)
+#warning "Requires FastLED 3.1 or later; check github for latest code."
+#endif
+
+#define NUM_LEDS    66
+extern CRGB leds[NUM_LEDS];
+
 #define INITIAL_LEDS 10
 
 #define ONE_G 10.0
@@ -19,7 +25,6 @@
 #define NUMBER_OF_READINGS  8 // number of readings to run average from.
 
 extern float currentX;
-extern Adafruit_NeoPixel strip;
 
 #endif
 
