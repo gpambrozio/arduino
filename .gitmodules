@@ -43,3 +43,6 @@ url=git@github.com:gpambrozio/Adafruit_NeoPixel.git
 [submodule "libraries/MicroView"]
 	path = libraries/MicroView
 	url = https://github.com/geekammo/MicroView-Arduino-Library.git
+[submodule "libraries/FastLED"]
+	path = libraries/FastLED
+	url = git@github.com:gpambrozio/FastLED.git
