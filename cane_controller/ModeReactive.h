@@ -4,7 +4,7 @@
 #include "Mode.h"
 #include "CaneCommon.h"
 
-#define ZERO_LEDS  12
+#define ZERO_LEDS   8
 #define DOTS_SCALE  3
 #define DOT_ENCOUNTER_RIPPLE 10
 
