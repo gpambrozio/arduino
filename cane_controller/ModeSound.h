@@ -11,6 +11,7 @@ class ModeSound : public Mode
 {
   public:
     using Mode::Mode;
+    virtual String name() { return "Audio"; }
     virtual void init() { 
       cycleIndex = 0;
       analyzer.start();

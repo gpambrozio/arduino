@@ -12,6 +12,7 @@ class ModeReactive : public Mode
 {
   public:
     using Mode::Mode;
+    virtual String name() { return "Reactive"; }
     virtual void init() { cycleIndex = 0; fallingDot[0] = 0; dotRising[0] = false; fallingDot[1] = NUM_LEDS; dotRising[1] = false; stableStart = 0;}
     virtual bool step(unsigned long dt) {
       int lights = (int)((currentX < 0 ? -currentX : currentX) * (NUM_LEDS - ZERO_LEDS) / ONE_G);

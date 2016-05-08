@@ -217,6 +217,15 @@ void loop() {
           }
           break;
         }
+
+        case 'd':
+        {
+          Serial.println("Modes");
+          for (int i=0; i < NUMBER_OF_MODES; i++) {
+            Serial.println(modes[i]->name());
+          }
+          Serial.println("-");
+        }
       }
     }
   }

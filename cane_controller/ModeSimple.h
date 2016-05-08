@@ -7,7 +7,8 @@
 class ModeSimple : public Mode
 {
   public:
-    explicit ModeSimple(byte b, uint32_t c, int p) : brightness(b), color(c), pixels(p) {};
+    explicit ModeSimple(byte b, uint32_t c, int p) : brightness(b), color(c), pixels(p) {}
+    virtual String name() { return "Simple"; }
     virtual void init() {}
     virtual bool step(unsigned long dt) {
       FastLED.setBrightness(brightness);

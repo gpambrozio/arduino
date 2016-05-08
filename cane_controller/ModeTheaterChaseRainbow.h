@@ -14,6 +14,7 @@ class ModeTheaterChaseRainbow : public Mode
 {
   public:
     using Mode::Mode;
+    virtual String name() { return "Chase"; }
     virtual void init() { cycleIndex = 0; }
     virtual bool step(unsigned long dt) {
       int cycleMod = (cycleIndex % (3*SCALE)) / SCALE;

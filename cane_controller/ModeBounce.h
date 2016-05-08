@@ -16,6 +16,7 @@ class ModeBounce : public Mode
 {
   public:
     using Mode::Mode;
+    virtual String name() { return "Knight"; }
     virtual void init() {
       cycleIndex = 0;
     }

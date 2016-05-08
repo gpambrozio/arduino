@@ -26,3 +26,7 @@ void Mode::init() {
 bool Mode::step(unsigned long dt) {
 }
 
+String Mode::name() {
+  return "";
+}
+

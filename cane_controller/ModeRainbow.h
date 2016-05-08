@@ -8,6 +8,7 @@ class ModeRainbow : public Mode
 {
   public:
     using Mode::Mode;
+    virtual String name() { return "Rainbow"; }
     virtual void init() { cycleIndex = 0; }
     virtual bool step(unsigned long dt) {
       for(uint16_t i=0; i< NUM_LEDS; i++) {
