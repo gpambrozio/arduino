@@ -7,7 +7,7 @@
 #warning "Requires FastLED 3.1 or later; check github for latest code."
 #endif
 
-#define NUM_LEDS    66
+#define NUM_LEDS     64
 #define BRIGHTNESS   40
 
 extern CRGB leds[NUM_LEDS];
