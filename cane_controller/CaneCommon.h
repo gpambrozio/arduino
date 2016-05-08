@@ -8,6 +8,8 @@
 #endif
 
 #define NUM_LEDS    66
+#define BRIGHTNESS   40
+
 extern CRGB leds[NUM_LEDS];
 
 #define INITIAL_LEDS 10

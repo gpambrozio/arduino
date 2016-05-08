@@ -100,7 +100,7 @@ void setup() {
   FastLED.addLeds<LED_TYPE,NEOPIXEL_PIN,COLOR_ORDER>(leds, NUM_LEDS).setCorrection(TypicalLEDStrip);
 
   // set master brightness control
-  FastLED.setBrightness(40);
+  FastLED.setBrightness(BRIGHTNESS);
 
   ModeBounce bounce = ModeBounce();
   bounce.init();
@@ -233,7 +233,7 @@ void loop() {
   if (mode != lastMode) {
     modes[mode]->init();
     lastMode = mode;
-    FastLED.setBrightness(40);
+    FastLED.setBrightness(BRIGHTNESS);
 #ifdef IS_BEAN
     Bean.setScratchData(1, &mode, 1);
 #endif
