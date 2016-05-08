@@ -20,6 +20,7 @@
 #include "ModeSound.h"
 #include "ModeJuggle.h"
 #include "ModeBPM.h"
+#include "ModeConfetti.h"
 
 #ifdef IS_BEAN
 #define NEOPIXEL_PIN 4
@@ -71,8 +72,9 @@ Mode *modes[] = {
   new ModeReactive(),
   new ModeRainbow(),
   new ModeTheaterChaseRainbow(),
-  new ModeJuggle(),
+  new ModeConfetti(),
   new ModeBounce(),
+  new ModeJuggle(),
   new ModeBPM(100),
   new ModeSimple(128, CRGB::White, NUM_LEDS/2),
 };
