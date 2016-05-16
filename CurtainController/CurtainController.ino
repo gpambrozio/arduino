@@ -8,7 +8,7 @@
 #include "nRF24L01.h"
 #include "RF24.h"
 
-#define DEBOUNCE_TIME    20   // in ms
+#define DEBOUNCE_TIME     50   // in ms
 #define MOVE_TOLERANCE    5000  // in ms
 
 #define CURTAIN4
