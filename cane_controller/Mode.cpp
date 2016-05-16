@@ -23,6 +23,9 @@ CHSV Mode::wheel(byte WheelPos) {
 void Mode::init() {
 }
 
+void Mode::cleanup() {
+}
+
 bool Mode::step(unsigned long dt) {
 }
 

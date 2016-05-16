@@ -114,6 +114,7 @@ void setup() {
     FastLED.show();
     if (bounce.step(10)) i++;
   }
+  bounce.cleanup();
 }
 
 void loop() {
@@ -237,6 +238,9 @@ void loop() {
   }
   
   if (mode != lastMode) {
+    if (lastMode >= 0 && lastMode < NUMBER_OF_MODES) {
+      modes[lastMode]->cleanup();
+    }
     modes[mode]->init();
     lastMode = mode;
     FastLED.setBrightness(BRIGHTNESS);

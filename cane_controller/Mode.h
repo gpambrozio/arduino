@@ -9,6 +9,7 @@ class Mode
   public:
     Mode();
     virtual void init();
+    virtual void cleanup();
     virtual String name();
     virtual bool step(unsigned long dt);
   protected:
