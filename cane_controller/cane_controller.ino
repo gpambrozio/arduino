@@ -68,7 +68,7 @@ int numberOfTaps = 0;
 float lastX = -1;
 
 Mode *modes[] = {
-//  new ModeSound(),
+  new ModeSound(),
   new ModeReactive(),
   new ModeRainbow(),
   new ModeTheaterChaseRainbow(),
