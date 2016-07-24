@@ -23,7 +23,7 @@
 static int ROTATION_SENSORS[MOTORS]   = {A0, A1, A2, A3};
 static int MOTOR_PWMS[MOTORS]         = { 9,  5,  6,  3};
 static int MOTOR_DIRECTIONS[MOTORS*2] = {A4, A4, A5, A5,  4,  7,  2,  2};
-static byte FULL_MOTION[MOTORS]       = {15, 18, 18, 15};
+static byte FULL_MOTION[MOTORS]       = {30, 36, 36, 30};
 static byte INVERT[MOTORS]            = { 1,  0,  0,  0};
 
 #else
@@ -36,7 +36,7 @@ static byte INVERT[MOTORS]            = { 1,  0,  0,  0};
 static int ROTATION_SENSORS[MOTORS]   = {A0, A1};
 static int MOTOR_PWMS[MOTORS]         = { 6,  3};
 static int MOTOR_DIRECTIONS[MOTORS*2] = { 7, A5,  4,  5};
-static byte FULL_MOTION[MOTORS]       = {18, 18};
+static byte FULL_MOTION[MOTORS]       = {36, 36};
 static byte INVERT[MOTORS]            = { 0,  0};
 
 #endif
@@ -104,8 +104,8 @@ void setup() {
 }
 
 void setPosition(int motor, int pos) {
-  // + 1 because we allow it to move further than it should (it happens...)
-  if (pos >= 0 && pos <= FULL_MOTION[motor] + 1) {
+  // + 2 because we allow it to move further than it should (it happens...)
+  if (pos >= 0 && pos <= FULL_MOTION[motor] + 2) {
     positions[motor] = pos;
     EEPROM.write(EEPROM_POSITION+motor, pos);
     printf_P(PSTR("Setposition of %d to %d\n"), motor, pos);
@@ -122,6 +122,7 @@ void moveTo(byte motor, int finalPosition) {
     int signal = ((direction == DIRECTION_DOWN && INVERT[motor] == 0) || 
                   (direction == DIRECTION_UP && INVERT[motor] == 1)) ? SIGNAL_DOWN : SIGNAL_UP;
     digitalWrite(MOTOR_DIRECTIONS[motor*2+0], signal);
+    // Some motors invert the signal with transistors so no need to change the pin
     if (MOTOR_DIRECTIONS[motor*2+0] != MOTOR_DIRECTIONS[motor*2+1]) {
       digitalWrite(MOTOR_DIRECTIONS[motor*2+1], (signal == SIGNAL_DOWN) ? SIGNAL_UP : SIGNAL_DOWN);
     }
@@ -169,7 +170,7 @@ void loop() {
     byte diff = finalPinState ^ lastPinState;
     byte currentMask = 1;
     for (int i = 0; i < MOTORS; i++) {
-      if ((diff & currentMask) && ((finalPinState & currentMask) == 0)) {
+      if (diff & currentMask) {
         if (isMoving[i]) {
           printf_P(PSTR("Press on %d\n"), i);
           setPosition(i, positions[i] + ((directionMask & currentMask) ? DIRECTION_DOWN : DIRECTION_UP));
@@ -179,7 +180,7 @@ void loop() {
             isMoving[i] = false;
             lastMove[i] = millis();
             printf_P(PSTR("Stopping motor %d\n"), i);
-          } else if (targetPositions[i] == positions[i] + ((directionMask & currentMask) ? DIRECTION_DOWN : 0)) {
+          } else if ((directionMask & currentMask) && targetPositions[i] == positions[i] + 2 * DIRECTION_DOWN) {
             // Almost there, slow down.
             analogWrite(MOTOR_PWMS[i], 140);
           }
@@ -201,18 +202,18 @@ void loop() {
     switch (inByte) {
       case 'm':
       {
-        move(Serial.parseInt(), Serial.parseInt(), Serial.parseInt());
+        move(Serial.parseInt(), Serial.parseInt(), Serial.parseInt() * 2);
         break;
       }
       case 'M':
       {
-        moveTo(Serial.parseInt(), Serial.parseInt());
+        moveTo(Serial.parseInt(), Serial.parseInt() * 2);
         break;
       }
       case 'p':
       {
         int motor = Serial.parseInt();
-        setPosition(motor, Serial.parseInt());
+        setPosition(motor, Serial.parseInt() * 2);
         targetPositions[motor] = positions[motor];
         break;
       }
@@ -229,21 +230,21 @@ void loop() {
         byte motor = (mirfData >>  8) & 0xFF;
         int direction = ((mirfData >> 16) & 0xFF) ? DIRECTION_DOWN : DIRECTION_UP;
         int turns = (mirfData >> 24) & 0xFF;
-        move(motor, direction, turns);
+        move(motor, direction, turns * 2);
         break;
       }
       case 'M':
       {
         byte motor = (mirfData >>  8) & 0xFF;
         int position = (mirfData >> 16) & 0xFF;
-        moveTo(motor, position);
+        moveTo(motor, position * 2);
         break;
       }
       case 'p':
       {
         byte motor = (mirfData >>  8) & 0xFF;
         int position = (mirfData >> 16) & 0xFF;
-        setPosition(motor, position);
+        setPosition(motor, position * 2);
         targetPositions[motor] = positions[motor];
         break;
       }
