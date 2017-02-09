@@ -68,7 +68,6 @@ int numberOfTaps = 0;
 float lastX = -1;
 
 Mode *modes[] = {
-  new ModeSound(),
   new ModeReactive(),
   new ModeRainbow(),
   new ModeTheaterChaseRainbow(),
@@ -76,6 +75,7 @@ Mode *modes[] = {
   new ModeBounce(),
   new ModeJuggle(),
   new ModeBPM(100),
+  new ModeSound(),
   new ModeSimple(128, CRGB::White, NUM_LEDS/2),
 };
 
