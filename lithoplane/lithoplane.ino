@@ -76,7 +76,8 @@ long sleep_start;
 
 long wake_second;
 
-#define MAX_RAINBOW_INDEX   (256*5)
+#define RAINBOW_DIVIDER     4
+#define MAX_RAINBOW_INDEX   (256*5*RAINBOW_DIVIDER)
 
 uint16_t rainbow_index;
 
@@ -95,6 +96,8 @@ bool is_gustavo;
 #define EEPROM_COLOR         0
 #define EEPROM_BRIGHTNESS    (EEPROM_COLOR + sizeof(last_color))
 #define EEPROM_RAINBOW       (EEPROM_BRIGHTNESS + sizeof(last_brightness))
+#define EEPROM_OFF           (EEPROM_RAINBOW + sizeof(should_rainbow))
+#define EEPROM_WAKE          (EEPROM_OFF + sizeof(should_off))
 
 long real_second;
 unsigned long real_second_start;
@@ -113,6 +116,9 @@ void setup(void)
   EEPROM.get(EEPROM_COLOR, last_color);
   EEPROM.get(EEPROM_BRIGHTNESS, last_brightness);
   EEPROM.get(EEPROM_RAINBOW, should_rainbow);
+  EEPROM.get(EEPROM_OFF, should_off);
+  EEPROM.get(EEPROM_WAKE, wake_second);
+
   strip.begin();
   strip.setBrightness(50);
   colorWipe(strip.Color(255, 0, 0));
@@ -187,8 +193,7 @@ void setup(void)
     should_off = false;
     resetModes();
     last_brightness = httpServer.arg(0).toInt();
-    EEPROM.put(EEPROM_BRIGHTNESS, last_brightness);
-    EEPROM.commit();
+    updateEeprom();
     httpServer.send(200, "text/plain", "OK");
   });
   httpServer.on("/c", [](){
@@ -196,22 +201,23 @@ void setup(void)
     should_off = false;
     resetModes();
     last_color = httpServer.arg(0).toInt();
-    EEPROM.put(EEPROM_COLOR, last_color);
-    EEPROM.put(EEPROM_RAINBOW, should_rainbow);
-    EEPROM.commit();
+    updateEeprom();
     httpServer.send(200, "text/plain", "OK");
   });
   httpServer.on("/r", [](){
     should_rainbow = true;
     should_off = false;
     resetModes();
-    EEPROM.put(EEPROM_RAINBOW, should_rainbow);
-    EEPROM.commit();
+    updateEeprom();
     httpServer.send(200, "text/plain", "OK");
   });
   httpServer.on("/w", [](){
     wake_second = httpServer.arg(0).toInt();
+    updateEeprom();
     httpServer.send(200, "text/plain", "OK");
+  });
+  httpServer.on("/s", []() {
+    httpServer.send (200, "text/plain", ESP.getResetInfo());
   });
   httpServer.begin();
   
@@ -274,10 +280,12 @@ void loop(void)
     hold_triggered = false;
     should_off = true;
     resetModes();
+    updateEeprom();
   } else if (number_of_taps_triggered > 0) {
     resetModes();
     if (should_off) {
       should_off = false;
+      updateEeprom();
     } else {
       if (is_gustavo && number_of_taps_triggered == 1 || !is_gustavo && number_of_taps_triggered == 4) {
         startBartCheck();
@@ -285,8 +293,7 @@ void loop(void)
         getWeather();
       } else if (is_gustavo && number_of_taps_triggered == 3 || !is_gustavo && number_of_taps_triggered == 1) {
         should_rainbow = !should_rainbow;
-        EEPROM.put(EEPROM_RAINBOW, should_rainbow);
-        EEPROM.commit();
+        updateEeprom();
       } else if (is_gustavo && number_of_taps_triggered == 4 || !is_gustavo && number_of_taps_triggered == 3) {
         sleep_start = millis();
       }
@@ -312,6 +319,7 @@ void loop(void)
         should_off = false;
         wake_second = 0;
         brightness = last_brightness;
+        updateEeprom();
       } else {
         long start_wake = wake_second - WAKE_SECONDS;
         if (start_wake < 0) {
@@ -332,6 +340,7 @@ void loop(void)
     if (elapsed >= SLEEP_TIME) {
       sleep_start = 0;
       should_off = true;
+      updateEeprom();
     } else {
       uint8_t brightness = map(elapsed, 0, SLEEP_TIME, last_brightness, 0);
       strip.setBrightness(brightness);
@@ -376,6 +385,15 @@ void loop(void)
     colorWipe(last_color);
     strip.show();
   }
+}
+
+void updateEeprom() {
+  EEPROM.put(EEPROM_COLOR, last_color);
+  EEPROM.put(EEPROM_BRIGHTNESS, last_brightness);
+  EEPROM.put(EEPROM_RAINBOW, should_rainbow);
+  EEPROM.put(EEPROM_OFF, should_off);
+  EEPROM.put(EEPROM_WAKE, wake_second);
+  EEPROM.commit();
 }
 
 void resetModes() {
@@ -463,7 +481,7 @@ void rainbowCycle(uint16_t j) {
   uint16_t i;
 
   for(i=0; i< strip.numPixels(); i++) {
-    strip.setPixelColor(strip.numPixels() - i - 1, Wheel(((i * 256 / strip.numPixels()) + j) & 255));
+    strip.setPixelColor(strip.numPixels() - i - 1, Wheel(((i * 256 / strip.numPixels()) + j / RAINBOW_DIVIDER) & 255));
   }
   strip.show();
 }
