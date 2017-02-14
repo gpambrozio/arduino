@@ -23,6 +23,7 @@ byte bcdToDec(byte val) {
 // 2) Starts the clock
 // 3) Sets hour mode to 24 hour clock
 // 4) DOW: 1 = Sun, 7 = Sat
+// 5) Format: ssmmhhwddMMyy
 // Assumes you're passing in valid numbers, 
 // Probably need to put in checks for valid numbers.
 void RTCSetDateFromSerial() {
