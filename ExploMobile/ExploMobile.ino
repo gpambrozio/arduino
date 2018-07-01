@@ -18,6 +18,9 @@
 
 #define AUTO_OFF      5   // in minutes
 
+#define DEFAULT_RAMP    100    // Meaning this change in power per second
+#define BANANAS_CHANGE_TIME  13000
+
 #define FIRST_BUTTON  5
 #define ANY_BUTTON    (FIRST_BUTTON+0)
 #define BUTTON_A      (FIRST_BUTTON+1)
@@ -66,8 +69,6 @@ double rampMotorDelta;
 
 boolean sleeping = false;
 
-#define DEFAULT_RAMP    25    // Meaning this change in power per second
-
 #define SPEED_UP    { rampTargetTime = 0; mode = -1; bananas = false; if (motorPower == 0) motorPower = MOTOR_MIN; else if (motorPower < MOTOR_MAX) motorPower++; rampTargetMotor = motorPower; Serial.println(motorPower); }
 #define SPEED_DOWN  { rampTargetTime = 0; mode = -1; bananas = false; if (motorPower > MOTOR_MIN) motorPower--; else motorPower = 0; rampTargetMotor = motorPower; Serial.println(motorPower); };
 
@@ -105,14 +106,14 @@ long rampChange(int motor) {
 }
 
 void bananasChange() {
-  bananasTargetTime = rampChange(random(MOTOR_MIN, MOTOR_MAX + 1)) + 5000;
+  bananasTargetTime = rampChange(random(MOTOR_MIN, MOTOR_MAX + 1)) + BANANAS_CHANGE_TIME;
 }
 
 void startBananas() {
   Serial.println("Bananas");
   mode = -1;
   bananas = true;
-  randomSeed(millis());
+  randomSeed(second+millis());
   bananasChange();
 }
 
@@ -227,7 +228,14 @@ void loop() {
         break;
         
       case 'B':
+      case 'b':
         startBananas();
+        break;
+
+      case 'S':
+      case 's':
+        bananas = false;
+        rampChange(Serial.parseInt());
         break;
 
       default:

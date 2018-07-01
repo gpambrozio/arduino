@@ -46,12 +46,12 @@ typedef enum {
     HatCommandSetBrightness,
 } HatCommand;
 
-//#define MARK  {Serial.print("Running line ");Serial.println(__LINE__);}
-#define MARK  {}
+#define MARK  {Serial.print("Running line ");Serial.println(__LINE__);}
+//#define MARK  {}
 
 // SHARED MEMORY STUFF ----------------------------------------------------------
 
-#define SHARED_BUFFER_SIZE  14
+#define SHARED_BUFFER_SIZE  36
 int sharedBuffer[SHARED_BUFFER_SIZE];
 
 uint8_t       ui81, ui82;
@@ -61,7 +61,7 @@ uint16_t      ui161, ui162;
 
 // CAPACITIVE SENSOR STUFF ----------------------------------------------------
 CapacitiveSensor  cs1 = CapacitiveSensor(CAP1_IN, CAP1_SENSOR);
-CapacitiveSensor  cs2 = CapacitiveSensor(CAP2_IN, CAP2_SENSOR);
+//CapacitiveSensor  cs2 = CapacitiveSensor(CAP2_IN, CAP2_SENSOR);
 
 // HUG COUNTER STUFF ----------------------------------------------------------
 
@@ -115,8 +115,8 @@ Adafruit_NeoMatrix matrix(NEO_WIDTH, NEO_HEIGHT, NEO_PIN,
 // BLUEFRUIT LE STUFF-------------------------------------------------------
 
 
-Adafruit_BLE_UART BTLEserial = Adafruit_BLE_UART(ADAFRUITBLE_REQ, ADAFRUITBLE_RDY, ADAFRUITBLE_RST);
-aci_evt_opcode_t  prevState  = ACI_EVT_DISCONNECTED;
+//Adafruit_BLE_UART BTLEserial = Adafruit_BLE_UART(ADAFRUITBLE_REQ, ADAFRUITBLE_RDY, ADAFRUITBLE_RST);
+//aci_evt_opcode_t  prevState  = ACI_EVT_DISCONNECTED;
 
 // STATUS LED STUFF --------------------------------------------------------
 
@@ -138,6 +138,7 @@ uint16_t remapXY(uint16_t x, uint16_t y) {
 
 // Read from BTLE into buffer, up to maxlen chars (remainder discarded).
 // Does NOT append trailing NUL.  Returns number of bytes stored.
+/*
 uint8_t readStr(char dest[], uint8_t maxlen) {
   int     c;
   uint8_t len = 0;
@@ -146,12 +147,13 @@ uint8_t readStr(char dest[], uint8_t maxlen) {
   }
   return len;
 }
-
+*/
 // MEAT, POTATOES ----------------------------------------------------------
 
 void setup() {
   // initialize serial communications at 9600 bps:
   Serial.begin(9600);
+  Serial.println("Hello");
 
   matrix.begin();
   matrix.setRemapFunction(remapXY);
@@ -162,7 +164,7 @@ void setup() {
 
   memset(sharedBuffer, 0, SHARED_BUFFER_SIZE);
 
-  BTLEserial.begin();
+//  BTLEserial.begin();
 
   pinMode(LED, OUTPUT);
   digitalWrite(LED, LOW);
@@ -181,7 +183,7 @@ typedef enum {
 } modes;
 
 byte prevMode = 0xff;
-byte mode = MODE_SOUND;
+byte mode = MODE_TEXT;
 
 uint8_t  i, state1, count1;
 unsigned long t, motor_end;
@@ -190,7 +192,7 @@ void loop() {
   t = millis(); // Current elapsed time, milliseconds.
   // millis() comparisons are used rather than delay() so that animation
   // speed is consistent regardless of message length & other factors.
-
+/*
   BTLEserial.pollACI(); // Handle BTLE operations
   aci_evt_opcode_t state = BTLEserial.getState();
 
@@ -244,10 +246,10 @@ void loop() {
         prevFrameTime = 0L;           // For animation timing
     }
   }
-
+*/
   i = cs1.capacitiveSensorRaw(30);
   
-  count1 = ((count1 * 7) + i) >> 3;    // "Dampened" reading
+//  count1 = ((count1 * 7) + i) >> 3;    // "Dampened" reading
 //  Serial.print(mode);
 //  Serial.print(' ');
 //  Serial.print(count);
@@ -269,8 +271,8 @@ void loop() {
   
   if (prevMode != mode) {
     if (mode == MODE_TEXT) {
-      strcpy(msg, "HUG ME!");
-      msgLen = 7;
+      strcpy(msg, "LOVE POTION");
+      msgLen = 11;
       msgX = matrix.width(); // Start off right edge
       prevFrameTime = 0L;             // For animation timing
     } else if (mode == MODE_SOUND) {
@@ -322,7 +324,7 @@ void loop() {
     // Get volume range of prior frames
     minLvl = maxLvl = vol[0];
 
-    for(i=1; i<SAMPLES; i++) {
+    for (i=1; i<SAMPLES; i++) {
       if(vol[i] < minLvl)      minLvl = vol[i];
       else if(vol[i] > maxLvl) maxLvl = vol[i];
     }

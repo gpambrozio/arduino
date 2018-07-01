@@ -183,6 +183,9 @@ void loop()
           unsigned long steps = Serial.parseInt();
           mirfData = (steps << 8) | inByte;
           sendRadioData(RADIO_LIGHTBALL);
+        } else if (inByte == 'R') {
+          mirfData = 'R';
+          sendRadioData(RADIO_LIGHTBALL);
         }
       
         break;

@@ -7,6 +7,9 @@
 #include <ESP8266HTTPClient.h>
 #include <ESP8266mDNS.h>
 
+//#define MARK  {Serial.print(millis());Serial.print(' ');Serial.print("Running line ");Serial.println(__LINE__);}
+#define MARK  {}
+
 #define LED_PIN       0
 
 #define BUTTON_PIN    2
@@ -18,6 +21,7 @@ Adafruit_NeoPixel strip = Adafruit_NeoPixel(44, LED_PIN, NEO_GRB + NEO_KHZ800);
                                       // The HTTP protocol uses port 80 by default.
 
 ESP8266WebServer httpServer(LISTEN_PORT);
+
 #define TIME_URL     F("http://trans-anchor-110020.appspot.com/t")
 
 #define BART_URL_GUSTAVO     F("http://trans-anchor-110020.appspot.com/b?w=g")
@@ -98,6 +102,7 @@ bool is_gustavo;
 #define EEPROM_RAINBOW       (EEPROM_BRIGHTNESS + sizeof(last_brightness))
 #define EEPROM_OFF           (EEPROM_RAINBOW + sizeof(should_rainbow))
 #define EEPROM_WAKE          (EEPROM_OFF + sizeof(should_off))
+#define EEPROM_MAX           (EEPROM_WAKE + sizeof(long))
 
 long real_second;
 unsigned long real_second_start;
@@ -105,6 +110,9 @@ unsigned long real_second_start;
 void setup(void)
 {
   Serial.begin(115200);
+  Serial.setDebugOutput(true);
+  
+  ESP.wdtDisable();
   
   pinMode(BUTTON_PIN, INPUT_PULLUP);
   pinMode(BUTTON_GROUND, OUTPUT);
@@ -112,17 +120,16 @@ void setup(void)
   
   wake_second = -1;
 
-  EEPROM.begin(512);
+  EEPROM.begin(EEPROM_MAX);
   EEPROM.get(EEPROM_COLOR, last_color);
   EEPROM.get(EEPROM_BRIGHTNESS, last_brightness);
   EEPROM.get(EEPROM_RAINBOW, should_rainbow);
   EEPROM.get(EEPROM_OFF, should_off);
-  EEPROM.get(EEPROM_WAKE, wake_second);
+//  EEPROM.get(EEPROM_WAKE, wake_second);
 
   strip.begin();
-  strip.setBrightness(50);
+  strip.setBrightness(10);
   colorWipe(strip.Color(255, 0, 0));
-  strip.show(); 
 
   while (true) {
     // WiFi.scanNetworks will return the number of networks found
@@ -212,12 +219,12 @@ void setup(void)
     httpServer.send(200, "text/plain", "OK");
   });
   httpServer.on("/w", [](){
-    wake_second = httpServer.arg(0).toInt();
+//    wake_second = httpServer.arg(0).toInt();
     updateEeprom();
     httpServer.send(200, "text/plain", "OK");
   });
   httpServer.on("/s", []() {
-    httpServer.send (200, "text/plain", ESP.getResetInfo());
+    httpServer.send(200, "text/plain", ESP.getResetInfo());
   });
   httpServer.begin();
   
@@ -236,12 +243,16 @@ void setup(void)
 
 void loop(void)
 {
+  MARK
+  ESP.wdtEnable(WDTO_8S);
   long millis_diff = millis() - real_second_start;
   if (millis_diff >= 1000) {
     real_second += millis_diff / 1000;
     real_second_start += (long)(millis_diff / 1000) * 1000;
   }
+  MARK
   httpServer.handleClient();
+  MARK
   bool sensor_state = digitalRead(BUTTON_PIN) == LOW;
 
   //first pressed
@@ -317,7 +328,7 @@ void loop(void)
       long current_second = real_second;
       if (current_second >= wake_second) {
         should_off = false;
-        wake_second = 0;
+        wake_second = -1;
         brightness = last_brightness;
         updateEeprom();
       } else {
@@ -334,7 +345,6 @@ void loop(void)
     }
     strip.setBrightness(brightness);
     colorWipe(strip.Color(255, 255, 255));
-    strip.show();
   } else if (sleep_start > 0) {
     long elapsed = millis() - sleep_start;
     if (elapsed >= SLEEP_TIME) {
@@ -345,7 +355,6 @@ void loop(void)
       uint8_t brightness = map(elapsed, 0, SLEEP_TIME, last_brightness, 0);
       strip.setBrightness(brightness);
       colorWipe(last_color);
-      strip.show();
     }
   } else if (next_bart_time > 0) {
     long next_bart_time_millis = 1000 * next_bart_time;
@@ -353,7 +362,6 @@ void loop(void)
     uint8_t brightness = pgm_read_byte(&sin_table[cycle_position]);
     strip.setBrightness(brightness);
     colorWipe(last_color);
-    strip.show();
   } else if (weather_color_end > 0) {
     strip.setBrightness(last_brightness);
     uint8_t min_color_r = (weather_color_min >> 16) & 0xff;
@@ -370,7 +378,6 @@ void loop(void)
     }
     
     colorWipe(strip.Color(min_color_r, 0, min_color_b));
-    strip.show();
     if (millis() > weather_color_end) {
       weather_color_end = 0;
     }
@@ -383,11 +390,12 @@ void loop(void)
   } else {
     strip.setBrightness(last_brightness);
     colorWipe(last_color);
-    strip.show();
   }
+  MARK
 }
 
 void updateEeprom() {
+  ESP.wdtFeed();
   EEPROM.put(EEPROM_COLOR, last_color);
   EEPROM.put(EEPROM_BRIGHTNESS, last_brightness);
   EEPROM.put(EEPROM_RAINBOW, should_rainbow);
@@ -443,6 +451,7 @@ String grabWebPage(const __FlashStringHelper *url) {
   HTTPClient http;
   String payload;
   
+  ESP.wdtFeed();
   http.begin(url); //HTTP
   /* Try connecting to the website.
      Note: HTTP/1.1 protocol is used to keep the server from closing the connection before all data is read.
@@ -456,6 +465,7 @@ String grabWebPage(const __FlashStringHelper *url) {
         payload = http.getString();
     }
   }
+  ESP.wdtFeed();
   http.end();
   return payload;
 }
@@ -471,9 +481,11 @@ long parseInt(const char *buffer) {
 // Fill the dots one after the other with a color
 void colorWipe(uint32_t c) {
   for(uint16_t i=0; i<strip.numPixels(); i++) {
-      strip.setPixelColor(i, c);
-      strip.show();
+    strip.setPixelColor(i, c);
   }
+  ESP.wdtFeed();
+  strip.show();
+  ESP.wdtFeed();
 }
 
 // Slightly different, this makes the rainbow equally distributed throughout
@@ -483,7 +495,9 @@ void rainbowCycle(uint16_t j) {
   for(i=0; i< strip.numPixels(); i++) {
     strip.setPixelColor(strip.numPixels() - i - 1, Wheel(((i * 256 / strip.numPixels()) + j / RAINBOW_DIVIDER) & 255));
   }
+  ESP.wdtFeed();
   strip.show();
+  ESP.wdtFeed();
 }
 
 // Input a value 0 to 255 to get a color value.

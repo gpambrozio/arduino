@@ -54,15 +54,20 @@ class ModeSound : public Mode
         levelHistoryPos = 0;
       }
       int maxLevel = 128;   // For when it' too silent.
+      int minLevel = levelHistory[0];
       for (uint16_t i=0; i<HISTORY_COUNT; i++) {
         if (levelHistory[i] > maxLevel) {
           maxLevel = levelHistory[i];
         }
+        if (levelHistory[i] < minLevel) {
+          minLevel = levelHistory[i];
+        }
       }
-      rollingMax = ((rollingMax * 3) + maxLevel) >> 2;
-      rollingLevel = (rollingLevel + thisCapture) >> 1;
+      rollingMax = (rollingMax * 15 + maxLevel) >> 4;
+      rollingMin = (rollingMin * 15 + minLevel) >> 4;
+      rollingLevel = thisCapture;//(rollingLevel + thisCapture) >> 1;
 
-      float lights = (float)rollingLevel * (float)(NUM_LEDS - MIN_LIGHTS) / (float)rollingMax + MIN_LIGHTS;
+      float lights = (float)(rollingLevel - rollingMin) * (float)(NUM_LEDS - MIN_LIGHTS) / (float)(rollingMax - rollingMin) + MIN_LIGHTS;
       for (uint16_t i=0; i<NUM_LEDS; i++) {
         if (i < lights) {
           leds[NUM_LEDS-i-1] = wheel((cycleIndex+i) & 0xFF);
@@ -80,14 +85,14 @@ class ModeSound : public Mode
     }
   private:
     uint16_t cycleIndex;
-    uint16_t rollingMax, rollingLevel;
+    uint16_t rollingMax, rollingMin, rollingLevel;
     byte levelHistoryPos;
     int levelHistory[HISTORY_COUNT];
 };
 
 ISR(ADC_vect) { // Audio-sampling interrupt
   int16_t sample = ADC;
-  captureSum += abs(sample - 512);
+  captureSum += abs(sample - 490);
   if(++samplePos >= 128) ADCSRA &= ~_BV(ADIE); // Buffer full, interrupt off
 }
 
