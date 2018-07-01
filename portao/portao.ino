@@ -23,15 +23,17 @@ const int IN2 = 1;
 const int SENS1 = 2;
 const int SENS2 = 3;
 
-const byte SENSORS = 4;
+const int KEY = 4;
+
+const byte SENSORS = 5;
 
 // The pins
-const int sensors[] = {2,4,8,7};
+const int sensors[] = {2,4,8,7,10};
 byte sensorState[SENSORS] = {0xFF,0xFF,0xFF,0xFF};
 
-unsigned long debounce[SENSORS] = {0,0,0,0};
-byte debounceState[SENSORS] = {0xFF,0xFF,0xFF,0xFF};
-byte reportState[SENSORS]   = {0xFF,0xFF,0xFF,0xFF};
+unsigned long debounce[SENSORS] = {0,0,0,0,0};
+byte debounceState[SENSORS] = {0xFF,0xFF,0xFF,0xFF,0xFF};
+byte reportState[SENSORS]   = {0xFF,0xFF,0xFF,0xFF,0xFF};
 
 const int ON = 0x00;
 const int OFF = 0xFF;
@@ -173,6 +175,8 @@ boolean waitUntil(byte sensor, byte state, int timeout, boolean forever)
     checkAll();
     if (debounceState[sensor] == state)
       return true;
+//    if ( debounceState[KEY] == ON ) 
+//      return false;
   }
   return false;
 }
@@ -184,16 +188,24 @@ void setup()
   pinMode(OUT2, OUTPUT);
   digitalWrite(OUT2, LOW);
   pinMode(LED, OUTPUT);
-  for (int i=0; i<SENSORS; i++)
+  for (int i=0; i<SENSORS; i++) {
     pinMode(sensors[i], INPUT);
- 
+    digitalWrite(sensors[i], HIGH); 
+  }
+
   //start serial connection
   Serial.begin(9600);
 
   Serial.println("Versao 0002");
   ignoreSensors = 0x03;
-  Serial.println("Waiting sens1");
-  waitUntil(SENS1, ON, 0, true);
+
+  unsigned long start = millis();
+  while ( (millis() - start) < 2000 ) {
+    checkAll();
+  }
+  
+  //Serial.println("Waiting sens1");
+  //waitUntil(SENS1, ON, 0, true);
   Serial.println("Waiting sens2");
   waitUntil(SENS2, ON, 0, true);
   Serial.println("Started!");
@@ -210,7 +222,10 @@ void openAndWait(int out, byte sensor, byte portao)
   while (true)
   {
     digitalWrite(out, HIGH);
-    if (!waitUntil(sensor, OFF, LIMITE_ABERTURA - (int)((millis() - start) / 1000), false))
+    int limite = LIMITE_ABERTURA - (int)((millis() - start) / 1000); 
+    if ( sensor == SENS1 )
+      limite = 1; 
+    if (!waitUntil(sensor, OFF, limite , false))
     {
       digitalWrite(out, LOW);
       Serial.println("Portao NAO ABRIU!");
@@ -234,12 +249,15 @@ void openAndWait(int out, byte sensor, byte portao)
 
   while (true)
   {
+    if ( sensor == SENS1 )
+        break;
+
     if (waitUntil(sensor, ON, LIMITE_ABERTO, false))
     {
       Serial.println("Portao fechou");
       break;
     }
-    else
+    else 
     {
       ledPeriod = 200;
       Serial.println("Portao NAO FECHOU!");
@@ -272,5 +290,13 @@ void loop()
     waitUntil(IN2, OFF, 0, true);
     lastSignal2 = millis();
   }
+/*  else if ( debounceState[KEY] == ON ) {
+    ignoreSensors = 1;
+    openAndWait(OUT1, SENS1, 1);
+    ignoreSensors = 0;
+    waitUntil(IN1, OFF, 0, true);
+    lastSignal1 = millis();
+  }
+  */
 }
 
