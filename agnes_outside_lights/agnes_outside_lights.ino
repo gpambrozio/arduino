@@ -5,7 +5,8 @@
   #include <avr/power.h>
 #endif
 
-#define PIN 16
+#define PIN_OUTSIDE 16
+#define PIN_INSIDE 15
 
 #define MAX_BRIGHTNESS 255
 
@@ -17,7 +18,8 @@
 //   NEO_GRB     Pixels are wired for GRB bitstream (most NeoPixel products)
 //   NEO_RGB     Pixels are wired for RGB bitstream (v1 FLORA pixels, not v2)
 //   NEO_RGBW    Pixels are wired for RGBW bitstream (NeoPixel RGBW products)
-Adafruit_NeoPixel strip = Adafruit_NeoPixel(150, PIN, NEO_GRB + NEO_KHZ800);
+Adafruit_NeoPixel strip_outside = Adafruit_NeoPixel(150, PIN_OUTSIDE, NEO_GRB + NEO_KHZ800);
+Adafruit_NeoPixel strip_inside = Adafruit_NeoPixel(259, PIN_INSIDE, NEO_GRB + NEO_KHZ800);
 
 // IMPORTANT: To reduce NeoPixel burnout risk, add 1000 uF capacitor across
 // pixel power leads, add 300 - 500 Ohm resistor on first pixel's data input
@@ -26,16 +28,16 @@ Adafruit_NeoPixel strip = Adafruit_NeoPixel(150, PIN, NEO_GRB + NEO_KHZ800);
 
 BLEUart bleuart;
 
-#define MIN_PACKET_SIZE       4 // '!', size, command, ...., checksum
+#define MIN_PACKET_SIZE       5 // '!', size, command, segment, ...., checksum
 #define READ_BUFSIZE                    (20)
  
 /* Buffer to hold incoming characters */
 uint8_t packetbuffer[READ_BUFSIZE+1];
 
 #define PACKET_COMMAND   (packetbuffer[2])
-#define PACKET_DATA      (packetbuffer+3)
+#define PACKET_SEGMENT   (packetbuffer[3])
+#define PACKET_DATA      (packetbuffer+4)
 #define PACKET_DATA_SIZE (packetbuffer[1] - MIN_PACKET_SIZE)
-
 
 void setup() {
   Bluefruit.begin();
@@ -43,7 +45,7 @@ void setup() {
   
   // Set max power. Accepted values are: -40, -30, -20, -16, -12, -8, -4, 0, 4
   Bluefruit.setTxPower(4);
-  Bluefruit.setName("AgnesOutsideLights");
+  Bluefruit.setName("AgnesLights");
 
   // Configure and start the BLE Uart service
   bleuart.begin();
@@ -54,20 +56,29 @@ void setup() {
   // Start advertising
   Bluefruit.Advertising.start();
 
-  strip.begin();
-  strip.setBrightness(MAX_BRIGHTNESS);
-  strip.show(); // Initialize all pixels to 'off'
+  strip_outside.begin();
+  strip_inside.begin();
+  
+  strip_outside.setBrightness(MAX_BRIGHTNESS);
+  strip_outside.show(); // Initialize all pixels to 'off'
+  strip_inside.setBrightness(MAX_BRIGHTNESS);
+  strip_inside.show(); // Initialize all pixels to 'off'
   delay(1000);
-  colorWipe(0xFF0000);
+  colorWipe(strip_outside, 0xFF0000);
+  colorWipe(strip_inside, 0xFF0000);
   delay(300);
-  colorWipe(0x00FF00);
+  colorWipe(strip_outside, 0x00FF00);
+  colorWipe(strip_inside, 0x00FF00);
   delay(300);
-  colorWipe(0x0000FF);
+  colorWipe(strip_outside, 0x0000FF);
+  colorWipe(strip_inside, 0x0000FF);
   delay(300);
-  colorWipe(0);
+  colorWipe(strip_outside, 0);
+  colorWipe(strip_inside, 0);
 }
 
-uint8_t mode = 0;
+uint8_t mode_outside = 'C';
+uint8_t mode_inside = 'C';
 uint16_t cyclePosition = 0;
 uint16_t cycleDelay = 1;
 
@@ -76,10 +87,17 @@ void loop() {
   uint8_t len = readPacket(&bleuart);
   if (len > 0) {
     bool commandOK = false;
+    char segment = PACKET_SEGMENT;
+    Adafruit_NeoPixel strip;
+    if (segment == 'O') {
+      strip = strip_outside;
+    } else {
+      strip = strip_inside;
+    }
     if (PACKET_COMMAND == 'C' && PACKET_DATA_SIZE == 4) {
       strip.setBrightness(min(PACKET_DATA[0], MAX_BRIGHTNESS));
       uint32_t color = ((uint32_t)PACKET_DATA[1] << 16) | ((uint32_t)PACKET_DATA[2] <<  8) | PACKET_DATA[3];
-      colorWipe(color);
+      colorWipe(strip, color);
       commandOK = true;
     } else if ((PACKET_COMMAND == 'R' || PACKET_COMMAND == 'T') && PACKET_DATA_SIZE == 2) {
       strip.setBrightness(min(PACKET_DATA[0], MAX_BRIGHTNESS));
@@ -87,23 +105,39 @@ void loop() {
       commandOK = true;
     }
     if (commandOK) {
-      cyclePosition = 0;
-      mode = PACKET_COMMAND;
+      if (segment == 'O') {
+        mode_outside = PACKET_COMMAND;
+      } else {
+        mode_inside = PACKET_COMMAND;
+      }
       bleuart.println("OK");
     }
   }
   
-  switch (mode) {
+  switch (mode_outside) {
     case 'C':
       // No need to do anything
       break;
 
     case 'R':
-      rainbowCycle(cyclePosition++);
+      rainbowCycle(strip_outside, cyclePosition++);
       break;
 
     case 'T':
-      theaterChaseRainbow(cyclePosition++);
+      theaterChaseRainbow(strip_outside, cyclePosition++);
+      break;
+  }
+  switch (mode_inside) {
+    case 'C':
+      // No need to do anything
+      break;
+
+    case 'R':
+      rainbowCycle(strip_inside, cyclePosition++);
+      break;
+
+    case 'T':
+      theaterChaseRainbow(strip_inside, cyclePosition++);
       break;
   }
   delay(cycleDelay);
@@ -122,7 +156,7 @@ void setupAdv(void) {
 }
 
 // Fill the dots one after the other with a color
-void colorWipe(uint32_t c) {
+void colorWipe(Adafruit_NeoPixel strip, uint32_t c) {
   for(uint16_t i=0; i<strip.numPixels(); i++) {
     strip.setPixelColor(i, c);
   }
@@ -130,7 +164,7 @@ void colorWipe(uint32_t c) {
 }
 
 // Slightly different, this makes the rainbow equally distributed throughout
-void rainbowCycle(uint16_t j) {
+void rainbowCycle(Adafruit_NeoPixel strip, uint16_t j) {
   j &= 0xFF;
 
   for (uint16_t i = 0; i < strip.numPixels(); i++) {
@@ -140,7 +174,7 @@ void rainbowCycle(uint16_t j) {
 }
 
 // Theatre-style crawling lights with rainbow effect
-void theaterChaseRainbow(uint16_t j) {
+void theaterChaseRainbow(Adafruit_NeoPixel strip, uint16_t j) {
   j %= 256 * 3;
   int q = j % 3;
   j /= 3;
@@ -158,14 +192,14 @@ void theaterChaseRainbow(uint16_t j) {
 uint32_t Wheel(byte WheelPos) {
   WheelPos = 255 - WheelPos;
   if(WheelPos < 85) {
-    return strip.Color(255 - WheelPos * 3, 0, WheelPos * 3);
+    return strip_outside.Color(255 - WheelPos * 3, 0, WheelPos * 3);
   }
   if(WheelPos < 170) {
     WheelPos -= 85;
-    return strip.Color(0, WheelPos * 3, 255 - WheelPos * 3);
+    return strip_outside.Color(0, WheelPos * 3, 255 - WheelPos * 3);
   }
   WheelPos -= 170;
-  return strip.Color(WheelPos * 3, 255 - WheelPos * 3, 0);
+  return strip_outside.Color(WheelPos * 3, 255 - WheelPos * 3, 0);
 }
 
 uint16_t replyidx = 0, replysize = READ_BUFSIZE;
