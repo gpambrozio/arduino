@@ -1,9 +1,6 @@
+#include <Arduino.h>
 #include <Adafruit_NeoPixel.h>
 #include <bluefruit.h>
-
-#ifdef __AVR__
-  #include <avr/power.h>
-#endif
 
 #define PIN_OUTSIDE 16
 #define PIN_INSIDE 15
@@ -88,19 +85,19 @@ void loop() {
   if (len > 0) {
     bool commandOK = false;
     char segment = PACKET_SEGMENT;
-    Adafruit_NeoPixel strip;
+    Adafruit_NeoPixel* strip;
     if (segment == 'O') {
-      strip = strip_outside;
+      strip = &strip_outside;
     } else {
-      strip = strip_inside;
+      strip = &strip_inside;
     }
     if (PACKET_COMMAND == 'C' && PACKET_DATA_SIZE == 4) {
-      strip.setBrightness(min(PACKET_DATA[0], MAX_BRIGHTNESS));
+      strip->setBrightness(min(PACKET_DATA[0], MAX_BRIGHTNESS));
       uint32_t color = ((uint32_t)PACKET_DATA[1] << 16) | ((uint32_t)PACKET_DATA[2] <<  8) | PACKET_DATA[3];
-      colorWipe(strip, color);
+      colorWipe(*strip, color);
       commandOK = true;
     } else if ((PACKET_COMMAND == 'R' || PACKET_COMMAND == 'T') && PACKET_DATA_SIZE == 2) {
-      strip.setBrightness(min(PACKET_DATA[0], MAX_BRIGHTNESS));
+      strip->setBrightness(min(PACKET_DATA[0], MAX_BRIGHTNESS));
       cycleDelay = PACKET_DATA[1];
       commandOK = true;
     }
