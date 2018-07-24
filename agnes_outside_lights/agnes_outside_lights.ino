@@ -7,6 +7,8 @@
 
 #define MAX_BRIGHTNESS 255
 
+#define MARK {Serial.print("Line "); Serial.println(__LINE__);} 
+
 // Parameter 1 = number of pixels in strip
 // Parameter 2 = Arduino pin number (most are valid)
 // Parameter 3 = pixel type flags, add together as needed:
@@ -39,7 +41,8 @@ uint8_t packetbuffer[READ_BUFSIZE+1];
 void setup() {
   Bluefruit.begin();
   Bluefruit.autoConnLed(false);
-  
+  Serial.begin(9600);
+
   // Set max power. Accepted values are: -40, -30, -20, -16, -12, -8, -4, 0, 4
   Bluefruit.setTxPower(4);
   Bluefruit.setName("AgnesLights");
@@ -52,26 +55,38 @@ void setup() {
  
   // Start advertising
   Bluefruit.Advertising.start();
+  
+  delay(1000);
+  MARK
 
   strip_outside.begin();
   strip_inside.begin();
+  MARK
   
   strip_outside.setBrightness(MAX_BRIGHTNESS);
   strip_outside.show(); // Initialize all pixels to 'off'
+  MARK
   strip_inside.setBrightness(MAX_BRIGHTNESS);
+  MARK
   strip_inside.show(); // Initialize all pixels to 'off'
+  MARK
   delay(1000);
-  colorWipe(strip_outside, 0xFF0000);
-  colorWipe(strip_inside, 0xFF0000);
+  MARK
+  colorWipe(&strip_outside, 0xFF0000);
+  colorWipe(&strip_inside, 0xFF0000);
+  MARK
   delay(300);
-  colorWipe(strip_outside, 0x00FF00);
-  colorWipe(strip_inside, 0x00FF00);
+  MARK
+  colorWipe(&strip_outside, 0x00FF00);
+  colorWipe(&strip_inside, 0x00FF00);
+  MARK
   delay(300);
-  colorWipe(strip_outside, 0x0000FF);
-  colorWipe(strip_inside, 0x0000FF);
+  colorWipe(&strip_outside, 0x0000FF);
+  colorWipe(&strip_inside, 0x0000FF);
   delay(300);
-  colorWipe(strip_outside, 0);
-  colorWipe(strip_inside, 0);
+  colorWipe(&strip_outside, 0);
+  colorWipe(&strip_inside, 0);
+  MARK
 }
 
 uint8_t mode_outside = 'C';
@@ -81,20 +96,21 @@ uint16_t cycleDelay = 1;
 
 void loop() {
   // Wait for new data to arrive
+  MARK
   uint8_t len = readPacket(&bleuart);
   if (len > 0) {
     bool commandOK = false;
     char segment = PACKET_SEGMENT;
     Adafruit_NeoPixel* strip;
     if (segment == 'O') {
-      strip = &strip_outside;
+      strip = &strip_inside;
     } else {
       strip = &strip_inside;
     }
     if (PACKET_COMMAND == 'C' && PACKET_DATA_SIZE == 4) {
       strip->setBrightness(min(PACKET_DATA[0], MAX_BRIGHTNESS));
       uint32_t color = ((uint32_t)PACKET_DATA[1] << 16) | ((uint32_t)PACKET_DATA[2] <<  8) | PACKET_DATA[3];
-      colorWipe(*strip, color);
+      colorWipe(strip, color);
       commandOK = true;
     } else if ((PACKET_COMMAND == 'R' || PACKET_COMMAND == 'T') && PACKET_DATA_SIZE == 2) {
       strip->setBrightness(min(PACKET_DATA[0], MAX_BRIGHTNESS));
@@ -117,11 +133,11 @@ void loop() {
       break;
 
     case 'R':
-      rainbowCycle(strip_outside, cyclePosition++);
+      rainbowCycle(&strip_outside, cyclePosition++);
       break;
 
     case 'T':
-      theaterChaseRainbow(strip_outside, cyclePosition++);
+      theaterChaseRainbow(&strip_outside, cyclePosition++);
       break;
   }
   switch (mode_inside) {
@@ -130,11 +146,11 @@ void loop() {
       break;
 
     case 'R':
-      rainbowCycle(strip_inside, cyclePosition++);
+      rainbowCycle(&strip_inside, cyclePosition++);
       break;
 
     case 'T':
-      theaterChaseRainbow(strip_inside, cyclePosition++);
+      theaterChaseRainbow(&strip_inside, cyclePosition++);
       break;
   }
   delay(cycleDelay);
@@ -153,35 +169,38 @@ void setupAdv(void) {
 }
 
 // Fill the dots one after the other with a color
-void colorWipe(Adafruit_NeoPixel strip, uint32_t c) {
-  for(uint16_t i=0; i<strip.numPixels(); i++) {
-    strip.setPixelColor(i, c);
+void colorWipe(Adafruit_NeoPixel *strip, uint32_t c) {
+  MARK
+  for(uint16_t i=0; i<strip->numPixels(); i++) {
+    strip->setPixelColor(i, c);
   }
-  strip.show();
+  MARK
+  strip->show();
+  MARK
 }
 
 // Slightly different, this makes the rainbow equally distributed throughout
-void rainbowCycle(Adafruit_NeoPixel strip, uint16_t j) {
+void rainbowCycle(Adafruit_NeoPixel *strip, uint16_t j) {
   j &= 0xFF;
 
-  for (uint16_t i = 0; i < strip.numPixels(); i++) {
-    strip.setPixelColor(i, Wheel((((i << 8) / strip.numPixels()) + j) & 0xFF));
+  for (uint16_t i = 0; i < strip->numPixels(); i++) {
+    strip->setPixelColor(i, Wheel((((i << 8) / strip->numPixels()) + j) & 0xFF));
   }
-  strip.show();
+  strip->show();
 }
 
 // Theatre-style crawling lights with rainbow effect
-void theaterChaseRainbow(Adafruit_NeoPixel strip, uint16_t j) {
+void theaterChaseRainbow(Adafruit_NeoPixel *strip, uint16_t j) {
   j %= 256 * 3;
   int q = j % 3;
   j /= 3;
-  for (uint16_t i = 0; i < strip.numPixels(); i++) {
-    strip.setPixelColor(i, 0);
+  for (uint16_t i = 0; i < strip->numPixels(); i++) {
+    strip->setPixelColor(i, 0);
   }
-  for (uint16_t i = 0; i < strip.numPixels(); i = i + 3) {
-    strip.setPixelColor(i+q, Wheel( (i+j) & 0xFF));    //turn every third pixel on
+  for (uint16_t i = 0; i < strip->numPixels(); i = i + 3) {
+    strip->setPixelColor(i+q, Wheel( (i+j) & 0xFF));    //turn every third pixel on
   }
-  strip.show();
+  strip->show();
 }
 
 // Input a value 0 to 255 to get a color value.
@@ -189,14 +208,14 @@ void theaterChaseRainbow(Adafruit_NeoPixel strip, uint16_t j) {
 uint32_t Wheel(byte WheelPos) {
   WheelPos = 255 - WheelPos;
   if(WheelPos < 85) {
-    return strip_outside.Color(255 - WheelPos * 3, 0, WheelPos * 3);
+    return strip_inside.Color(255 - WheelPos * 3, 0, WheelPos * 3);
   }
   if(WheelPos < 170) {
     WheelPos -= 85;
-    return strip_outside.Color(0, WheelPos * 3, 255 - WheelPos * 3);
+    return strip_inside.Color(0, WheelPos * 3, 255 - WheelPos * 3);
   }
   WheelPos -= 170;
-  return strip_outside.Color(WheelPos * 3, 255 - WheelPos * 3, 0);
+  return strip_inside.Color(WheelPos * 3, 255 - WheelPos * 3, 0);
 }
 
 uint16_t replyidx = 0, replysize = READ_BUFSIZE;
