@@ -7,8 +7,6 @@
 
 #define MAX_BRIGHTNESS 255
 
-#define MARK {Serial.print("Line "); Serial.println(__LINE__);} 
-
 // Parameter 1 = number of pixels in strip
 // Parameter 2 = Arduino pin number (most are valid)
 // Parameter 3 = pixel type flags, add together as needed:
@@ -17,8 +15,8 @@
 //   NEO_GRB     Pixels are wired for GRB bitstream (most NeoPixel products)
 //   NEO_RGB     Pixels are wired for RGB bitstream (v1 FLORA pixels, not v2)
 //   NEO_RGBW    Pixels are wired for RGBW bitstream (NeoPixel RGBW products)
-//Adafruit_NeoPixel strip_outside = Adafruit_NeoPixel(150, PIN_OUTSIDE, NEO_GRB + NEO_KHZ800);
 Adafruit_NeoPixel strip_inside = Adafruit_NeoPixel(259, PIN_INSIDE, NEO_GRB + NEO_KHZ800);
+Adafruit_NeoPixel strip_outside = Adafruit_NeoPixel(150, PIN_OUTSIDE, NEO_GRB + NEO_KHZ800);
 
 // IMPORTANT: To reduce NeoPixel burnout risk, add 1000 uF capacitor across
 // pixel power leads, add 300 - 500 Ohm resistor on first pixel's data input
@@ -42,6 +40,7 @@ void setup() {
   Bluefruit.begin();
   Bluefruit.autoConnLed(false);
   Serial.begin(9600);
+  Serial.println("Reset");
 
   // Set max power. Accepted values are: -40, -30, -20, -16, -12, -8, -4, 0, 4
   Bluefruit.setTxPower(4);
@@ -57,36 +56,27 @@ void setup() {
   Bluefruit.Advertising.start();
   
   delay(1000);
-  MARK
 
-//  strip_outside.begin();
   strip_inside.begin();
-  MARK
+  strip_outside.begin();
   
-//  strip_outside.setBrightness(MAX_BRIGHTNESS);
-//  strip_outside.show(); // Initialize all pixels to 'off'
-  MARK
   strip_inside.setBrightness(MAX_BRIGHTNESS);
-  MARK
   strip_inside.show(); // Initialize all pixels to 'off'
-  MARK
+  strip_outside.setBrightness(MAX_BRIGHTNESS);
+  strip_outside.show(); // Initialize all pixels to 'off'
+
   delay(1000);
-  MARK
-//  colorWipe(&strip_outside, 0xFF0000);
   colorWipe(&strip_inside, 0xFF0000);
-  MARK
+  colorWipe(&strip_outside, 0xFF0000);
   delay(300);
-  MARK
-//  colorWipe(&strip_outside, 0x00FF00);
   colorWipe(&strip_inside, 0x00FF00);
-  MARK
+  colorWipe(&strip_outside, 0x00FF00);
   delay(300);
-//  colorWipe(&strip_outside, 0x0000FF);
   colorWipe(&strip_inside, 0x0000FF);
+  colorWipe(&strip_outside, 0x0000FF);
   delay(300);
-//  colorWipe(&strip_outside, 0);
   colorWipe(&strip_inside, 0);
-  MARK
+  colorWipe(&strip_outside, 0);
 }
 
 uint8_t mode_outside = 'C';
@@ -96,7 +86,6 @@ uint16_t cycleDelay = 1;
 
 void loop() {
   // Wait for new data to arrive
-  MARK
   uint8_t len = readPacket(&bleuart);
   if (len > 0) {
     bool commandOK = false;
@@ -127,19 +116,19 @@ void loop() {
     }
   }
   
-//  switch (mode_outside) {
-//    case 'C':
-//      // No need to do anything
-//      break;
-//
-//    case 'R':
-//      rainbowCycle(&strip_outside, cyclePosition++);
-//      break;
-//
-//    case 'T':
-//      theaterChaseRainbow(&strip_outside, cyclePosition++);
-//      break;
-//  }
+  switch (mode_outside) {
+    case 'C':
+      // No need to do anything
+      break;
+
+    case 'R':
+      rainbowCycle(&strip_outside, cyclePosition++);
+      break;
+
+    case 'T':
+      theaterChaseRainbow(&strip_outside, cyclePosition++);
+      break;
+  }
   switch (mode_inside) {
     case 'C':
       // No need to do anything
@@ -170,13 +159,10 @@ void setupAdv(void) {
 
 // Fill the dots one after the other with a color
 void colorWipe(Adafruit_NeoPixel *strip, uint32_t c) {
-  MARK
   for(uint16_t i=0; i<strip->numPixels(); i++) {
     strip->setPixelColor(i, c);
   }
-  MARK
   strip->show();
-  MARK
 }
 
 // Slightly different, this makes the rainbow equally distributed throughout
