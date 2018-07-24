@@ -17,7 +17,7 @@
 //   NEO_GRB     Pixels are wired for GRB bitstream (most NeoPixel products)
 //   NEO_RGB     Pixels are wired for RGB bitstream (v1 FLORA pixels, not v2)
 //   NEO_RGBW    Pixels are wired for RGBW bitstream (NeoPixel RGBW products)
-Adafruit_NeoPixel strip_outside = Adafruit_NeoPixel(150, PIN_OUTSIDE, NEO_GRB + NEO_KHZ800);
+//Adafruit_NeoPixel strip_outside = Adafruit_NeoPixel(150, PIN_OUTSIDE, NEO_GRB + NEO_KHZ800);
 Adafruit_NeoPixel strip_inside = Adafruit_NeoPixel(259, PIN_INSIDE, NEO_GRB + NEO_KHZ800);
 
 // IMPORTANT: To reduce NeoPixel burnout risk, add 1000 uF capacitor across
@@ -59,12 +59,12 @@ void setup() {
   delay(1000);
   MARK
 
-  strip_outside.begin();
+//  strip_outside.begin();
   strip_inside.begin();
   MARK
   
-  strip_outside.setBrightness(MAX_BRIGHTNESS);
-  strip_outside.show(); // Initialize all pixels to 'off'
+//  strip_outside.setBrightness(MAX_BRIGHTNESS);
+//  strip_outside.show(); // Initialize all pixels to 'off'
   MARK
   strip_inside.setBrightness(MAX_BRIGHTNESS);
   MARK
@@ -72,19 +72,19 @@ void setup() {
   MARK
   delay(1000);
   MARK
-  colorWipe(&strip_outside, 0xFF0000);
+//  colorWipe(&strip_outside, 0xFF0000);
   colorWipe(&strip_inside, 0xFF0000);
   MARK
   delay(300);
   MARK
-  colorWipe(&strip_outside, 0x00FF00);
+//  colorWipe(&strip_outside, 0x00FF00);
   colorWipe(&strip_inside, 0x00FF00);
   MARK
   delay(300);
-  colorWipe(&strip_outside, 0x0000FF);
+//  colorWipe(&strip_outside, 0x0000FF);
   colorWipe(&strip_inside, 0x0000FF);
   delay(300);
-  colorWipe(&strip_outside, 0);
+//  colorWipe(&strip_outside, 0);
   colorWipe(&strip_inside, 0);
   MARK
 }
@@ -127,19 +127,19 @@ void loop() {
     }
   }
   
-  switch (mode_outside) {
-    case 'C':
-      // No need to do anything
-      break;
-
-    case 'R':
-      rainbowCycle(&strip_outside, cyclePosition++);
-      break;
-
-    case 'T':
-      theaterChaseRainbow(&strip_outside, cyclePosition++);
-      break;
-  }
+//  switch (mode_outside) {
+//    case 'C':
+//      // No need to do anything
+//      break;
+//
+//    case 'R':
+//      rainbowCycle(&strip_outside, cyclePosition++);
+//      break;
+//
+//    case 'T':
+//      theaterChaseRainbow(&strip_outside, cyclePosition++);
+//      break;
+//  }
   switch (mode_inside) {
     case 'C':
       // No need to do anything
