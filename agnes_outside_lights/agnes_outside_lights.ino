@@ -5,7 +5,8 @@
 #define PIN_OUTSIDE 16
 #define PIN_INSIDE 15
 
-#define MAX_BRIGHTNESS 255
+#define MAX_BRIGHTNESS_OUTSIDE 200
+#define MAX_BRIGHTNESS_INSIDE 40
 
 // Parameter 1 = number of pixels in strip
 // Parameter 2 = Arduino pin number (most are valid)
@@ -60,9 +61,9 @@ void setup() {
   strip_inside.begin();
   strip_outside.begin();
   
-  strip_inside.setBrightness(MAX_BRIGHTNESS);
+  strip_inside.setBrightness(MAX_BRIGHTNESS_INSIDE);
   strip_inside.show(); // Initialize all pixels to 'off'
-  strip_outside.setBrightness(MAX_BRIGHTNESS);
+  strip_outside.setBrightness(MAX_BRIGHTNESS_OUTSIDE);
   strip_outside.show(); // Initialize all pixels to 'off'
 
   delay(1000);
@@ -91,18 +92,22 @@ void loop() {
     bool commandOK = false;
     char segment = PACKET_SEGMENT;
     Adafruit_NeoPixel* strip;
+    int max_brightness;
     if (segment == 'O') {
       strip = &strip_inside;
+      max_brightness = MAX_BRIGHTNESS_OUTSIDE;
     } else {
       strip = &strip_inside;
+      max_brightness = MAX_BRIGHTNESS_INSIDE;
     }
+    
     if (PACKET_COMMAND == 'C' && PACKET_DATA_SIZE == 4) {
-      strip->setBrightness(min(PACKET_DATA[0], MAX_BRIGHTNESS));
+      strip->setBrightness(min(PACKET_DATA[0], max_brightness));
       uint32_t color = ((uint32_t)PACKET_DATA[1] << 16) | ((uint32_t)PACKET_DATA[2] <<  8) | PACKET_DATA[3];
       colorWipe(strip, color);
       commandOK = true;
     } else if ((PACKET_COMMAND == 'R' || PACKET_COMMAND == 'T') && PACKET_DATA_SIZE == 2) {
-      strip->setBrightness(min(PACKET_DATA[0], MAX_BRIGHTNESS));
+      strip->setBrightness(min(PACKET_DATA[0], max_brightness));
       cycleDelay = PACKET_DATA[1];
       commandOK = true;
     }
