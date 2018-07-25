@@ -40,8 +40,6 @@ uint8_t packetbuffer[READ_BUFSIZE+1];
 void setup() {
   Bluefruit.begin();
   Bluefruit.autoConnLed(false);
-  Serial.begin(9600);
-  Serial.println("Reset");
 
   // Set max power. Accepted values are: -40, -30, -20, -16, -12, -8, -4, 0, 4
   Bluefruit.setTxPower(4);
