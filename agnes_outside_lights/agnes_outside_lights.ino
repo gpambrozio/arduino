@@ -92,7 +92,7 @@ void loop() {
     Adafruit_NeoPixel* strip;
     int max_brightness;
     if (segment == 'O') {
-      strip = &strip_inside;
+      strip = &strip_outside;
       max_brightness = MAX_BRIGHTNESS_OUTSIDE;
     } else {
       strip = &strip_inside;
@@ -115,7 +115,7 @@ void loop() {
       } else {
         mode_inside = PACKET_COMMAND;
       }
-      bleuart.println("OK");
+      bleuart.print("OK");
     }
   }
   
@@ -207,19 +207,28 @@ uint32_t Wheel(byte WheelPos) {
   return strip_inside.Color(WheelPos * 3, 255 - WheelPos * 3, 0);
 }
 
+unsigned long last_received_byte = 0;
 uint16_t replyidx = 0, replysize = READ_BUFSIZE;
+
 uint8_t readPacket(BLEUart *ble_uart)  {
+  if (replyidx > 0 && millis() - last_received_byte > 2000) {
+     replyidx = 0;
+     replysize = READ_BUFSIZE;
+     bleuart.print("TO");
+  }
+  
   while (ble_uart->available() && replyidx < replysize) {
     char c =  ble_uart->read();
+    last_received_byte = millis();
     if (replyidx == 0) {
       if (c == '!') {
         replysize = READ_BUFSIZE;
-        packetbuffer[replyidx] = c;
+        packetbuffer[0] = c;
         replyidx++;
       }
     } else {
       if (replyidx == 1) {
-        replysize = min(READ_BUFSIZE, c);
+        replysize = max(MIN_PACKET_SIZE, min(READ_BUFSIZE, c));
       }
       packetbuffer[replyidx] = c;
       replyidx++;
@@ -241,12 +250,12 @@ uint8_t readPacket(BLEUart *ble_uart)  {
   xsum = ~xsum;
 
   uint16_t messagesize = replyidx;
-  replyidx = 0, replysize = READ_BUFSIZE;
+  replyidx = 0;
+  replysize = READ_BUFSIZE;
   
   // Throw an error message if the checksum's don't match
   if (xsum != checksum) {
     bleuart.print("NO");
-    bleuart.write((const char*)&xsum, 1);
     return 0;
   }
   
