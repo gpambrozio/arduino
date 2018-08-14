@@ -48,12 +48,9 @@ void setup() {
   // Configure and start the BLE Uart service
   bleuart.begin();
  
-  // Set up the advertising packet
-  setupAdv();
+  // Set up the advertising packet and start it
+  startAdv();
  
-  // Start advertising
-  Bluefruit.Advertising.start();
-  
   delay(1000);
 
   strip_inside.begin();
@@ -76,14 +73,26 @@ void setup() {
   delay(300);
   colorWipe(&strip_inside, 0);
   colorWipe(&strip_outside, 0);
+
+  pinMode(LED_RED, OUTPUT);
 }
 
 uint8_t mode_outside = 'C';
 uint8_t mode_inside = 'C';
 uint16_t cyclePosition = 0;
 uint16_t cycleDelay = 1;
+unsigned long last_blink = 0;
 
 void loop() {
+  if (millis() >= last_blink) {
+    if (millis() >= last_blink + 10) {
+      digitalWrite(LED_RED, LOW);
+      last_blink = millis() + 15000;
+    } else {
+      digitalWrite(LED_RED, HIGH);
+    }
+  }
+
   // Wait for new data to arrive
   uint8_t len = readPacket(&bleuart);
   if (len > 0) {
@@ -148,7 +157,7 @@ void loop() {
   delay(cycleDelay);
 }
 
-void setupAdv(void) {
+void startAdv(void) {
   Bluefruit.Advertising.addFlags(BLE_GAP_ADV_FLAGS_LE_ONLY_GENERAL_DISC_MODE);
   Bluefruit.Advertising.addTxPower();
   
@@ -158,6 +167,20 @@ void setupAdv(void) {
   // There is no room for 'Name' in the Advertising packet
   // Use the optional secondary Scan Response packet for 'Name' instead
   Bluefruit.ScanResponse.addName();
+
+  /* Start Advertising
+   * - Enable auto advertising if disconnected
+   * - Interval:  fast mode = 20 ms, slow mode = 152.5 ms
+   * - Timeout for fast mode is 30 seconds
+   * - Start(timeout) with timeout = 0 will advertise forever (until connected)
+   *
+   * For recommended advertising interval
+   * https://developer.apple.com/library/content/qa/qa1931/_index.html
+   */
+  Bluefruit.Advertising.restartOnDisconnect(true);
+  Bluefruit.Advertising.setInterval(32, 244);    // in unit of 0.625 ms
+  Bluefruit.Advertising.setFastTimeout(30);      // number of seconds in fast mode
+  Bluefruit.Advertising.start(0);                // 0 = Don't stop advertising after n seconds
 }
 
 // Fill the dots one after the other with a color
