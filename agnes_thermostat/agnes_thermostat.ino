@@ -14,12 +14,10 @@
 #include <bluefruit.h>
 #include "DHT.h"
 
-#define DHTPIN A1     // what digital pin we're connected to
+#define DHTPIN 7     // what digital pin we're connected to
 
 // Uncomment whatever type you're using!
-//#define DHTTYPE DHT11   // DHT 11
 #define DHTTYPE DHT22   // DHT 22  (AM2302), AM2321
-//#define DHTTYPE DHT21   // DHT 21 (AM2301)
 
 // Connect pin 1 (on the left) of the sensor to +5V
 // NOTE: If using a board with 3.3V logic like an Arduino Due connect pin 1
@@ -39,9 +37,10 @@ DHT dht(DHTPIN, DHTTYPE);
  * Temperature Char: 0x1235
  * Humidity Char:    0x1236
  */
-BLEService        hrms = BLEService(0x1234);
-BLECharacteristic hrmc = BLECharacteristic(0x1235);
-BLECharacteristic bslc = BLECharacteristic(0x1236);
+BLEService        service = BLEService(0x1234);
+BLECharacteristic tempc = BLECharacteristic(0x1235);
+BLECharacteristic humc = BLECharacteristic(0x1236);
+BLECharacteristic onoffc = BLECharacteristic(0x1237);
 
 BLEDis bledis;    // DIS (Device Information Service) helper class instance
 BLEBas blebas;    // BAS (Battery Service) helper class instance
@@ -85,8 +84,8 @@ void setup()
 
   // Setup the Heart Rate Monitor service using
   // BLEService and BLECharacteristic classes
-  Serial.println("Configuring the Heart Rate Monitor Service");
-  setupHRM();
+  Serial.println("Configuring Service");
+  setupService();
 
   // Setup the advertising packet(s)
   Serial.println("Setting up the advertising payload(s)");
@@ -103,7 +102,7 @@ void startAdv(void)
   Bluefruit.Advertising.addTxPower();
 
   // Include HRM Service UUID
-  Bluefruit.Advertising.addService(hrms);
+  Bluefruit.Advertising.addService(service);
 
   // Include Name
   Bluefruit.Advertising.addName();
@@ -123,47 +122,45 @@ void startAdv(void)
   Bluefruit.Advertising.start(0);                // 0 = Don't stop advertising after n seconds  
 }
 
-uint16_t hrmdata = 0;
+uint16_t tempdata = 0;
 uint16_t humdata = 0;
+uint8_t onoff = 0;
 
-void setupHRM(void)
+void setupService(void)
 {
   // Configure the service
-  hrms.begin();
+  service.begin();
 
   // Note: You must call .begin() on the BLEService before calling .begin() on
   // any characteristic(s) within that service definition.. Calling .begin() on
   // a BLECharacteristic will cause it to be added to the last BLEService that
   // was 'begin()'ed!
 
-  // Configure the Heart Rate Measurement characteristic
-  // See: https://www.bluetooth.com/specifications/gatt/viewer?attributeXmlFile=org.bluetooth.characteristic.heart_rate_measurement.xml
+  // Configure the Temperature characteristic
   // Properties = Notify
-  hrmc.setProperties(CHR_PROPS_NOTIFY);
-  hrmc.setPermission(SECMODE_OPEN, SECMODE_NO_ACCESS);
-  hrmc.setFixedLen(sizeof(hrmdata));
-  hrmc.begin();
-  hrmc.notify(&hrmdata, sizeof(hrmdata));                   // Use .notify instead of .write!
+  tempc.setProperties(CHR_PROPS_NOTIFY | CHR_PROPS_READ);
+  tempc.setPermission(SECMODE_OPEN, SECMODE_NO_ACCESS);
+  tempc.setFixedLen(sizeof(tempdata));
+  tempc.setUserDescriptor("Temperature");
+  tempc.begin();
+  tempc.notify(&tempdata, sizeof(tempdata));                   // Use .notify instead of .write!
 
-  // Configure the Body Sensor Location characteristic
-  // See: https://www.bluetooth.com/specifications/gatt/viewer?attributeXmlFile=org.bluetooth.characteristic.body_sensor_location.xml
-  // Properties = Read
-  // Min Len    = 1
-  // Max Len    = 1
-  //    B0      = UINT8 - Body Sensor Location
-  //      0     = Other
-  //      1     = Chest
-  //      2     = Wrist
-  //      3     = Finger
-  //      4     = Hand
-  //      5     = Ear Lobe
-  //      6     = Foot
-  //      7:255 = Reserved
-  bslc.setProperties(CHR_PROPS_NOTIFY);
-  bslc.setPermission(SECMODE_OPEN, SECMODE_NO_ACCESS);
-  bslc.setFixedLen(sizeof(humdata));
-  bslc.begin();
-  bslc.notify(&humdata, sizeof(humdata));                   // Use .notify instead of .write!
+  // Configure the humidity characteristic
+  // Properties = Notify
+  humc.setProperties(CHR_PROPS_NOTIFY | CHR_PROPS_READ);
+  humc.setPermission(SECMODE_OPEN, SECMODE_NO_ACCESS);
+  humc.setFixedLen(sizeof(humdata));
+  humc.setUserDescriptor("Humidity");
+  humc.begin();
+  humc.notify(&humdata, sizeof(humdata));                   // Use .notify instead of .write!
+
+  onoffc.setProperties(CHR_PROPS_NOTIFY | CHR_PROPS_READ | CHR_PROPS_WRITE);
+  onoffc.setPermission(SECMODE_OPEN, SECMODE_OPEN);
+  onoffc.setFixedLen(sizeof(onoff));
+  onoffc.setUserDescriptor("OnOff");
+  onoffc.setWriteCallback(onoff_write_cb);
+  onoffc.begin();
+  onoffc.notify(&onoff, sizeof(onoff));                   // Use .notify instead of .write!
 }
 
 void connect_callback(uint16_t conn_handle)
@@ -171,7 +168,6 @@ void connect_callback(uint16_t conn_handle)
   Serial.print("Connected to ");
   char central_name[32] = { 0 };
   Bluefruit.Gap.getPeerName(conn_handle, central_name, sizeof(central_name));
-
   Serial.println(central_name);
 }
 
@@ -181,9 +177,19 @@ void disconnect_callback(uint16_t conn_handle, uint8_t reason)
   Serial.println("Advertising!");
 }
 
+void onoff_write_cb(BLECharacteristic& chr, uint8_t* data, uint16_t len, uint16_t offset)
+{
+  Serial.print("OnOff changed to ");
+  if (len < sizeof(onoff)) {
+    Serial.print("wrong size "); Serial.println(len);
+    return;
+  }
+  onoff = *data;
+  Serial.println(onoff);
+}
+
 void loop()
 {
-  Serial.println("Start loop");
   digitalToggle(LED_RED);
 
   // Reading temperature or humidity takes about 250 milliseconds!
@@ -193,59 +199,29 @@ void loop()
 
   // Check if any reads failed and exit early (to try again).
   if (isnan(h) || isnan(t)) {
-    return;
-  }
-  hrmdata = (uint16_t)(t * 10);
-  humdata = (uint16_t)(h * 10);
+    Serial.println("NaN");
+  } else {
+    tempdata = (uint16_t)(t * 10);
+    humdata = (uint16_t)(h * 10);
 
-  Serial.print("Humidity: ");
-  Serial.print(hrmdata);
-  Serial.print(" %\t");
-  Serial.print("Temperature: ");
-  Serial.print(humdata);
-  Serial.println(" *C ");
+    Serial.print("Temperature: ");
+    Serial.print(t);
+    Serial.print(" *C\t");
+    Serial.print("Humidity: ");
+    Serial.print(h);
+    Serial.println(" %");
+  }
 
   if (Bluefruit.connected()) {
     Serial.println("Updating");
     
     // Note: We use .notify instead of .write!
-    // If it is connected but CCCD is not enabled
     // The characteristic's value is still updated although notification is not sent
-    if (hrmc.notify(&hrmdata, sizeof(hrmdata))){
-      Serial.print("Temperature Measurement updated to: "); Serial.println(hrmdata); 
-    } else {
-      Serial.println("ERROR: Notify not set in the CCCD or not connected!");
-    }
-    if (bslc.notify(&humdata, sizeof(humdata))){
-      Serial.print("Temperature Measurement updated to: "); Serial.println(hrmdata); 
-    } else {
-      Serial.println("ERROR: Notify not set in the CCCD or not connected!");
-    }
+    tempc.notify(&tempdata, sizeof(tempdata));
+    humc.notify(&humdata, sizeof(humdata));
   }
 
   // Only send update once per second
-  Serial.println("Before delay");
-  delay(1000);
-  Serial.println("End loop");
+  delay(2000);
 }
 
-/**
- * RTOS Idle callback is automatically invoked by FreeRTOS
- * when there are no active threads. E.g when loop() calls delay() and
- * there is no bluetooth or hw event. This is the ideal place to handle
- * background data.
- * 
- * NOTE: FreeRTOS is configured as tickless idle mode. After this callback
- * is executed, if there is time, freeRTOS kernel will go into low power mode.
- * Therefore waitForEvent() should not be called in this callback.
- * http://www.freertos.org/low-power-tickless-rtos.html
- * 
- * WARNING: This function MUST NOT call any blocking FreeRTOS API 
- * such as delay(), xSemaphoreTake() etc ... for more information
- * http://www.freertos.org/a00016.html
- */
-void rtos_idle_callback(void)
-{
-  // Don't call any other FreeRTOS blocking API()
-  // Perform background task(s) here
-}
