@@ -15,6 +15,8 @@
 #include "DHT.h"
 
 #define DHTPIN 7     // what digital pin we're connected to
+#define RELAY  16
+#define BUTTON 11
 
 // Uncomment whatever type you're using!
 #define DHTTYPE DHT22   // DHT 22  (AM2302), AM2321
@@ -38,22 +40,22 @@ DHT dht(DHTPIN, DHTTYPE);
  * Humidity Char:    0x1236
  */
 BLEService        service = BLEService(0x1234);
-BLECharacteristic tempc = BLECharacteristic(0x1235);
-BLECharacteristic humc = BLECharacteristic(0x1236);
-BLECharacteristic onoffc = BLECharacteristic(0x1237);
+BLECharacteristic temperatureCharacteristic = BLECharacteristic(0x1235);
+BLECharacteristic humidityCharacteristic = BLECharacteristic(0x1236);
+BLECharacteristic onoffCharacteristic = BLECharacteristic(0x1237);
+BLECharacteristic targetCharacteristic = BLECharacteristic(0x1238);
 
-BLEDis bledis;    // DIS (Device Information Service) helper class instance
-BLEBas blebas;    // BAS (Battery Service) helper class instance
-
-// Advanced function prototypes
-void startAdv(void);
-void setupHRM(void);
-void connect_callback(uint16_t conn_handle);
-void disconnect_callback(uint16_t conn_handle, uint8_t reason);
+BLEDis diService;    // DIS (Device Information Service) helper class instance
+BLEBas batteryService;    // BAS (Battery Service) helper class instance
 
 void setup()
 {
+  digitalWrite(RELAY, LOW);
+  pinMode(RELAY, OUTPUT);
+  pinMode(BUTTON, INPUT_PULLUP);
+
   Serial.begin(115200);
+
   dht.begin();
   
   Serial.println("Bluefruit52 HRM Example");
@@ -62,25 +64,29 @@ void setup()
   // Initialise the Bluefruit module
   Serial.println("Initialise the Bluefruit nRF52 module");
   Bluefruit.begin();
+  Bluefruit.autoConnLed(false);
+
+  // Set max power. Accepted values are: -40, -30, -20, -16, -12, -8, -4, 0, 4
+  Bluefruit.setTxPower(4);
 
   // Set the advertised device name (keep it short!)
   Serial.println("Setting Device Name to 'Feather52 HRM'");
   Bluefruit.setName("Thermostat");
 
   // Set the connect/disconnect callback handlers
-  Bluefruit.setConnectCallback(connect_callback);
-  Bluefruit.setDisconnectCallback(disconnect_callback);
+  Bluefruit.setConnectCallback(connectCallback);
+  Bluefruit.setDisconnectCallback(disconnectCallback);
 
   // Configure and Start the Device Information Service
   Serial.println("Configuring the Device Information Service");
-  bledis.setManufacturer("VanTomation");
-  bledis.setModel("Thermostat+Humid");
-  bledis.begin();
+  diService.setManufacturer("VanTomation");
+  diService.setModel("Thermostat+Humid");
+  diService.begin();
 
   // Start the BLE Battery Service and set it to 100%
   Serial.println("Configuring the Battery Service");
-  blebas.begin();
-  blebas.write(100);
+  batteryService.begin();
+  batteryService.write(100);
 
   // Setup the Heart Rate Monitor service using
   // BLEService and BLECharacteristic classes
@@ -91,7 +97,6 @@ void setup()
   Serial.println("Setting up the advertising payload(s)");
   startAdv();
 
-  Serial.println("Ready Player One!!!");
   Serial.println("\nAdvertising");
 }
 
@@ -122,9 +127,10 @@ void startAdv(void)
   Bluefruit.Advertising.start(0);                // 0 = Don't stop advertising after n seconds  
 }
 
-uint16_t tempdata = 0;
-uint16_t humdata = 0;
+uint16_t lastTemperature = 0;
+uint16_t lastHuminity = 0;
 uint8_t onoff = 0;
+uint16_t targetTemperature = 20;
 
 void setupService(void)
 {
@@ -138,32 +144,40 @@ void setupService(void)
 
   // Configure the Temperature characteristic
   // Properties = Notify
-  tempc.setProperties(CHR_PROPS_NOTIFY | CHR_PROPS_READ);
-  tempc.setPermission(SECMODE_OPEN, SECMODE_NO_ACCESS);
-  tempc.setFixedLen(sizeof(tempdata));
-  tempc.setUserDescriptor("Temperature");
-  tempc.begin();
-  tempc.notify(&tempdata, sizeof(tempdata));                   // Use .notify instead of .write!
+  temperatureCharacteristic.setProperties(CHR_PROPS_NOTIFY | CHR_PROPS_READ);
+  temperatureCharacteristic.setPermission(SECMODE_OPEN, SECMODE_NO_ACCESS);
+  temperatureCharacteristic.setFixedLen(sizeof(lastTemperature));
+  temperatureCharacteristic.setUserDescriptor("Temperature");
+  temperatureCharacteristic.begin();
+  temperatureCharacteristic.notify(&lastTemperature, sizeof(lastTemperature));                   // Use .notify instead of .write!
 
   // Configure the humidity characteristic
   // Properties = Notify
-  humc.setProperties(CHR_PROPS_NOTIFY | CHR_PROPS_READ);
-  humc.setPermission(SECMODE_OPEN, SECMODE_NO_ACCESS);
-  humc.setFixedLen(sizeof(humdata));
-  humc.setUserDescriptor("Humidity");
-  humc.begin();
-  humc.notify(&humdata, sizeof(humdata));                   // Use .notify instead of .write!
+  humidityCharacteristic.setProperties(CHR_PROPS_NOTIFY | CHR_PROPS_READ);
+  humidityCharacteristic.setPermission(SECMODE_OPEN, SECMODE_NO_ACCESS);
+  humidityCharacteristic.setFixedLen(sizeof(lastHuminity));
+  humidityCharacteristic.setUserDescriptor("Humidity");
+  humidityCharacteristic.begin();
+  humidityCharacteristic.notify(&lastHuminity, sizeof(lastHuminity));                   // Use .notify instead of .write!
 
-  onoffc.setProperties(CHR_PROPS_NOTIFY | CHR_PROPS_READ | CHR_PROPS_WRITE);
-  onoffc.setPermission(SECMODE_OPEN, SECMODE_OPEN);
-  onoffc.setFixedLen(sizeof(onoff));
-  onoffc.setUserDescriptor("OnOff");
-  onoffc.setWriteCallback(onoff_write_cb);
-  onoffc.begin();
-  onoffc.notify(&onoff, sizeof(onoff));                   // Use .notify instead of .write!
+  onoffCharacteristic.setProperties(CHR_PROPS_NOTIFY | CHR_PROPS_READ | CHR_PROPS_WRITE);
+  onoffCharacteristic.setPermission(SECMODE_OPEN, SECMODE_OPEN);
+  onoffCharacteristic.setFixedLen(sizeof(onoff));
+  onoffCharacteristic.setUserDescriptor("OnOff");
+  onoffCharacteristic.setWriteCallback(onoffWriteCallback);
+  onoffCharacteristic.begin();
+  onoffCharacteristic.notify(&onoff, sizeof(onoff));
+
+  targetCharacteristic.setProperties(CHR_PROPS_READ | CHR_PROPS_WRITE);
+  targetCharacteristic.setPermission(SECMODE_OPEN, SECMODE_OPEN);
+  targetCharacteristic.setFixedLen(sizeof(targetTemperature));
+  targetCharacteristic.setUserDescriptor("TargetTemp");
+  targetCharacteristic.setWriteCallback(targetWriteCallback);
+  targetCharacteristic.begin();
+  targetCharacteristic.write(&targetTemperature, sizeof(targetTemperature));
 }
 
-void connect_callback(uint16_t conn_handle)
+void connectCallback(uint16_t conn_handle)
 {
   Serial.print("Connected to ");
   char central_name[32] = { 0 };
@@ -171,13 +185,13 @@ void connect_callback(uint16_t conn_handle)
   Serial.println(central_name);
 }
 
-void disconnect_callback(uint16_t conn_handle, uint8_t reason)
+void disconnectCallback(uint16_t conn_handle, uint8_t reason)
 {
   Serial.println("Disconnected");
   Serial.println("Advertising!");
 }
 
-void onoff_write_cb(BLECharacteristic& chr, uint8_t* data, uint16_t len, uint16_t offset)
+void onoffWriteCallback(BLECharacteristic& chr, uint8_t* data, uint16_t len, uint16_t offset)
 {
   Serial.print("OnOff changed to ");
   if (len < sizeof(onoff)) {
@@ -186,42 +200,70 @@ void onoff_write_cb(BLECharacteristic& chr, uint8_t* data, uint16_t len, uint16_
   }
   onoff = *data;
   Serial.println(onoff);
+  onoffCharacteristic.notify(&onoff, sizeof(onoff));
+  digitalWrite(RELAY, onoff ? HIGH : LOW);
 }
+
+void targetWriteCallback(BLECharacteristic& chr, uint8_t* data, uint16_t len, uint16_t offset)
+{
+  Serial.print("Target changed to ");
+  if (len < sizeof(targetTemperature)) {
+    Serial.print("wrong size "); Serial.println(len);
+    return;
+  }
+  targetTemperature = *((uint16_t*)data);
+  Serial.println(targetTemperature);
+  targetCharacteristic.notify(&targetTemperature, sizeof(targetTemperature));
+  onoff = 1;
+  onoffCharacteristic.notify(&onoff, sizeof(onoff));
+}
+
+unsigned long nextTemperatureRead = 0;
+unsigned long lastSuccessfullTemperatureRead = 0;
+unsigned long nextBlink = 0;
 
 void loop()
 {
-  digitalToggle(LED_RED);
-
-  // Reading temperature or humidity takes about 250 milliseconds!
-  // Sensor readings may also be up to 2 seconds 'old' (its a very slow sensor)
-  float h = dht.readHumidity();
-  float t = dht.readTemperature();
-
-  // Check if any reads failed and exit early (to try again).
-  if (isnan(h) || isnan(t)) {
-    Serial.println("NaN");
-  } else {
-    tempdata = (uint16_t)(t * 10);
-    humdata = (uint16_t)(h * 10);
-
-    Serial.print("Temperature: ");
-    Serial.print(t);
-    Serial.print(" *C\t");
-    Serial.print("Humidity: ");
-    Serial.print(h);
-    Serial.println(" %");
+  if (millis() >= nextBlink) {
+    if (millis() >= nextBlink + 10) {
+      digitalWrite(LED_RED, LOW);
+      nextBlink = millis() + 15000;
+    } else {
+      digitalWrite(LED_RED, HIGH);
+    }
   }
 
-  if (Bluefruit.connected()) {
-    Serial.println("Updating");
-    
-    // Note: We use .notify instead of .write!
-    // The characteristic's value is still updated although notification is not sent
-    tempc.notify(&tempdata, sizeof(tempdata));
-    humc.notify(&humdata, sizeof(humdata));
+  if (millis() >= nextTemperatureRead) {
+    // Reading temperature or humidity takes about 250 milliseconds!
+    // Sensor readings may also be up to 2 seconds 'old' (its a very slow sensor)
+    float h = dht.readHumidity();
+    float t = dht.readTemperature();
+  
+    // Check if any reads failed and exit early (to try again).
+    if (isnan(h) || isnan(t)) {
+      Serial.println("NaN");
+    } else {
+      lastSuccessfullTemperatureRead = millis();
+      
+      lastTemperature = (uint16_t)(t * 10);
+      lastHuminity = (uint16_t)(h * 10);
+  
+      Serial.print("Temperature: ");
+      Serial.print(t);
+      Serial.print(" *C\t");
+      Serial.print("Humidity: ");
+      Serial.print(h);
+      Serial.println(" %");
+
+      // Note: We use .notify instead of .write!
+      // The characteristic's value is still updated although notification is not sent
+      temperatureCharacteristic.notify(&lastTemperature, sizeof(lastTemperature));
+      humidityCharacteristic.notify(&lastHuminity, sizeof(lastHuminity));
+    }
+
+    nextTemperatureRead = millis() + 15000;
   }
 
-  // Only send update once per second
-  delay(2000);
+  delay(100);
 }
 
