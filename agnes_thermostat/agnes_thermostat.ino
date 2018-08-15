@@ -53,6 +53,7 @@ void setup()
   digitalWrite(RELAY, LOW);
   pinMode(RELAY, OUTPUT);
   pinMode(BUTTON, INPUT_PULLUP);
+  pinMode(LED_RED, OUTPUT);
 
   Serial.begin(115200);
 
@@ -239,9 +240,10 @@ void loop()
     float h = dht.readHumidity();
     float t = dht.readTemperature();
   
-    // Check if any reads failed and exit early (to try again).
+    // Check if any reads failed
     if (isnan(h) || isnan(t)) {
       Serial.println("NaN");
+      nextTemperatureRead = millis() + 1000;
     } else {
       lastSuccessfullTemperatureRead = millis();
       
@@ -259,9 +261,8 @@ void loop()
       // The characteristic's value is still updated although notification is not sent
       temperatureCharacteristic.notify(&lastTemperature, sizeof(lastTemperature));
       humidityCharacteristic.notify(&lastHuminity, sizeof(lastHuminity));
+      nextTemperatureRead = millis() + 15000;
     }
-
-    nextTemperatureRead = millis() + 15000;
   }
 
   delay(100);
