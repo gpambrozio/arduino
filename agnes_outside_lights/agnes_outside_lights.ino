@@ -2,6 +2,22 @@
 #include <Adafruit_NeoPixel.h>
 #include <bluefruit.h>
 
+#define DEBUG
+
+#ifdef DEBUG
+
+#define D(d)  Serial.print(d)
+#define DL(d) Serial.println(d)
+#define MARK  {Serial.print(F("Running line "));Serial.println(__LINE__);}
+
+#else
+
+#define D(d)  {}
+#define DL(d) {}
+#define MARK  {}
+
+#endif
+
 #define PIN_OUTSIDE 16
 #define PIN_INSIDE 15
 
@@ -38,24 +54,19 @@ uint8_t packetbuffer[READ_BUFSIZE+1];
 #define PACKET_DATA_SIZE (packetbuffer[1] - MIN_PACKET_SIZE)
 
 void setup() {
-  Bluefruit.begin();
-  Bluefruit.autoConnLed(false);
+#ifdef DEBUG
+  Serial.begin(115200);
+#endif
+  DL("Start");
+  pinMode(LED_RED, OUTPUT);
 
-  // Set max power. Accepted values are: -40, -30, -20, -16, -12, -8, -4, 0, 4
-  Bluefruit.setTxPower(4);
-  Bluefruit.setName("AgnesLights");
-
-  // Configure and start the BLE Uart service
-  bleuart.begin();
- 
-  // Set up the advertising packet and start it
-  startAdv();
- 
   delay(1000);
 
+  DL("Starting strips");
   strip_inside.begin();
   strip_outside.begin();
   
+  DL("Resetting strips");
   strip_inside.setBrightness(MAX_BRIGHTNESS_INSIDE);
   strip_inside.show(); // Initialize all pixels to 'off'
   strip_outside.setBrightness(MAX_BRIGHTNESS_OUTSIDE);
@@ -74,7 +85,25 @@ void setup() {
   colorWipe(&strip_inside, 0);
   colorWipe(&strip_outside, 0);
 
-  pinMode(LED_RED, OUTPUT);
+  DL("Starting BT");
+  Bluefruit.begin();
+  Bluefruit.autoConnLed(false);
+
+  // Set max power. Accepted values are: -40, -30, -20, -16, -12, -8, -4, 0, 4
+  Bluefruit.setTxPower(4);
+  Bluefruit.setName("AgnesLights");
+
+  // Set the connect/disconnect callback handlers
+  Bluefruit.setConnectCallback(connectCallback);
+  Bluefruit.setDisconnectCallback(disconnectCallback);
+
+  // Configure and start the BLE Uart service
+  bleuart.begin();
+ 
+  // Set up the advertising packet and start it
+  startAdv();
+ 
+  DL("Ending setup");
 }
 
 uint8_t mode_outside = 'C';
@@ -88,6 +117,7 @@ void loop() {
     if (millis() >= last_blink + 10) {
       digitalWrite(LED_RED, LOW);
       last_blink = millis() + 15000;
+      DL("Loop");
     } else {
       digitalWrite(LED_RED, HIGH);
     }
@@ -183,6 +213,18 @@ void startAdv(void) {
   Bluefruit.Advertising.start(0);                // 0 = Don't stop advertising after n seconds
 }
 
+void connectCallback(uint16_t conn_handle) {
+  D("Connected to ");
+  char central_name[32] = { 0 };
+  Bluefruit.Gap.getPeerName(conn_handle, central_name, sizeof(central_name));
+  DL(central_name);
+}
+
+void disconnectCallback(uint16_t conn_handle, uint8_t reason) {
+  DL("Disconnected");
+  DL("Advertising!");
+}
+
 // Fill the dots one after the other with a color
 void colorWipe(Adafruit_NeoPixel *strip, uint32_t c) {
   for(uint16_t i=0; i<strip->numPixels(); i++) {
@@ -242,12 +284,12 @@ uint8_t readPacket(BLEUart *ble_uart)  {
   
   while (ble_uart->available() && replyidx < replysize) {
     char c =  ble_uart->read();
+    D("Received ");DL(c);
     last_received_byte = millis();
     if (replyidx == 0) {
       if (c == '!') {
         replysize = READ_BUFSIZE;
-        packetbuffer[0] = c;
-        replyidx++;
+        packetbuffer[replyidx++] = c;
       }
     } else {
       if (replyidx == 1) {
@@ -258,10 +300,13 @@ uint8_t readPacket(BLEUart *ble_uart)  {
     }
   }
  
-  if (replyidx < replysize)  // no data (yet...)
+  if (replyidx < replysize) {  // no data (yet...)
     return 0;
-  if (packetbuffer[0] != '!')  // doesn't start with '!' packet beginning
+  }
+  if (packetbuffer[0] != '!') { // doesn't start with '!' packet beginning
+    MARK;
     return 0;
+  }
   
   // check checksum!
   uint8_t xsum = 0;
@@ -279,10 +324,12 @@ uint8_t readPacket(BLEUart *ble_uart)  {
   // Throw an error message if the checksum's don't match
   if (xsum != checksum) {
     bleuart.print("NO");
+    MARK;
     return 0;
   }
   
   // checksum passed!
+  MARK;
   return messagesize;
 }
 
