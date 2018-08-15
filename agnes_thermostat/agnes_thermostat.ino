@@ -14,6 +14,22 @@
 #include <bluefruit.h>
 #include "DHT.h"
 
+#define DEBUG
+
+#ifdef DEBUG
+
+#define D(d)  Serial.print(d)
+#define DL(d) Serial.println(d)
+#define MARK  {Serial.print(F("Running line "));Serial.println(__LINE__);}
+
+#else
+
+#define D(d)  {}
+#define DL(d) {}
+#define MARK  {}
+
+#endif
+
 #define DHTPIN 7     // what digital pin we're connected to
 #define RELAY  16
 #define BUTTON 11
@@ -50,20 +66,24 @@ BLEBas batteryService;    // BAS (Battery Service) helper class instance
 
 void setup()
 {
+#ifdef DEBUG
+  Serial.begin(115200);
+#endif
   digitalWrite(RELAY, LOW);
   pinMode(RELAY, OUTPUT);
-  pinMode(BUTTON, INPUT_PULLUP);
   pinMode(LED_RED, OUTPUT);
 
-  Serial.begin(115200);
+  pinMode(BUTTON, INPUT_PULLUP);
+  attachInterrupt(BUTTON, buttonHandlerRising, RISING);
+  attachInterrupt(BUTTON, buttonHandlerFalling, FALLING);
 
   dht.begin();
   
-  Serial.println("Bluefruit52 HRM Example");
-  Serial.println("-----------------------\n");
+  DL("Bluefruit52 HRM Example");
+  DL("-----------------------\n");
 
   // Initialise the Bluefruit module
-  Serial.println("Initialise the Bluefruit nRF52 module");
+  DL("Initialise the Bluefruit nRF52 module");
   Bluefruit.begin();
   Bluefruit.autoConnLed(false);
 
@@ -71,7 +91,7 @@ void setup()
   Bluefruit.setTxPower(4);
 
   // Set the advertised device name (keep it short!)
-  Serial.println("Setting Device Name to 'Feather52 HRM'");
+  DL("Setting Device Name to 'Feather52 HRM'");
   Bluefruit.setName("Thermostat");
 
   // Set the connect/disconnect callback handlers
@@ -79,26 +99,34 @@ void setup()
   Bluefruit.setDisconnectCallback(disconnectCallback);
 
   // Configure and Start the Device Information Service
-  Serial.println("Configuring the Device Information Service");
+  DL("Configuring the Device Information Service");
   diService.setManufacturer("VanTomation");
   diService.setModel("Thermostat+Humid");
   diService.begin();
 
   // Start the BLE Battery Service and set it to 100%
-  Serial.println("Configuring the Battery Service");
+  DL("Configuring the Battery Service");
   batteryService.begin();
   batteryService.write(100);
 
   // Setup the Heart Rate Monitor service using
   // BLEService and BLECharacteristic classes
-  Serial.println("Configuring Service");
+  DL("Configuring Service");
   setupService();
 
   // Setup the advertising packet(s)
-  Serial.println("Setting up the advertising payload(s)");
+  DL("Setting up the advertising payload(s)");
   startAdv();
 
-  Serial.println("\nAdvertising");
+  DL("\nAdvertising");
+}
+
+void buttonHandlerRising(void) {
+  DL("interrupt called for Rising");
+}
+
+void buttonHandlerFalling(void) {
+  DL("interrupt called for Falling");
 }
 
 void startAdv(void)
@@ -180,40 +208,40 @@ void setupService(void)
 
 void connectCallback(uint16_t conn_handle)
 {
-  Serial.print("Connected to ");
+  D("Connected to ");
   char central_name[32] = { 0 };
   Bluefruit.Gap.getPeerName(conn_handle, central_name, sizeof(central_name));
-  Serial.println(central_name);
+  DL(central_name);
 }
 
 void disconnectCallback(uint16_t conn_handle, uint8_t reason)
 {
-  Serial.println("Disconnected");
-  Serial.println("Advertising!");
+  DL("Disconnected");
+  DL("Advertising!");
 }
 
 void onoffWriteCallback(BLECharacteristic& chr, uint8_t* data, uint16_t len, uint16_t offset)
 {
-  Serial.print("OnOff changed to ");
+  D("OnOff changed to ");
   if (len < sizeof(onoff)) {
-    Serial.print("wrong size "); Serial.println(len);
+    D("wrong size "); DL(len);
     return;
   }
   onoff = *data;
-  Serial.println(onoff);
+  DL(onoff);
   onoffCharacteristic.notify(&onoff, sizeof(onoff));
   digitalWrite(RELAY, onoff ? HIGH : LOW);
 }
 
 void targetWriteCallback(BLECharacteristic& chr, uint8_t* data, uint16_t len, uint16_t offset)
 {
-  Serial.print("Target changed to ");
+  D("Target changed to ");
   if (len < sizeof(targetTemperature)) {
-    Serial.print("wrong size "); Serial.println(len);
+    D("wrong size "); DL(len);
     return;
   }
   targetTemperature = *((uint16_t*)data);
-  Serial.println(targetTemperature);
+  DL(targetTemperature);
   targetCharacteristic.notify(&targetTemperature, sizeof(targetTemperature));
   onoff = 1;
   onoffCharacteristic.notify(&onoff, sizeof(onoff));
@@ -242,7 +270,7 @@ void loop()
   
     // Check if any reads failed
     if (isnan(h) || isnan(t)) {
-      Serial.println("NaN");
+      DL("NaN");
       nextTemperatureRead = millis() + 1000;
     } else {
       lastSuccessfullTemperatureRead = millis();
@@ -250,12 +278,12 @@ void loop()
       lastTemperature = (uint16_t)(t * 10);
       lastHuminity = (uint16_t)(h * 10);
   
-      Serial.print("Temperature: ");
-      Serial.print(t);
-      Serial.print(" *C\t");
-      Serial.print("Humidity: ");
-      Serial.print(h);
-      Serial.println(" %");
+      D("Temperature: ");
+      D(t);
+      D(" *C\t");
+      D("Humidity: ");
+      D(h);
+      DL(" %");
 
       // Note: We use .notify instead of .write!
       // The characteristic's value is still updated although notification is not sent
