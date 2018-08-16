@@ -74,8 +74,6 @@ void setup()
   pinMode(LED_RED, OUTPUT);
 
   pinMode(BUTTON, INPUT_PULLUP);
-  attachInterrupt(BUTTON, buttonHandlerRising, RISING);
-  attachInterrupt(BUTTON, buttonHandlerFalling, FALLING);
 
   dht.begin();
   
@@ -118,15 +116,14 @@ void setup()
   DL("Setting up the advertising payload(s)");
   startAdv();
 
+  // Pin interrupts have to be after all BT stuff
+  attachInterrupt(BUTTON, buttonHandlerFalling, FALLING);
   DL("\nAdvertising");
 }
 
-void buttonHandlerRising(void) {
-  DL("interrupt called for Rising");
-}
-
+volatile unsigned long lastButtonFall = 0;
 void buttonHandlerFalling(void) {
-  DL("interrupt called for Falling");
+  lastButtonFall = millis();
 }
 
 void startAdv(void)
@@ -195,7 +192,7 @@ void setupService(void)
   onoffCharacteristic.setUserDescriptor("OnOff");
   onoffCharacteristic.setWriteCallback(onoffWriteCallback);
   onoffCharacteristic.begin();
-  onoffCharacteristic.notify(&onoff, sizeof(onoff));
+  changeOnOff(0);
 
   targetCharacteristic.setProperties(CHR_PROPS_READ | CHR_PROPS_WRITE);
   targetCharacteristic.setPermission(SECMODE_OPEN, SECMODE_OPEN);
@@ -220,6 +217,13 @@ void disconnectCallback(uint16_t conn_handle, uint8_t reason)
   DL("Advertising!");
 }
 
+void changeOnOff(uint8_t v)
+{
+  onoff = v;
+  DL(onoff);
+  onoffCharacteristic.notify(&onoff, sizeof(onoff));
+}
+
 void onoffWriteCallback(BLECharacteristic& chr, uint8_t* data, uint16_t len, uint16_t offset)
 {
   D("OnOff changed to ");
@@ -227,10 +231,8 @@ void onoffWriteCallback(BLECharacteristic& chr, uint8_t* data, uint16_t len, uin
     D("wrong size "); DL(len);
     return;
   }
-  onoff = *data;
-  DL(onoff);
-  onoffCharacteristic.notify(&onoff, sizeof(onoff));
-  digitalWrite(RELAY, onoff ? HIGH : LOW);
+  
+  changeOnOff(*data);
 }
 
 void targetWriteCallback(BLECharacteristic& chr, uint8_t* data, uint16_t len, uint16_t offset)
@@ -243,23 +245,28 @@ void targetWriteCallback(BLECharacteristic& chr, uint8_t* data, uint16_t len, ui
   targetTemperature = *((uint16_t*)data);
   DL(targetTemperature);
   targetCharacteristic.notify(&targetTemperature, sizeof(targetTemperature));
-  onoff = 1;
-  onoffCharacteristic.notify(&onoff, sizeof(onoff));
+  changeOnOff(1);
 }
 
 unsigned long nextTemperatureRead = 0;
 unsigned long lastSuccessfullTemperatureRead = 0;
 unsigned long nextBlink = 0;
+unsigned long lastButtonClick = 0;
+bool isHeating = false;
 
 void loop()
 {
   if (millis() >= nextBlink) {
-    if (millis() >= nextBlink + 10) {
-      digitalWrite(LED_RED, LOW);
-      nextBlink = millis() + 15000;
-    } else {
-      digitalWrite(LED_RED, HIGH);
-    }
+    digitalWrite(LED_RED, HIGH);
+    delay(5);
+    digitalWrite(LED_RED, LOW);
+    nextBlink = millis() + 15000;
+  }
+
+  if (lastButtonFall > lastButtonClick && lastButtonFall - lastButtonClick > 1000) {
+    lastButtonClick = millis();
+    DL("Button clicked");
+    changeOnOff(1 - onoff);
   }
 
   if (millis() >= nextTemperatureRead) {
@@ -271,19 +278,15 @@ void loop()
     // Check if any reads failed
     if (isnan(h) || isnan(t)) {
       DL("NaN");
-      nextTemperatureRead = millis() + 1000;
+      nextTemperatureRead = millis() + 2000;
     } else {
       lastSuccessfullTemperatureRead = millis();
       
       lastTemperature = (uint16_t)(t * 10);
       lastHuminity = (uint16_t)(h * 10);
   
-      D("Temperature: ");
-      D(t);
-      D(" *C\t");
-      D("Humidity: ");
-      D(h);
-      DL(" %");
+      D("Temperature: "); D(t); D(" *C\t");
+      D("Humidity: "); D(h); DL(" %");
 
       // Note: We use .notify instead of .write!
       // The characteristic's value is still updated although notification is not sent
@@ -292,6 +295,14 @@ void loop()
       nextTemperatureRead = millis() + 15000;
     }
   }
+
+  if (onoff) {
+    uint16_t temperatureLimit = targetTemperature + (isHeating ? 20 : 0);
+    isHeating = lastTemperature < temperatureLimit;
+  } else {
+    isHeating = false;    
+  }
+  digitalWrite(RELAY, isHeating ? HIGH : LOW);
 
   delay(100);
 }
