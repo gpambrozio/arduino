@@ -82,7 +82,7 @@ void setup()
 
   DL("Starting strips");
   strip.begin();
-  strip.setBrightness(2);
+  strip.setBrightness(5);
   strip.setPixelColor(0, 0xFF0000);
   strip.setPixelColor(1, 0x00FF00);
   strip.show();
@@ -170,7 +170,7 @@ void startAdv(void)
 uint16_t lastTemperature = 0;
 uint16_t lastHuminity = 0;
 uint8_t onoff = 0;
-uint16_t targetTemperature = 20;
+uint16_t targetTemperature = 200;
 
 void setupService(void)
 {
@@ -189,7 +189,7 @@ void setupService(void)
   temperatureCharacteristic.setFixedLen(sizeof(lastTemperature));
   temperatureCharacteristic.setUserDescriptor("Temperature");
   temperatureCharacteristic.begin();
-  temperatureCharacteristic.notify(&lastTemperature, sizeof(lastTemperature));                   // Use .notify instead of .write!
+  temperatureCharacteristic.notify16(lastTemperature);
 
   // Configure the humidity characteristic
   // Properties = Notify
@@ -198,7 +198,7 @@ void setupService(void)
   humidityCharacteristic.setFixedLen(sizeof(lastHuminity));
   humidityCharacteristic.setUserDescriptor("Humidity");
   humidityCharacteristic.begin();
-  humidityCharacteristic.notify(&lastHuminity, sizeof(lastHuminity));                   // Use .notify instead of .write!
+  humidityCharacteristic.notify16(lastHuminity);
 
   onoffCharacteristic.setProperties(CHR_PROPS_NOTIFY | CHR_PROPS_READ | CHR_PROPS_WRITE);
   onoffCharacteristic.setPermission(SECMODE_OPEN, SECMODE_OPEN);
@@ -214,7 +214,7 @@ void setupService(void)
   targetCharacteristic.setUserDescriptor("TargetTemp");
   targetCharacteristic.setWriteCallback(targetWriteCallback);
   targetCharacteristic.begin();
-  targetCharacteristic.write(&targetTemperature, sizeof(targetTemperature));
+  targetCharacteristic.write16(targetTemperature);
 }
 
 void connectCallback(uint16_t conn_handle)
@@ -235,7 +235,7 @@ void changeOnOff(uint8_t v)
 {
   onoff = v;
   DL(onoff);
-  onoffCharacteristic.notify(&onoff, sizeof(onoff));
+  onoffCharacteristic.notify8(onoff);
 }
 
 void onoffWriteCallback(BLECharacteristic& chr, uint8_t* data, uint16_t len, uint16_t offset)
@@ -258,7 +258,7 @@ void targetWriteCallback(BLECharacteristic& chr, uint8_t* data, uint16_t len, ui
   }
   targetTemperature = *((uint16_t*)data);
   DL(targetTemperature);
-  targetCharacteristic.notify(&targetTemperature, sizeof(targetTemperature));
+  targetCharacteristic.notify16(targetTemperature);
   changeOnOff(1);
 }
 
@@ -293,7 +293,14 @@ void loop()
     if (isnan(h) || isnan(t)) {
       DL("NaN");
       nextTemperatureRead = millis() + 2000;
+      if (millis() - lastSuccessfullTemperatureRead > 5 * 60000) {
+        strip.setPixelColor(1, 0);
+        strip.show();
+      }
     } else {
+      strip.setPixelColor(1, getHeatMapColor(t / 40.0));
+      strip.show();
+
       lastSuccessfullTemperatureRead = millis();
       
       lastTemperature = (uint16_t)(t * 10);
@@ -304,8 +311,8 @@ void loop()
 
       // Note: We use .notify instead of .write!
       // The characteristic's value is still updated although notification is not sent
-      temperatureCharacteristic.notify(&lastTemperature, sizeof(lastTemperature));
-      humidityCharacteristic.notify(&lastHuminity, sizeof(lastHuminity));
+      temperatureCharacteristic.notify16(lastTemperature);
+      humidityCharacteristic.notify16(lastHuminity);
       nextTemperatureRead = millis() + 15000;
     }
   }
@@ -317,7 +324,37 @@ void loop()
     isHeating = false;    
   }
   digitalWrite(RELAY, isHeating ? HIGH : LOW);
+  strip.setPixelColor(0, isHeating ? 0xFF0000 : (onoff ? 0xFF : 0));
+  strip.show();
 
   delay(100);
+}
+
+// Adapted from http://www.andrewnoske.com/wiki/Code_-_heatmaps_and_color_gradients
+uint32_t getHeatMapColor(float value)
+{
+  // A static array of 4 colors:  (blue,   green,  yellow,  red) using {r,g,b} for each.
+  const int NUM_COLORS = 4;
+  static uint8_t color[NUM_COLORS][3] = { {0, 0, 255}, {0, 255, 0}, {255, 255, 0}, {255, 0, 0} };
+ 
+  int idx1;        // |-- Our desired color will be between these two indexes in "color".
+  int idx2;        // |
+  float fractBetween = 0;  // Fraction between "idx1" and "idx2" where our value is.
+ 
+  if (value <= 0)      { idx1 = idx2 = 0;            }    // accounts for an input <=0
+  else if (value >= 1) { idx1 = idx2 = NUM_COLORS-1; }    // accounts for an input >=0
+  else
+  {
+    value *= (NUM_COLORS-1);        // Will multiply value by 3.
+    idx1  = floor(value);                  // Our desired color will be after this index.
+    idx2  = idx1+1;                        // ... and before this index (inclusive).
+    fractBetween = value - float(idx1);    // Distance between the two indexes (0-1).
+  }
+ 
+  uint8_t red   = round(fractBetween * (color[idx2][0] - color[idx1][0])) + color[idx1][0];
+  uint8_t green = round(fractBetween * (color[idx2][1] - color[idx1][1])) + color[idx1][1];
+  uint8_t blue  = round(fractBetween * (color[idx2][2] - color[idx1][2])) + color[idx1][2];
+
+  return (((uint32_t)red) << 16) | (((uint32_t)green) << 8) | blue;
 }
 
