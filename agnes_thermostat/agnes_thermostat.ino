@@ -12,6 +12,7 @@
  any redistribution
 *********************************************************************/
 #include <bluefruit.h>
+#include <Adafruit_NeoPixel.h>
 #include "DHT.h"
 
 #define DEBUG
@@ -30,12 +31,14 @@
 
 #endif
 
-#define DHTPIN 7     // what digital pin we're connected to
+#define DHTPIN A1     // what digital pin we're connected to
 #define RELAY  16
 #define BUTTON 11
 
 // Uncomment whatever type you're using!
 #define DHTTYPE DHT22   // DHT 22  (AM2302), AM2321
+
+Adafruit_NeoPixel strip = Adafruit_NeoPixel(2, 7, NEO_GRB + NEO_KHZ800);
 
 // Connect pin 1 (on the left) of the sensor to +5V
 // NOTE: If using a board with 3.3V logic like an Arduino Due connect pin 1
@@ -76,7 +79,14 @@ void setup()
   pinMode(BUTTON, INPUT_PULLUP);
 
   dht.begin();
-  
+
+  DL("Starting strips");
+  strip.begin();
+  strip.setBrightness(2);
+  strip.setPixelColor(0, 0xFF0000);
+  strip.setPixelColor(1, 0x00FF00);
+  strip.show();
+
   DL("Bluefruit52 HRM Example");
   DL("-----------------------\n");
 
@@ -89,7 +99,7 @@ void setup()
   Bluefruit.setTxPower(4);
 
   // Set the advertised device name (keep it short!)
-  DL("Setting Device Name to 'Feather52 HRM'");
+  DL("Setting Device Name");
   Bluefruit.setName("Thermostat");
 
   // Set the connect/disconnect callback handlers
@@ -119,6 +129,10 @@ void setup()
   // Pin interrupts have to be after all BT stuff
   attachInterrupt(BUTTON, buttonHandlerFalling, FALLING);
   DL("\nAdvertising");
+
+  strip.setPixelColor(0, 0);
+  strip.setPixelColor(1, 0);
+  strip.show();
 }
 
 volatile unsigned long lastButtonFall = 0;
