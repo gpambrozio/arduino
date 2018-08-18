@@ -31,6 +31,11 @@
 
 #endif
 
+// Just to adjust the scale for the color coding
+#define MIN_TEMP_C 10.0
+#define MAX_TEMP_C 35.0
+
+
 #define DHTPIN A1     // what digital pin we're connected to
 #define RELAY  16
 #define BUTTON 11
@@ -75,21 +80,21 @@ void setup()
   digitalWrite(RELAY, LOW);
   pinMode(RELAY, OUTPUT);
   pinMode(LED_RED, OUTPUT);
-
   pinMode(BUTTON, INPUT_PULLUP);
 
   dht.begin();
 
   DL("Starting strips");
   strip.begin();
-  strip.setBrightness(5);
+  strip.setBrightness(2);
+
   strip.setPixelColor(0, 0xFF0000);
-  strip.setPixelColor(1, 0x00FF00);
-  strip.show();
-
-  DL("Bluefruit52 HRM Example");
-  DL("-----------------------\n");
-
+  for (float temp = MIN_TEMP_C; temp <= MAX_TEMP_C; temp += 0.5) {
+    strip.setPixelColor(1, getHeatMapColor(temp));
+    strip.show();
+    delay(50);
+  }
+  
   // Initialise the Bluefruit module
   DL("Initialise the Bluefruit nRF52 module");
   Bluefruit.begin();
@@ -104,7 +109,6 @@ void setup()
 
   // Set the connect/disconnect callback handlers
   Bluefruit.setConnectCallback(connectCallback);
-  Bluefruit.setDisconnectCallback(disconnectCallback);
 
   // Configure and Start the Device Information Service
   DL("Configuring the Device Information Service");
@@ -219,22 +223,12 @@ void setupService(void)
 
 void connectCallback(uint16_t conn_handle)
 {
-  D("Connected to ");
-  char central_name[32] = { 0 };
-  Bluefruit.Gap.getPeerName(conn_handle, central_name, sizeof(central_name));
-  DL(central_name);
-}
-
-void disconnectCallback(uint16_t conn_handle, uint8_t reason)
-{
-  DL("Disconnected");
-  DL("Advertising!");
+  DL("Connected");
 }
 
 void changeOnOff(uint8_t v)
 {
   onoff = v;
-  DL(onoff);
   onoffCharacteristic.notify8(onoff);
 }
 
@@ -272,8 +266,13 @@ void loop()
 {
   if (millis() >= nextBlink) {
     digitalWrite(LED_RED, HIGH);
+    strip.setPixelColor(0, 0x00FF00);
+    strip.show();
+
     delay(5);
     digitalWrite(LED_RED, LOW);
+    strip.setPixelColor(0, isHeating ? 0xFF0000 : (onoff ? 0xFF : 0));
+    strip.show();
     nextBlink = millis() + 15000;
   }
 
@@ -298,7 +297,7 @@ void loop()
         strip.show();
       }
     } else {
-      strip.setPixelColor(1, getHeatMapColor(t / 40.0));
+      strip.setPixelColor(1, getHeatMapColor(t));
       strip.show();
 
       lastSuccessfullTemperatureRead = millis();
@@ -331,8 +330,10 @@ void loop()
 }
 
 // Adapted from http://www.andrewnoske.com/wiki/Code_-_heatmaps_and_color_gradients
-uint32_t getHeatMapColor(float value)
+uint32_t getHeatMapColor(float temperature)
 {
+  float value = (temperature - MIN_TEMP_C) / (MAX_TEMP_C - MIN_TEMP_C);
+  
   // A static array of 4 colors:  (blue,   green,  yellow,  red) using {r,g,b} for each.
   const int NUM_COLORS = 4;
   static uint8_t color[NUM_COLORS][3] = { {0, 0, 255}, {0, 255, 0}, {255, 255, 0}, {255, 0, 0} };
