@@ -174,7 +174,7 @@ void startAdv(void)
 uint16_t lastTemperature = 0;
 uint16_t lastHuminity = 0;
 uint8_t onoff = 0;
-uint16_t targetTemperature = 200;
+uint16_t targetTemperature = 710;
 
 void setupService(void)
 {
@@ -253,7 +253,6 @@ void targetWriteCallback(BLECharacteristic& chr, uint8_t* data, uint16_t len, ui
   targetTemperature = *((uint16_t*)data);
   DL(targetTemperature);
   targetCharacteristic.notify16(targetTemperature);
-  changeOnOff(1);
 }
 
 unsigned long nextTemperatureRead = 0;
@@ -271,7 +270,7 @@ void loop()
 
     delay(5);
     digitalWrite(LED_RED, LOW);
-    strip.setPixelColor(0, isHeating ? 0xFF0000 : (onoff ? 0xFF : 0));
+    strip.setPixelColor(0, isHeating ? 0xFF0000 : (onoff ? 0xFF : (lastTemperature < targetTemperature ? 0xFFFF : 0)));
     strip.show();
     nextBlink = millis() + 15000;
   }
@@ -302,7 +301,7 @@ void loop()
 
       lastSuccessfullTemperatureRead = millis();
       
-      lastTemperature = (uint16_t)(t * 10);
+      lastTemperature = (uint16_t)(320 + t * 90 / 5);
       lastHuminity = (uint16_t)(h * 10);
   
       D("Temperature: "); D(t); D(" *C\t");
@@ -323,7 +322,7 @@ void loop()
     isHeating = false;    
   }
   digitalWrite(RELAY, isHeating ? HIGH : LOW);
-  strip.setPixelColor(0, isHeating ? 0xFF0000 : (onoff ? 0xFF : 0));
+  strip.setPixelColor(0, isHeating ? 0xFF0000 : (onoff ? 0xFF : (lastTemperature < targetTemperature ? 0xFFFF : 0)));
   strip.show();
 
   delay(100);
