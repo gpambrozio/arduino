@@ -131,17 +131,12 @@ void setup()
   startAdv();
 
   // Pin interrupts have to be after all BT stuff
-  attachInterrupt(BUTTON, buttonHandlerFalling, FALLING);
+  attachInterrupt(digitalPinToInterrupt(BUTTON), buttonHandler, CHANGE);
   DL("\nAdvertising");
 
   strip.setPixelColor(0, 0);
   strip.setPixelColor(1, 0);
   strip.show();
-}
-
-volatile unsigned long lastButtonFall = 0;
-void buttonHandlerFalling(void) {
-  lastButtonFall = millis();
 }
 
 void startAdv(void)
@@ -171,9 +166,9 @@ void startAdv(void)
   Bluefruit.Advertising.start(0);                // 0 = Don't stop advertising after n seconds  
 }
 
+uint8_t onoff = 0;
 uint16_t lastTemperature = 0;
 uint16_t lastHuminity = 0;
-uint8_t onoff = 0;
 uint16_t targetTemperature = 710;
 
 void setupService(void)
@@ -212,7 +207,7 @@ void setupService(void)
   onoffCharacteristic.begin();
   changeOnOff(0);
 
-  targetCharacteristic.setProperties(CHR_PROPS_READ | CHR_PROPS_WRITE);
+  targetCharacteristic.setProperties(CHR_PROPS_NOTIFY | CHR_PROPS_READ | CHR_PROPS_WRITE);
   targetCharacteristic.setPermission(SECMODE_OPEN, SECMODE_OPEN);
   targetCharacteristic.setFixedLen(sizeof(targetTemperature));
   targetCharacteristic.setUserDescriptor("TargetTemp");
@@ -239,6 +234,7 @@ void onoffWriteCallback(BLECharacteristic& chr, uint8_t* data, uint16_t len, uin
     D("wrong size "); DL(len);
     return;
   }
+  DL(*data);
   
   changeOnOff(*data);
 }
@@ -255,11 +251,31 @@ void targetWriteCallback(BLECharacteristic& chr, uint8_t* data, uint16_t len, ui
   targetCharacteristic.notify16(targetTemperature);
 }
 
+bool isHeating = false;
 unsigned long nextTemperatureRead = 0;
 unsigned long lastSuccessfullTemperatureRead = 0;
 unsigned long nextBlink = 0;
 unsigned long lastButtonClick = 0;
-bool isHeating = false;
+
+volatile unsigned long lastButtonFall = 0;
+volatile unsigned long lastButtonRise = 0;
+volatile unsigned long lastButtonChange = 0;
+volatile bool isDown = false;
+void buttonHandler() {
+  unsigned long now = millis();
+  if (now - lastButtonChange > 1000) {
+    isDown = false;
+  }
+  if (now - lastButtonChange > 50) {
+    lastButtonChange = now;
+    if (isDown) {
+      lastButtonRise = now;
+    } else {
+      lastButtonFall = now;
+    }
+    isDown = !isDown;
+  }
+}
 
 void loop()
 {
@@ -270,12 +286,13 @@ void loop()
 
     delay(5);
     digitalWrite(LED_RED, LOW);
-    strip.setPixelColor(0, isHeating ? 0xFF0000 : (onoff ? 0xFF : (lastTemperature < targetTemperature ? 0xFFFF : 0)));
+    strip.setPixelColor(0, isHeating ? 0xFF0000 : (onoff ? 0xFF00 : (lastTemperature < targetTemperature ? 0xFF : 0)));
     strip.show();
     nextBlink = millis() + 15000;
   }
 
-  if (lastButtonFall > lastButtonClick && lastButtonFall - lastButtonClick > 1000) {
+  if (lastButtonFall > lastButtonClick && lastButtonFall - lastButtonClick > 500 &&
+      lastButtonRise > lastButtonFall && lastButtonRise - lastButtonFall > 100) {
     lastButtonClick = millis();
     DL("Button clicked");
     changeOnOff(1 - onoff);
@@ -304,7 +321,7 @@ void loop()
       lastTemperature = (uint16_t)(320 + t * 90 / 5);
       lastHuminity = (uint16_t)(h * 10);
   
-      D("Temperature: "); D(t); D(" *C\t");
+      D("Temperature: "); D(lastTemperature); D(" *F\n");
       D("Humidity: "); D(h); DL(" %");
 
       // Note: We use .notify instead of .write!
@@ -322,7 +339,7 @@ void loop()
     isHeating = false;    
   }
   digitalWrite(RELAY, isHeating ? HIGH : LOW);
-  strip.setPixelColor(0, isHeating ? 0xFF0000 : (onoff ? 0xFF : (lastTemperature < targetTemperature ? 0xFFFF : 0)));
+  strip.setPixelColor(0, isHeating ? 0xFF0000 : (onoff ? 0xFF00 : (lastTemperature < targetTemperature ? 0xFF : 0)));
   strip.show();
 
   delay(100);
@@ -357,4 +374,5 @@ uint32_t getHeatMapColor(float temperature)
 
   return (((uint32_t)red) << 16) | (((uint32_t)green) << 8) | blue;
 }
+
 
