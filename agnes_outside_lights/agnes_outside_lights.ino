@@ -18,8 +18,8 @@
 
 #endif
 
-#define PIN_OUTSIDE 16
-#define PIN_INSIDE 15
+#define PIN_OUTSIDE 15
+#define PIN_INSIDE 16
 
 #define MAX_BRIGHTNESS_OUTSIDE 200
 #define MAX_BRIGHTNESS_INSIDE 40
@@ -86,7 +86,7 @@ void setup() {
   colorWipe(&strip_outside, 0);
 
   DL("Starting BT");
-  Bluefruit.begin();
+  Bluefruit.begin(2);
   Bluefruit.autoConnLed(false);
 
   // Set max power. Accepted values are: -40, -30, -20, -16, -12, -8, -4, 0, 4
@@ -106,17 +106,24 @@ void setup() {
   DL("Ending setup");
 }
 
+int target_brightness_outside = 0;
+int target_brightness_inside = 0;
+int brightness_outside = 0;
+int brightness_inside = 0;
+uint32_t color_outside = 0;
+uint32_t color_inside = 0;
 uint8_t mode_outside = 'C';
 uint8_t mode_inside = 'C';
 uint16_t cyclePosition = 0;
 uint16_t cycleDelay = 1;
-unsigned long last_blink = 0;
+unsigned long next_cycle_change = 0;
+unsigned long next_blink = 0;
 
 void loop() {
-  if (millis() >= last_blink) {
-    if (millis() >= last_blink + 10) {
+  if (millis() >= next_blink) {
+    if (millis() >= next_blink + 10) {
       digitalWrite(LED_RED, LOW);
-      last_blink = millis() + 15000;
+      next_blink = millis() + 15000;
       DL("Loop");
     } else {
       digitalWrite(LED_RED, HIGH);
@@ -130,21 +137,28 @@ void loop() {
     char segment = PACKET_SEGMENT;
     Adafruit_NeoPixel* strip;
     int max_brightness;
+    int *target_brightness;
+    uint32_t *color;
+    
     if (segment == 'O') {
       strip = &strip_outside;
       max_brightness = MAX_BRIGHTNESS_OUTSIDE;
+      target_brightness = &target_brightness_outside;
+      color = &color_outside;
     } else {
       strip = &strip_inside;
       max_brightness = MAX_BRIGHTNESS_INSIDE;
+      target_brightness = &target_brightness_inside;
+      color = &color_inside;
     }
     
     if (PACKET_COMMAND == 'C' && PACKET_DATA_SIZE == 4) {
-      strip->setBrightness(min(PACKET_DATA[0], max_brightness));
-      uint32_t color = ((uint32_t)PACKET_DATA[1] << 16) | ((uint32_t)PACKET_DATA[2] <<  8) | PACKET_DATA[3];
-      colorWipe(strip, color);
+      *target_brightness = min(PACKET_DATA[0], max_brightness);
+      *color = ((uint32_t)PACKET_DATA[1] << 16) | ((uint32_t)PACKET_DATA[2] <<  8) | PACKET_DATA[3];
+      colorWipe(strip, *color);
       commandOK = true;
     } else if ((PACKET_COMMAND == 'R' || PACKET_COMMAND == 'T') && PACKET_DATA_SIZE == 2) {
-      strip->setBrightness(min(PACKET_DATA[0], max_brightness));
+      *target_brightness = min(PACKET_DATA[0], max_brightness);
       cycleDelay = PACKET_DATA[1];
       commandOK = true;
     }
@@ -157,6 +171,21 @@ void loop() {
       bleuart.print("OK");
     }
   }
+
+  if (target_brightness_outside != brightness_outside) {
+    brightness_outside += (target_brightness_outside > brightness_outside) ? 1 : -1;
+    strip_outside.setBrightness(brightness_outside);
+    if (mode_outside == 'C') {
+      colorWipe(&strip_outside, color_outside);
+    }
+  }
+  if (target_brightness_inside != brightness_inside) {
+    brightness_inside += (target_brightness_inside > brightness_inside) ? 1 : -1;
+    strip_inside.setBrightness(brightness_inside);
+    if (mode_inside == 'C') {
+      colorWipe(&strip_inside, color_inside);
+    }
+  }
   
   switch (mode_outside) {
     case 'C':
@@ -164,11 +193,11 @@ void loop() {
       break;
 
     case 'R':
-      rainbowCycle(&strip_outside, cyclePosition++);
+      rainbowCycle(&strip_outside, cyclePosition);
       break;
 
     case 'T':
-      theaterChaseRainbow(&strip_outside, cyclePosition++);
+      theaterChaseRainbow(&strip_outside, cyclePosition);
       break;
   }
   switch (mode_inside) {
@@ -177,14 +206,18 @@ void loop() {
       break;
 
     case 'R':
-      rainbowCycle(&strip_inside, cyclePosition++);
+      rainbowCycle(&strip_inside, cyclePosition);
       break;
 
     case 'T':
-      theaterChaseRainbow(&strip_inside, cyclePosition++);
+      theaterChaseRainbow(&strip_inside, cyclePosition);
       break;
   }
-  delay(cycleDelay);
+
+  if (millis() > next_cycle_change) {
+    next_cycle_change += cycleDelay;
+    cyclePosition++;
+  }
 }
 
 void startAdv(void) {
