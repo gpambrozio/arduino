@@ -70,7 +70,6 @@ BLECharacteristic onoffCharacteristic = BLECharacteristic(0x1237);
 BLECharacteristic targetCharacteristic = BLECharacteristic(0x1238);
 
 BLEDis diService;    // DIS (Device Information Service) helper class instance
-BLEBas batteryService;    // BAS (Battery Service) helper class instance
 
 void setup()
 {
@@ -115,11 +114,6 @@ void setup()
   diService.setManufacturer("VanTomation");
   diService.setModel("Thermostat+Humid");
   diService.begin();
-
-  // Start the BLE Battery Service and set it to 100%
-  DL("Configuring the Battery Service");
-  batteryService.begin();
-  batteryService.write(100);
 
   // Setup the Heart Rate Monitor service using
   // BLEService and BLECharacteristic classes
@@ -307,8 +301,8 @@ void loop()
     // Check if any reads failed
     if (isnan(h) || isnan(t)) {
       DL("NaN");
-      nextTemperatureRead = millis() + 2000;
-      if (millis() - lastSuccessfullTemperatureRead > 5 * 60000) {
+      nextTemperatureRead = millis() + 3000;
+      if (millis() - lastSuccessfullTemperatureRead > 2 * 60000) {
         strip.setPixelColor(1, 0);
         strip.show();
       }
@@ -318,7 +312,7 @@ void loop()
 
       lastSuccessfullTemperatureRead = millis();
       
-      lastTemperature = (uint16_t)(320 + t * 90 / 5);
+      lastTemperature = 320 + (uint16_t)(90.0 * t / 5.0);
       lastHuminity = (uint16_t)(h * 10);
   
       D("Temperature: "); D(lastTemperature); D(" *F\n");
@@ -334,7 +328,7 @@ void loop()
 
   if (onoff) {
     uint16_t temperatureLimit = targetTemperature + (isHeating ? 20 : 0);
-    isHeating = lastTemperature < temperatureLimit;
+    isHeating = (millis() - lastSuccessfullTemperatureRead) < 2 * 60000 && lastTemperature < temperatureLimit;
   } else {
     isHeating = false;    
   }
