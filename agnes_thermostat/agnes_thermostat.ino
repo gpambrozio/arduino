@@ -260,7 +260,7 @@ void buttonHandler() {
   if (now - lastButtonChange > 1000) {
     isDown = false;
   }
-  if (now - lastButtonChange > 50) {
+  if (now - lastButtonChange > 100) {
     lastButtonChange = now;
     if (isDown) {
       lastButtonRise = now;
@@ -286,7 +286,7 @@ void loop()
   }
 
   if (lastButtonFall > lastButtonClick && lastButtonFall - lastButtonClick > 500 &&
-      lastButtonRise > lastButtonFall && lastButtonRise - lastButtonFall > 100) {
+      lastButtonRise > lastButtonFall && lastButtonRise - lastButtonFall > 150) {
     lastButtonClick = millis();
     DL("Button clicked");
     changeOnOff(1 - onoff);
@@ -368,5 +368,3 @@ uint32_t getHeatMapColor(float temperature)
 
   return (((uint32_t)red) << 16) | (((uint32_t)green) << 8) | blue;
 }
-
-
