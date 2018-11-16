@@ -127,13 +127,13 @@ void setup() {
   // light up all the LEDs in order
   for (uint8_t i=0; i<numKeys; i++) {
     trellis.setLED(i);
-    trellis.writeDisplay();    
+    trellis.writeDisplay();
     delay(50);
   }
   // then turn them off
   for (uint8_t i=0; i<numKeys; i++) {
     trellis.clrLED(i);
-    trellis.writeDisplay();    
+    trellis.writeDisplay();
     delay(50);
   }
 
@@ -165,11 +165,9 @@ void loop() {
         if (i == 3) {
           light = min(1023, light + 128);
           analogWrite(TFT_LIGHT, light);
-          Serial.printf("Light = %d\n", light);
         } else if (i == 15) {
           light = max(0, light - 128);
           analogWrite(TFT_LIGHT, light);
-          Serial.printf("Light = %d\n", light);
         } else {
           if (i % 2 == 0) {
             http.begin("http://agnespanel.local:8080/text//0");
