@@ -1,18 +1,5 @@
 /*************************************************** 
-  This is a test example for the Adafruit Trellis w/HT16K33
-
-  Designed specifically to work with the Adafruit Trellis 
-  ----> https://www.adafruit.com/products/1616
-  ----> https://www.adafruit.com/products/1611
-
-  These displays use I2C to communicate, 2 pins are required to  
-  interface
-  Adafruit invests time and resources providing this open source code, 
-  please support Adafruit and open-source hardware by purchasing 
-  products from Adafruit!
-
-  Written by Limor Fried/Ladyada for Adafruit Industries.  
-  MIT license, all text above must be included in any redistribution
+ *  Agnes' keypad using adafruit's feather ESP8266
  ****************************************************/
 
 #include <Wire.h>
@@ -35,20 +22,10 @@
 ESP8266WebServer server(80);
 HTTPClient http;
 
-/*************************************************** 
-  This example shows reading buttons and setting/clearing buttons in a loop
-  "momentary" mode has the LED light up only when a button is pressed
-  "latching" mode lets you turn the LED on/off when pressed
-
-  Up to 8 matrices can be used but this example will show 4 or 1
- ****************************************************/
-
 Adafruit_Trellis matrix0 = Adafruit_Trellis();
 
 // Just one
 Adafruit_TrellisSet trellis =  Adafruit_TrellisSet(&matrix0);
-// or use the below to select 4, up to 8 can be passed in
-//Adafruit_TrellisSet trellis =  Adafruit_TrellisSet(&matrix0, &matrix1, &matrix2, &matrix3);
 
 // set to however many you're working with here, up to 8
 #define NUMTRELLIS 1
@@ -72,18 +49,13 @@ Adafruit_TrellisSet trellis =  Adafruit_TrellisSet(&matrix0);
 #define TFT_DC     16
 #define TFT_LIGHT  12
 
-// Option 1 (recommended): must use the hardware SPI pins
-// (for UNO thats sclk = 13 and sid = 11) and pin 10 must be
-// an output. This is much faster - also required if you want
-// to use the microSD card (see the image drawing example)
-
 // For 1.44" and 1.8" TFT with ST7735 use
 Adafruit_ST7735 tft = Adafruit_ST7735(TFT_CS,  TFT_DC, TFT_RST);
 
 
 void setup() {
   Serial.begin(115200);
-  Serial.println("Trellis Demo");
+  Serial.println("Keypad");
 
   // INT pin requires a pullup
   pinMode(INTPIN, INPUT_PULLUP);
