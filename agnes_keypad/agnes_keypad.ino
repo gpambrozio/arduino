@@ -70,6 +70,7 @@ Adafruit_TrellisSet trellis =  Adafruit_TrellisSet(&matrix0);
 #define TFT_RST    0   // you can also connect this to the Arduino reset
                        // in which case, set this #define pin to -1!
 #define TFT_DC     16
+#define TFT_LIGHT  12
 
 // Option 1 (recommended): must use the hardware SPI pins
 // (for UNO thats sclk = 13 and sid = 11) and pin 10 must be
@@ -120,6 +121,9 @@ void setup() {
   // I find it easiest if the addresses are in order
   trellis.begin(0x70);  // only one
 
+  pinMode(TFT_LIGHT, OUTPUT);
+  analogWrite(TFT_LIGHT, 1023);
+
   // light up all the LEDs in order
   for (uint8_t i=0; i<numKeys; i++) {
     trellis.setLED(i);
@@ -139,6 +143,7 @@ void setup() {
 }
 
 long nextTFTUpdate = 0;
+int light = 1023;
 
 void loop() {
   delay(30); // 30ms delay is required, dont remove me!
@@ -149,28 +154,38 @@ void loop() {
     for (uint8_t i=0; i<numKeys; i++) {
       // if it was pressed...
       if (trellis.justPressed(i)) {
-        Serial.print("v"); Serial.println(i);
+        Serial.printf("v%d\n", i);
         // Alternate the LED
         if (trellis.isLED(i)) {
           trellis.clrLED(i);
         } else {
           trellis.setLED(i);
         }
-        
-        if (i % 2 == 0) {
-          http.begin("http://agnespanel.local:8080/text//0");
-        } else {
-          http.begin("http://agnespanel.local:8080/image/thanks/1");
-        }
-        
-        int httpCode = http.GET();
-        if (httpCode > 0) {
-          Serial.printf("[HTTP] GET... code: %d\n", httpCode);
-        } else {
-          Serial.print("[HTTP] GET... failed, error: "); Serial.println(http.errorToString(httpCode).c_str());
-        }
 
-        http.end();
+        if (i == 3) {
+          light = min(1023, light + 128);
+          analogWrite(TFT_LIGHT, light);
+          Serial.printf("Light = %d\n", light);
+        } else if (i == 15) {
+          light = max(0, light - 128);
+          analogWrite(TFT_LIGHT, light);
+          Serial.printf("Light = %d\n", light);
+        } else {
+          if (i % 2 == 0) {
+            http.begin("http://agnespanel.local:8080/text//0");
+          } else {
+            http.begin("http://agnespanel.local:8080/image/thanks/1");
+          }
+          
+          int httpCode = http.GET();
+          if (httpCode > 0) {
+            Serial.printf("[HTTP] GET... code: %d\n", httpCode);
+          } else {
+            Serial.print("[HTTP] GET... failed, error: "); Serial.println(http.errorToString(httpCode).c_str());
+          }
+  
+          http.end();
+        }
       }
     }
     // tell the trellis to set the LEDs we requested
@@ -194,6 +209,6 @@ void tftPrintTest() {
   tft.setTextColor(ST77XX_MAGENTA, ST77XX_BLACK);
   tft.print(millis() / 1000);
   tft.setTextColor(ST77XX_WHITE, ST77XX_BLACK);
-  tft.print(" s.");
+  tft.print(" seconds.");
   tft.endWrite();
 }
