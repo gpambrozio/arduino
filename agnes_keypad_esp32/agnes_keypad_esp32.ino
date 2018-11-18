@@ -135,19 +135,19 @@ void loop() {
           trellis.setLED(i);
         }
 
-        if (i == 3) {
+        if (i == 15) {
           light += 32;
           if (light > 255) light = 255;
           sigmaDeltaWrite(TFT_LIGHT_CHANNEL, light);
-        } else if (i == 15) {
+        } else if (i == 14) {
           light -= 32;
           if (light < 0) light = 0;
           sigmaDeltaWrite(TFT_LIGHT_CHANNEL, light);
-        } else if (false) {
+        } else {
           if (i % 2 == 0) {
-            http.begin("http://agnespanel.local:8080/text//0");
+            http.begin("agnespanel", 8080, "/text//0");
           } else {
-            http.begin("http://agnespanel.local:8080/image/thanks/1");
+            http.begin("agnespanel", 8080, "/image/thanks/1");
           }
           
           int httpCode = http.GET();
