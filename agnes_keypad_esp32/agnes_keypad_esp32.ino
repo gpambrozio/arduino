@@ -234,7 +234,11 @@ void tftPrintTest() {
   img.setTextColor(TFT_WHITE, TFT_BLACK);
   img.println(" seconds.");
   img.setTextFont(2);
-  img.printf("Inside: %.1f F\n", temperatureInside);
-  img.printf("Outside: %.1f F\n", temperatureOutside);
+  if (temperatureInside > 0) {
+    img.printf("Inside: %.1f F\n", temperatureInside);
+  }
+  if (temperatureOutside > 0) {
+    img.printf("Outside: %.1f F\n", temperatureOutside);
+  }
   img.pushSprite(0, 0);
 }
