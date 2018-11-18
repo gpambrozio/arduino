@@ -15,9 +15,8 @@
 #include <Wire.h>
 #include "Adafruit_Trellis.h"
 
-#include <Adafruit_GFX.h>    // Core graphics library
-#include <Adafruit_ST7735.h> // Hardware-specific library for ST7735
 #include <SPI.h>
+#include <TFT_eSPI.h>       // Hardware-specific library
 
 #define WLAN_AGNES
 
@@ -37,30 +36,13 @@ Adafruit_TrellisSet trellis =  Adafruit_TrellisSet(&matrix0);
 #define numKeys (NUMTRELLIS * 16)
 
 // Connect Trellis Vin to 5V and Ground to ground.
-#define INTPIN 2
-// Connect I2C SDA pin to your Arduino SDA line
-// Connect I2C SCL pin to your Arduino SCL line
-// All Trellises share the SDA, SCL and INT pin! 
-// Even 8 tiles use only 3 wires max
+#define INTPIN 14
 
-// TTF Config
-// ==========
-// For the breakout, you can use any 2 or 3 pins
-// These pins will also work for the 1.8" TFT shield
-#define TFT_CS     12
-#define TFT_RST    15  // you can also connect this to the Arduino reset
-                       // in which case, set this #define pin to -1!
-#define TFT_DC     32
 #define TFT_LIGHT  13
 #define TFT_LIGHT_CHANNEL 0
 
-// Option 1 (recommended): must use the hardware SPI pins
-// (for UNO thats sclk = 13 and sid = 11) and pin 10 must be
-// an output. This is much faster - also required if you want
-// to use the microSD card (see the image drawing example)
-
 // For 1.44" and 1.8" TFT with ST7735 use
-Adafruit_ST7735 tft = Adafruit_ST7735(TFT_CS,  TFT_DC, TFT_RST);
+TFT_eSPI tft = TFT_eSPI();
 
 
 void setup() {
@@ -125,9 +107,9 @@ void setup() {
     delay(50);
   }
 
-  tft.initR(INITR_144GREENTAB);   // initialize a ST7735S chip, black tab
+  tft.init();
   tft.setRotation(3);
-  tft.fillScreen(ST77XX_BLACK);
+  tft.fillScreen(TFT_BLACK);
 
   Serial.println("setup done");
 }
@@ -154,11 +136,11 @@ void loop() {
         }
 
         if (i == 3) {
-          light += 16;
+          light += 32;
           if (light > 255) light = 255;
           sigmaDeltaWrite(TFT_LIGHT_CHANNEL, light);
         } else if (i == 15) {
-          light -= 16;
+          light -= 32;
           if (light < 0) light = 0;
           sigmaDeltaWrite(TFT_LIGHT_CHANNEL, light);
         } else if (false) {
@@ -191,23 +173,12 @@ void loop() {
 }
 
 void tftPrintTest() {
-  tft.setTextWrap(false);
-  tft.startWrite();
-  tft.setCursor(0, 0);
-  tft.setTextColor(ST77XX_WHITE);
-  Serial.println("5");
+  tft.setCursor(0, 0, 1);
+  tft.setTextColor(TFT_WHITE);
   tft.println("Sketch has been");
-  Serial.println("6");
   tft.println("running for: ");
-  Serial.println("7");
-  tft.setTextColor(ST77XX_MAGENTA, ST77XX_BLACK);
-  Serial.println("8");
+  tft.setTextColor(TFT_MAGENTA, TFT_BLACK);
   tft.print(millis() / 1000);
-  Serial.println("9");
-  tft.setTextColor(ST77XX_WHITE, ST77XX_BLACK);
-  Serial.println("10");
+  tft.setTextColor(TFT_WHITE, TFT_BLACK);
   tft.print(" seconds.");
-  Serial.println("11");
-  tft.endWrite();
-  Serial.println("12");
 }
