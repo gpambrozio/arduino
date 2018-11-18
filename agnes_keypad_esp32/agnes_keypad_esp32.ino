@@ -38,8 +38,11 @@ Adafruit_TrellisSet trellis =  Adafruit_TrellisSet(&matrix0);
 // Connect Trellis Vin to 5V and Ground to ground.
 #define INTPIN 14
 
-#define TFT_LIGHT  13
+#define TFT_LIGHT  27
 #define TFT_LIGHT_CHANNEL 0
+
+// The built in LED
+#define LED 13
 
 // For 1.44" and 1.8" TFT with ST7735 use
 TFT_eSPI tft = TFT_eSPI();
@@ -53,6 +56,9 @@ void setup() {
   // INT pin requires a pullup
   pinMode(INTPIN, INPUT_PULLUP);
   digitalWrite(INTPIN, HIGH);
+
+  pinMode(LED, OUTPUT);
+  digitalWrite(LED, LOW);
 
   wifiMulti.addAP(WLAN_SSID, WLAN_PASS);
 
@@ -144,7 +150,7 @@ void loop() {
           if (light < 0) light = 0;
           sigmaDeltaWrite(TFT_LIGHT_CHANNEL, light);
         } else {
-          if (i % 2 == 0) {
+          if (i % 2 == 1) {
             http.begin("agnespanel", 8080, "/text//0");
           } else {
             http.begin("agnespanel", 8080, "/image/thanks/1");
