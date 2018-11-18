@@ -46,7 +46,7 @@ Adafruit_TrellisSet trellis =  Adafruit_TrellisSet(&matrix0);
 
 // For 1.44" and 1.8" TFT with ST7735 use
 TFT_eSPI tft = TFT_eSPI();
-
+TFT_eSprite img = TFT_eSprite(&tft);
 
 void setup() {
 
@@ -69,11 +69,16 @@ void setup() {
 
   tft.init();
   tft.setRotation(3);
-  tft.setTextColor(TFT_WHITE, TFT_BLACK);
-
   tft.fillScreen(TFT_BLACK);
-  tft.setCursor(0, 0, 2);
-  tft.printf("Connecting to %s", WLAN_SSID);
+
+  img.setColorDepth(8);
+  img.createSprite(TFT_WIDTH, TFT_HEIGHT);
+  
+  img.setTextColor(TFT_WHITE, TFT_BLACK);
+  img.fillSprite(TFT_BLACK);
+  img.setCursor(0, 0, 2);
+  img.printf("Connecting to %s", WLAN_SSID);
+  img.pushSprite(0, 0);
 
   wifiMulti.addAP(WLAN_SSID, WLAN_PASS);
 
@@ -81,9 +86,10 @@ void setup() {
     Serial.println("WiFi Connect Failed! Retrying...");
     delay(1000);
   }
-  tft.setCursor(0, 0, 2);
-  tft.printf("Connected to %s ", WLAN_SSID);
-  trellis.setLED(2); trellis.writeDisplay();
+  img.fillSprite(TFT_BLACK);
+  img.setCursor(0, 0, 2);
+  img.printf("Connected to %s ", WLAN_SSID);
+  img.pushSprite(0, 0);
   
   Serial.println("");
   Serial.println("WiFi connected");
@@ -219,14 +225,16 @@ void loop() {
 }
 
 void tftPrintTest() {
-  tft.setCursor(0, 0, 1);
-  tft.setTextColor(TFT_WHITE);
-  tft.println("Sketch has been\nrunning for");
-  tft.setTextColor(TFT_MAGENTA, TFT_BLACK);
-  tft.print(millis() / 1000);
-  tft.setTextColor(TFT_WHITE, TFT_BLACK);
-  tft.println(" seconds.");
-  tft.setTextFont(2);
-  tft.printf("Inside : %.1f F\n", temperatureInside);
-  tft.printf("Outside: %.1f F\n", temperatureOutside);
+  img.fillSprite(TFT_BLACK);
+  img.setCursor(0, 0, 1);
+  img.setTextColor(TFT_WHITE);
+  img.println("Sketch has been\nrunning for");
+  img.setTextColor(TFT_MAGENTA, TFT_BLACK);
+  img.print(millis() / 1000);
+  img.setTextColor(TFT_WHITE, TFT_BLACK);
+  img.println(" seconds.");
+  img.setTextFont(2);
+  img.printf("Inside: %.1f F\n", temperatureInside);
+  img.printf("Outside: %.1f F\n", temperatureOutside);
+  img.pushSprite(0, 0);
 }
