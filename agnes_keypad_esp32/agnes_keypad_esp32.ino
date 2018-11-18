@@ -175,8 +175,7 @@ void loop() {
 void tftPrintTest() {
   tft.setCursor(0, 0, 1);
   tft.setTextColor(TFT_WHITE);
-  tft.println("Sketch has been");
-  tft.println("running for: ");
+  tft.println("Sketch has been\nrunning for");
   tft.setTextColor(TFT_MAGENTA, TFT_BLACK);
   tft.print(millis() / 1000);
   tft.setTextColor(TFT_WHITE, TFT_BLACK);
