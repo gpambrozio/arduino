@@ -133,8 +133,16 @@ void setup() {
 }
 
 HTTPClient http;
+WiFiClient client;
+
+float temperatureOutside = 0;
+float temperatureInside = 0;
+
 long nextTFTUpdate = 0;
-int light = 255;
+
+#define LIGHT_CHANGE 32
+#define MAX_LIGHT 255
+int light = MAX_LIGHT;
 
 void loop() {
   delay(30); // 30ms delay is required, dont remove me!
@@ -154,11 +162,11 @@ void loop() {
         }
 
         if (i == 15) {
-          light += 32;
-          if (light > 255) light = 255;
+          light += LIGHT_CHANGE;
+          if (light > MAX_LIGHT) light = MAX_LIGHT;
           sigmaDeltaWrite(TFT_LIGHT_CHANNEL, light);
         } else if (i == 14) {
-          light -= 32;
+          light -= LIGHT_CHANGE;
           if (light < 0) light = 0;
           sigmaDeltaWrite(TFT_LIGHT_CHANNEL, light);
         } else {
@@ -182,6 +190,26 @@ void loop() {
     // tell the trellis to set the LEDs we requested
     trellis.writeDisplay();
   }
+
+  if (client.connected()) {
+    if (client.available()) {
+      String line = client.readStringUntil('\n');
+      Serial.print("Received "); Serial.println(line);
+      if (line.startsWith("To")) {
+        temperatureOutside = line.substring(2).toFloat() / 10.0;
+      } else if (line.startsWith("Ti")) {
+        temperatureInside = line.substring(2).toFloat() / 10.0;
+      }
+    }
+  } else {
+    Serial.println("connecting to server.");
+    client.stop();
+    if (client.connect(WiFi.gatewayIP(), 5000)) {
+      Serial.println("connected to server.");
+      client.print("Panel\n");
+    }
+  }
+  
   ArduinoOTA.handle();
   server.handleClient();
   if (millis() > nextTFTUpdate) {
@@ -197,5 +225,8 @@ void tftPrintTest() {
   tft.setTextColor(TFT_MAGENTA, TFT_BLACK);
   tft.print(millis() / 1000);
   tft.setTextColor(TFT_WHITE, TFT_BLACK);
-  tft.print(" seconds.");
+  tft.println(" seconds.");
+  tft.setTextFont(2);
+  tft.printf("Inside : %.1f F\n", temperatureInside);
+  tft.printf("Outside: %.1f F\n", temperatureOutside);
 }
