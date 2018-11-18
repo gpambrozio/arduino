@@ -60,12 +60,31 @@ void setup() {
   pinMode(LED, OUTPUT);
   digitalWrite(LED, LOW);
 
+  // begin() with the addresses of each panel in order
+  trellis.begin(0x70);  // only one
+  for (uint8_t i=0; i<numKeys; i++) {
+    trellis.clrLED(i);
+  }
+  trellis.writeDisplay();
+
+  tft.init();
+  tft.setRotation(3);
+  tft.setTextColor(TFT_WHITE, TFT_BLACK);
+
+  tft.fillScreen(TFT_BLACK);
+  tft.setCursor(0, 0, 2);
+  tft.printf("Connecting to %s", WLAN_SSID);
+
   wifiMulti.addAP(WLAN_SSID, WLAN_PASS);
 
   while (wifiMulti.run() != WL_CONNECTED) {
     Serial.println("WiFi Connect Failed! Retrying...");
     delay(1000);
   }
+  tft.setCursor(0, 0, 2);
+  tft.printf("Connected to %s ", WLAN_SSID);
+  trellis.setLED(2); trellis.writeDisplay();
+  
   Serial.println("");
   Serial.println("WiFi connected");
   Serial.println("IP address: ");
@@ -87,10 +106,6 @@ void setup() {
   });
   server.begin();
 
-  // begin() with the addresses of each panel in order
-  // I find it easiest if the addresses are in order
-  trellis.begin(0x70);  // only one
-
   pinMode(TFT_LIGHT, OUTPUT);
 
   //setup channel 0 with frequency 312500 Hz
@@ -104,19 +119,16 @@ void setup() {
   for (uint8_t i=0; i<numKeys; i++) {
     trellis.setLED(i);
     trellis.writeDisplay();
-    delay(50);
+    delay(30);
   }
   // then turn them off
   for (uint8_t i=0; i<numKeys; i++) {
     trellis.clrLED(i);
     trellis.writeDisplay();
-    delay(50);
+    delay(30);
   }
 
-  tft.init();
-  tft.setRotation(3);
   tft.fillScreen(TFT_BLACK);
-
   Serial.println("setup done");
 }
 
