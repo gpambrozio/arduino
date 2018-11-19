@@ -235,10 +235,18 @@ void tftPrintTest() {
   img.println(" seconds.");
   img.setTextFont(2);
   if (temperatureInside > 0) {
-    img.printf("Inside: %.1f F\n", temperatureInside);
+    img.printf("Inside: %.1f", temperatureInside);
+    img.setTextFont(1);
+    img.printf("o");
+    img.setTextFont(2);
+    img.printf("F\n");
   }
   if (temperatureOutside > 0) {
-    img.printf("Outside: %.1f F\n", temperatureOutside);
+    img.printf("Outside: %.1f", temperatureOutside);
+    img.setTextFont(1);
+    img.printf("o");
+    img.setTextFont(2);
+    img.printf("F\n");
   }
   img.pushSprite(0, 0);
 }
