@@ -143,6 +143,10 @@ WiFiClient client;
 
 float temperatureOutside = 0;
 float temperatureInside = 0;
+float thermostatTarget = 0;
+bool thermostatOn = false;
+
+String wifiSsid = "";
 
 long nextTFTUpdate = 0;
 
@@ -161,11 +165,7 @@ void loop() {
       if (trellis.justPressed(i)) {
         Serial.printf("v%d\n", i);
         // Alternate the LED
-        if (trellis.isLED(i)) {
-          trellis.clrLED(i);
-        } else {
-          trellis.setLED(i);
-        }
+        trellis.setLED(i);
 
         if (i == 15) {
           light += LIGHT_CHANGE;
@@ -191,6 +191,8 @@ void loop() {
   
           http.end();
         }
+      } else if (trellis.justReleased(i)) {
+        trellis.clrLED(i);
       }
     }
     // tell the trellis to set the LEDs we requested
@@ -205,6 +207,12 @@ void loop() {
         temperatureOutside = line.substring(2).toFloat() / 10.0;
       } else if (line.startsWith("Ti")) {
         temperatureInside = line.substring(2).toFloat() / 10.0;
+      } else if (line.startsWith("TO")) {
+        thermostatOn = line.substring(2).toInt() != 0;
+      } else if (line.startsWith("Tt")) {
+        thermostatTarget = line.substring(2).toFloat() / 10.0;
+      } else if (line.startsWith("Ws")) {
+        wifiSsid = line.substring(2);
       }
     }
   } else {
@@ -233,8 +241,13 @@ void tftPrintTest() {
   img.print(millis() / 1000);
   img.setTextColor(TFT_WHITE, TFT_BLACK);
   img.println(" seconds.");
-  img.setTextFont(2);
+  if (wifiSsid != "") {
+    img.setTextFont(1);
+    img.printf("WiFi: ");
+    img.println(wifiSsid);
+  }
   if (temperatureInside > 0) {
+    img.setTextFont(2);
     img.printf("Inside: %.1f", temperatureInside);
     img.setTextFont(1);
     img.printf("o");
@@ -242,6 +255,7 @@ void tftPrintTest() {
     img.printf("F\n");
   }
   if (temperatureOutside > 0) {
+    img.setTextFont(2);
     img.printf("Outside: %.1f", temperatureOutside);
     img.setTextFont(1);
     img.printf("o");
