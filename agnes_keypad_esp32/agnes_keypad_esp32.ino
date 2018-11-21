@@ -105,10 +105,8 @@ void setup() {
   ArduinoOTA.begin();
   
   server.on("/", []() {
-    if (!server.authenticate(WLAN_SSID, WLAN_PASS)) {
-      return server.requestAuthentication();
-    }
-    server.send(200, "text/plain", "Login OK");
+    trellis.begin(0x70);  // only one
+    server.send(200, "text/plain", "OK");
   });
   server.begin();
 
