@@ -12,6 +12,9 @@
 #include <ArduinoOTA.h>
 #include <ESPmDNS.h>
 
+// IMPORTANT: Wire might be broken for ESP32
+// To fix see this: https://github.com/espressif/arduino-esp32/issues/741#issuecomment-374325594
+
 #include <Wire.h>
 #include "Adafruit_Trellis.h"
 
@@ -59,6 +62,9 @@ void setup() {
 
   pinMode(LED, OUTPUT);
   digitalWrite(LED, LOW);
+
+  Wire.begin();
+  Wire.setClock(100000);
 
   // begin() with the addresses of each panel in order
   trellis.begin(0x70);  // only one
