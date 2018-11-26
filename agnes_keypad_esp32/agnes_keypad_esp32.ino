@@ -25,15 +25,10 @@
 
 #include <Passwords.h>
 
+// The built in LED
+#define LED 13
+
 #define BATTERY_PIN   A13
-
-WiFiMulti wifiMulti;
-WebServer server(80);
-
-Adafruit_Trellis matrix0 = Adafruit_Trellis();
-
-// Just one
-Adafruit_TrellisSet trellis =  Adafruit_TrellisSet(&matrix0);
 
 // set to however many you're working with here, up to 8
 #define NUMTRELLIS 1
@@ -43,8 +38,13 @@ Adafruit_TrellisSet trellis =  Adafruit_TrellisSet(&matrix0);
 #define TFT_LIGHT  27
 #define TFT_LIGHT_CHANNEL 0
 
-// The built in LED
-#define LED 13
+WiFiMulti wifiMulti;
+WebServer server(80);
+
+Adafruit_Trellis matrix0 = Adafruit_Trellis();
+
+// Just one
+Adafruit_TrellisSet trellis =  Adafruit_TrellisSet(&matrix0);
 
 // For 1.44" and 1.8" TFT with ST7735 use
 TFT_eSPI tft = TFT_eSPI();
