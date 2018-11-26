@@ -153,6 +153,8 @@ long nextTFTUpdate = 0;
 #define MAX_LIGHT 255
 int light = MAX_LIGHT;
 
+long nextBatteryUpdate = 0;
+
 void loop() {
   delay(30); // 30ms delay is required, dont remove me!
 
@@ -229,6 +231,14 @@ void loop() {
     nextTFTUpdate = millis() + 1000;
     tftPrintTest();
   }
+  if (millis() > nextBatteryUpdate) {
+    nextBatteryUpdate = millis() + 60000;
+    char url[20];
+    sprintf(url, "/text//%d", analogRead(BATTERY_PIN));
+    http.begin("agnespanel", 8080, url);
+    http.GET();
+    http.end();
+  }
 }
 
 void tftPrintTest() {
@@ -240,6 +250,8 @@ void tftPrintTest() {
   img.print(millis() / 1000);
   img.setTextColor(TFT_WHITE, TFT_BLACK);
   img.println(" seconds.");
+  img.print("Battery: ");
+  img.println(analogRead(BATTERY_PIN));
   if (wifiSsid != "") {
     img.setTextFont(1);
     img.printf("WiFi: ");
