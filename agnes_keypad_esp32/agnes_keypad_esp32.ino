@@ -25,6 +25,8 @@
 
 #include <Passwords.h>
 
+#define BATTERY_PIN   A13
+
 WiFiMulti wifiMulti;
 WebServer server(80);
 
