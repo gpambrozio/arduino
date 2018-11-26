@@ -38,9 +38,6 @@ Adafruit_TrellisSet trellis =  Adafruit_TrellisSet(&matrix0);
 
 #define numKeys (NUMTRELLIS * 16)
 
-// Connect Trellis Vin to 5V and Ground to ground.
-#define INTPIN 14
-
 #define TFT_LIGHT  27
 #define TFT_LIGHT_CHANNEL 0
 
@@ -55,10 +52,6 @@ void setup() {
 
   Serial.begin(115200);
   Serial.println("Keypad");
-
-  // INT pin requires a pullup
-  pinMode(INTPIN, INPUT_PULLUP);
-  digitalWrite(INTPIN, HIGH);
 
   pinMode(LED, OUTPUT);
   digitalWrite(LED, LOW);
