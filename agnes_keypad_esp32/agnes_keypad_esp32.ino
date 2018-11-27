@@ -29,6 +29,7 @@
 #define LED 13
 
 #define BATTERY_PIN   A13
+#define POWER_PIN     A2
 
 // set to however many you're working with here, up to 8
 #define NUMTRELLIS 1
@@ -55,6 +56,8 @@ void setup() {
   Serial.begin(115200);
   Serial.println("Keypad");
 
+  pinMode(BATTERY_PIN, INPUT);
+  pinMode(POWER_PIN, INPUT);
   pinMode(LED, OUTPUT);
   digitalWrite(LED, LOW);
 
@@ -149,6 +152,8 @@ String wifiSsid = "";
 
 long nextTFTUpdate = 0;
 
+float battery, power;
+
 #define LIGHT_CHANGE 32
 #define MAX_LIGHT 255
 int light = MAX_LIGHT;
@@ -225,6 +230,10 @@ void loop() {
     }
   }
   
+  // Formula from http://cuddletech.com/?p=1030
+  battery = ((float)(analogRead(BATTERY_PIN)) / 4095) * 2.0 * 3.3 * 1.1;
+  power = ((float)(analogRead(POWER_PIN)) / 4095) * 2.0 * 3.3 * 1.1;
+
   ArduinoOTA.handle();
   server.handleClient();
   if (millis() > nextTFTUpdate) {
@@ -233,8 +242,8 @@ void loop() {
   }
   if (millis() > nextBatteryUpdate) {
     nextBatteryUpdate = millis() + 60000;
-    char url[20];
-    sprintf(url, "/text//%d", analogRead(BATTERY_PIN));
+    char url[30];
+    sprintf(url, "/text//%.2f/%.2f", battery, power);
     http.begin("agnespanel", 8080, url);
     http.GET();
     http.end();
@@ -250,8 +259,13 @@ void tftPrintTest() {
   img.print(millis() / 1000);
   img.setTextColor(TFT_WHITE, TFT_BLACK);
   img.println(" seconds.");
+
   img.print("Battery: ");
-  img.println(analogRead(BATTERY_PIN));
+  img.println(battery);
+  
+  img.print("Power: ");
+  img.println(power);
+  
   if (wifiSsid != "") {
     img.setTextFont(1);
     img.printf("WiFi: ");
