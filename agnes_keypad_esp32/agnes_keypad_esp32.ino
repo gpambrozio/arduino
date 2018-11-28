@@ -152,11 +152,15 @@ String wifiSsid = "";
 
 long nextTFTUpdate = 0;
 
-float battery, power;
+float battery;
+float power;
 
 #define LIGHT_CHANGE 32
-#define MAX_LIGHT 255
-int light = MAX_LIGHT;
+#define MAX_LIGHT_POWER 255
+#define MAX_LIGHT_BATTERY 96
+#define MAX_LIGHT (power < 4.0 ? MAX_LIGHT_BATTERY : MAX_LIGHT_POWER)
+
+int light = MAX_LIGHT_POWER;
 
 long nextBatteryUpdate = 0;
 
@@ -175,12 +179,8 @@ void loop() {
 
         if (i == 15) {
           light += LIGHT_CHANGE;
-          if (light > MAX_LIGHT) light = MAX_LIGHT;
-          sigmaDeltaWrite(TFT_LIGHT_CHANNEL, light);
         } else if (i == 14) {
           light -= LIGHT_CHANGE;
-          if (light < 0) light = 0;
-          sigmaDeltaWrite(TFT_LIGHT_CHANNEL, light);
         } else {
           if (i % 2 == 1) {
             http.begin("agnespanel", 8080, "/text//0");
@@ -233,6 +233,10 @@ void loop() {
   // Formula from http://cuddletech.com/?p=1030
   battery = ((float)(analogRead(BATTERY_PIN)) / 4095) * 2.0 * 3.3 * 1.1;
   power = ((float)(analogRead(POWER_PIN)) / 4095) * 2.0 * 3.3 * 1.1;
+
+  light = min(light, MAX_LIGHT);
+  if (light < 0) light = 0;   // min is not defined for some reason...
+  sigmaDeltaWrite(TFT_LIGHT_CHANNEL, light);
 
   ArduinoOTA.handle();
   server.handleClient();
