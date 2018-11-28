@@ -11,16 +11,14 @@
 
 // Created by: Bodmer 27/1/17
 // Updated by: Bodmer 10/3/17
-// Version: 0.07
+// Updated by: Bodmer 23/11/18 to support SDA reads and the ESP32
+// Version: 0.08
 
 // MIT licence applies, all text above must be included in derivative works
 
 //====================================================================================
 //                                  Definitions
 //====================================================================================
-#define BAUD_RATE 250000      // Maximum Serial Monitor rate for other messages
-#define DUMP_BAUD_RATE 921600 // Rate used for screen dumps
-
 #define PIXEL_TIMEOUT 100     // 100ms Time-out between pixel requests
 #define START_TIMEOUT 10000   // 10s Maximum time to wait at start transfer
 
@@ -33,14 +31,17 @@
 #define FILE_TYPE "png"       // jpg, bmp, png, tif are valid
 
 // Filename extension
-// '#' = add 0-9, '@' = add timestamp, '%' add millis() timestamp, '*' = add nothing
+// '#' = add incrementing number, '@' = add timestamp, '%' add millis() timestamp,
+// '*' = add nothing
 // '@' and '%' will generate new unique filenames, so beware of cluttering up your
 // hard drive with lots of images! The PC client sketch is set to limit the number of
 // saved images to 1000 and will then prompt for a restart.
-#define FILE_EXT  '%'         
+#define FILE_EXT  '@'         
 
 // Number of pixels to send in a burst (minimum of 1), no benefit above 8
-// NPIXELS values and render times: 1 = 5.0s, 2 = 1.75s, 4 = 1.68s, 8 = 1.67s
+// NPIXELS values and render times:
+// NPIXELS 1 = use readPixel() = >5s and 16 bit pixels only
+// NPIXELS >1 using rectRead() 2 = 1.75s, 4 = 1.68s, 8 = 1.67s
 #define NPIXELS 8  // Must be integer division of both TFT width and TFT height
 
 //====================================================================================
@@ -60,16 +61,12 @@ boolean screenServer(void)
 // Start a screen dump server (serial or network) - filename specified
 boolean screenServer(String filename)
 {
-  Serial.end();                 // Stop the serial port (clears buffers too)
-  Serial.begin(DUMP_BAUD_RATE); // Force baud rate to be high
   delay(0); // Equivalent to yield() for ESP8266;
 
   boolean result = serialScreenServer(filename); // Screenshot serial port server
   //boolean result = wifiScreenServer(filename);   // Screenshot WiFi UDP port server (WIP)
 
-  Serial.end();                 // Stop the serial port (clears buffers too)
-  Serial.begin(BAUD_RATE);      // Return baud rate to normal
-  delay(0); // Equivalent to yield() for ESP8266;
+  delay(0); // Equivalent to yield()
 
   //Serial.println();
   //if (result) Serial.println(F("Screen dump passed :-)"));
@@ -146,14 +143,20 @@ boolean serialScreenServer(String filename)
       // Save arrival time of the read command (for later time-out check)
       lastCmdTime = millis();
 
-#if defined BITS_PER_PIXEL && BITS_PER_PIXEL >= 24
+#if defined BITS_PER_PIXEL && BITS_PER_PIXEL >= 24 && NPIXELS > 1
       // Fetch N RGB pixels from x,y and put in buffer
       tft.readRectRGB(x, y, NPIXELS, 1, color);
       // Send buffer to client
       Serial.write(color, 3 * NPIXELS); // Write all pixels in the buffer
 #else
       // Fetch N 565 format pixels from x,y and put in buffer
-      tft.readRect(x, y, NPIXELS, 1, (uint16_t *)color);
+      if (NPIXELS > 1) tft.readRect(x, y, NPIXELS, 1, (uint16_t *)color);
+      else
+      {
+        uint16_t c = tft.readPixel(x, y);
+        color[0] = c>>8;
+        color[1] = c & 0xFF;  // Swap bytes
+      }
       // Send buffer to client
       Serial.write(color, 2 * NPIXELS); // Write all pixels in the buffer
 #endif
@@ -179,7 +182,8 @@ void sendParameters(String filename)
   Serial.write(tft.height() & 0xFF);
 
   Serial.write('Y'); // Bits per pixel (16 or 24)
-  Serial.write(BITS_PER_PIXEL);
+  if (NPIXELS > 1) Serial.write(BITS_PER_PIXEL);
+  else Serial.write(16); // readPixel() only provides 16 bit values
 
   Serial.write('?'); // Filename next
   Serial.print(filename);
@@ -190,5 +194,3 @@ void sendParameters(String filename)
 
   Serial.write(*FILE_TYPE); // First character defines file type j,b,p,t
 }
-
-

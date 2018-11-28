@@ -1,3 +1,18 @@
+
+# News
+
+1. androdlang has published a really nice companion library to extend the graphics capabilities of TFT_eSPI, you can find this here:
+https://github.com/androdlang/TFTShape
+
+2. I have created a user updateable graphics extension library template that can be used to create your own graphics extensions. The Library contains examples and is commented so it should be clear what you need to do to add functions. You can find it here:
+https://github.com/Bodmer/TFT_eFX
+
+3. The capability to read from an ST7789V TFT with a single bidirectional SDA pin has been added. At the moment this **ONLY** works with an ESP32. It is enabled with a #define TFT_SDA_READ in the setup file.
+
+4. ST7789V displays are manufactured in two variants that have the red and green pixels swapped, this is catered for by a new option in the setup file:
+    //#define TFT_RGB_ORDER TFT_RGB  // Colour order Red-Green-Blue
+    //#define TFT_RGB_ORDER TFT_BGR  // Colour order Blue-Green-Red
+
 # TFT_eSPI
 
 An Arduino IDE compatible graphics and fonts library for ESP8266 and ESP32 processors with drivers for ILI9341, ILI9163, ST7735, S6D02A1, ILI9481, ILI9486, ILI9488, HX8357D and ST7789 based TFT displays that support SPI. The library can be loaded using the Arduino IDE's Library Manager.
@@ -5,6 +20,8 @@ An Arduino IDE compatible graphics and fonts library for ESP8266 and ESP32 proce
 8 bit parallel interface TFTs  (e.g. UNO format mcufriend shields) can used with an ESP32.
 
 The library supports TFT displays designed for the Raspberry Pi that are based on a ILI9486 driver chip with a 480 x 320 pixel screen. This display must be of the Waveshare design and use a 16 bit serial interface based on the 74HC04, 74HC4040 and 2 x 74HC4094 logic chips. A modification to these displays is possible (see mod image in Tools folder) to make many graphics functions much faster (e.g. 23ms to clear the screen, 1.2ms to draw a 72 pixel high numeral).
+
+Some displays permit the internal TFT screen RAM to be read. The library supports reading from ILI9341, ST7789 and ILI9488 SPI displays for the ESP32 and ESP8266. The 8 bit parallel displays used with the ESP32 can usually can be read too. The TFT_Screen_Capture example allows full screens to be captured and sent to a PC, this is handy to create program documentation.
 
 Support has been added recently for Waveshare 2 and 3 colour ePaper displays using full frame buffers. This addition is currently relatively immature and thus only one example has been provided. Further examples will be added soon.
 
@@ -26,11 +43,11 @@ The Button class from Adafruit_GFX is incorporated, with the enhancement that th
 
 The library supports SPI overlap on the ESP8266 so the TFT screen can share MOSI, MISO and SCLK pins with the program FLASH, this frees up GPIO pins for other uses.
 
-The library contains proportional fonts, different sizes can be enabled/disabled at compile time to optimise the use of FLASH memory. Anti-alased (smooth) font files in vlw format stored in SPIFFS are supported and in the case any 16 bit Unicode character can be included and rendered, this means many language specific characters can be rendered to the screen.
+The library contains proportional fonts, different sizes can be enabled/disabled at compile time to optimise the use of FLASH memory. Anti-alased (smooth) font files in vlw format stored in SPIFFS are supported. Any 16 bit Unicode character can be included and rendered, this means many language specific characters can be rendered to the screen.
 
 The library is based on the Adafruit GFX and Adafruit driver libraries and the aim is to retain compatibility. Significant additions have been made to the library to boost the speed for ESP8266/ESP32 processors (it is typically 3 to 10 times faster) and to add new features. The new graphics functions include different size proportional fonts and formatting features. There are lots of example sketches to demonstrate the different features and included functions.
 
-Configuration of the library font selections, pins used to interface with the TFT and other features is made by editting the User_Setup.h file in the library folder, or by selecting a configuration in the library "User_Setup_Selet,h" file.  Fonts and features can easily be disabled by commenting out lines.
+Configuration of the library font selections, pins used to interface with the TFT and other features is made by editting the User_Setup.h file in the library folder, or by selecting your own configuration in the "User_Setup_Selet,h" file.  Fonts and features can easily be enabled/disabled by commenting out lines.
 
 
 # Anti-aliased Fonts
@@ -71,6 +88,8 @@ IO32 wired to IO36
 
 ![Example](https://i.imgur.com/pUZn6lF.jpg)
 
+If the display board is fitted with a resistance based touch screen then this can be used by performing the modifications described here and the fork of the Adafruit library:
+https://github.com/s60sc/Adafruit_TouchScreen
 
 # ePaper displays
 

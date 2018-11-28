@@ -657,7 +657,21 @@ void TFT_eSprite::scroll(int16_t dx, int16_t dy)
       fyp += iw;
     }
   }
-  else return; // TODO add scroll for 1 bpp
+  else if (_bpp == 1)
+  {
+    if (dx >  0) { tx += w; fx += w; } // Start from right edge
+    while (h--)
+    { // move pixels one by one
+      for (uint16_t xp = 0; xp < w; xp++)
+      {
+        if (dx <= 0) drawPixel(tx + xp, ty, readPixel(fx + xp, fy));
+        if (dx >  0) drawPixel(tx - xp, ty, readPixel(fx - xp, fy));
+      }
+      if (dy <= 0)  { ty++; fy++; }
+      else  { ty--; fy--; }
+    }
+  }
+  else return; // Not 1, 8 or 16 bpp
 
   // Fill the gap left by the scrolling
   if (dx > 0) fillRect(_sx, _sy, dx, _sh, _scolor);
@@ -946,11 +960,14 @@ void TFT_eSprite::fillRect(int32_t x, int32_t y, int32_t w, int32_t h, uint32_t 
 {
   if (!_created ) return;
 
+  if ((x >= _iwidth) || (y >= _iheight)) return;
+  
   if (x < 0) { w += x; x = 0; }
+  if (y < 0) { h += y; y = 0; }
 
-  if ((x < 0) || (y < 0) || (x >= _iwidth) || (y >= _iheight)) return;
   if ((x + w) > _iwidth)  w = _iwidth  - x;
   if ((y + h) > _iheight) h = _iheight - y;
+
   if ((w < 1) || (h < 1)) return;
 
   int32_t yp = _iwidth * y + x;
