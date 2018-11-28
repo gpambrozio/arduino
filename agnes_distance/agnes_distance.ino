@@ -23,15 +23,21 @@
 #define echoPin  25
 
 // defines variables
-long duration;
-float distance = 0;
 
 BLEServer *pServer;
 BLEService *pService;
 BLECharacteristic *pCharacteristic;
 BLEAdvertising *pAdvertising;
 
+#define BUFFER_SIZE  20
+
+float distance = 0;
+float distanceBuffer[BUFFER_SIZE];
+float distanceBufferSum = 0;
+int distanceBufferPosition = 0;
+
 void setup() {
+  memset(distanceBuffer, 0, sizeof(float) * BUFFER_SIZE);
   
   pinMode(trigPin, OUTPUT); // Sets the trigPin as an Output
   pinMode(echoPin, INPUT); // Sets the echoPin as an Input
@@ -65,15 +71,23 @@ void loop() {
   digitalWrite(trigPin, LOW);
   
   // Reads the echoPin, returns the sound wave travel time in microseconds
-  duration = pulseIn(echoPin, HIGH, 10000);
+  long duration = pulseIn(echoPin, HIGH, 10000);
   
   // Calculating the distance
-  distance = (float)duration * 0.017;
+  distance = (float)duration * 0.1715; // 343 m/s divided by 2
 
   if (duration > 20) {
-    // Prints the distance on the Serial Monitor
+    distanceBufferSum -= distanceBuffer[distanceBufferPosition];
+    distanceBufferSum += distance;
+    distanceBuffer[distanceBufferPosition] = distance;
+
+    distance = distanceBufferSum / BUFFER_SIZE;
+    if (++distanceBufferPosition >= BUFFER_SIZE)
+      distanceBufferPosition = 0;
+    
     pCharacteristic->setValue(distance);
     pCharacteristic->notify();
+
     Serial.print("Distance: ");
     Serial.println(distance);
   }
