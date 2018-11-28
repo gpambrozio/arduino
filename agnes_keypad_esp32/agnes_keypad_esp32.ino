@@ -162,8 +162,6 @@ float power;
 
 int light = MAX_LIGHT_POWER;
 
-long nextBatteryUpdate = 0;
-
 void loop() {
   delay(30); // 30ms delay is required, dont remove me!
 
@@ -243,14 +241,6 @@ void loop() {
   if (millis() > nextTFTUpdate) {
     nextTFTUpdate = millis() + 1000;
     tftPrintTest();
-  }
-  if (millis() > nextBatteryUpdate) {
-    nextBatteryUpdate = millis() + 60000;
-    char url[30];
-    sprintf(url, "/text//%.2f/%.2f", battery, power);
-    http.begin("agnespanel", 8080, url);
-    http.GET();
-    http.end();
   }
 }
 
