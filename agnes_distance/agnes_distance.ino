@@ -2,7 +2,7 @@
  * Ultrasonic Sensor HC-SR04 and Arduino Tutorial
  *
  * by Dejan Nedelkovski,
- * www.HowToMechatronics.com
+ * https://howtomechatronics.com/tutorials/arduino/ultrasonic-sensor-hc-sr04/
  *
  */
 
