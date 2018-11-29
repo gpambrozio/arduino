@@ -9,7 +9,6 @@ extern TFT_eSprite img;
 
 extern HTTPClient http;
 extern WiFiClient client;
-extern String wifiSsid;
 
 extern float battery;
 extern float power;

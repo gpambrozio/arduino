@@ -21,6 +21,7 @@
 #include "Mode.h"
 #include "ModeDebug.h"
 #include "ModeDrive.h"
+#include "ModeHouse.h"
 
 #define WLAN_AGNES
 
@@ -54,6 +55,7 @@ TFT_eSprite img = TFT_eSprite(&tft);
 
 Mode *modes[] = {
   new ModeDebug(),
+  new ModeHouse(),
   new ModeDrive(),
 };
 
@@ -156,8 +158,6 @@ void setup() {
 
 HTTPClient http;
 WiFiClient client;
-
-String wifiSsid = "";
 
 long nextTFTUpdate = 0;
 
