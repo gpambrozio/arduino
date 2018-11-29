@@ -226,7 +226,7 @@ void loop() {
   if (millis() > nextTFTUpdate) {
     nextTFTUpdate = millis() + 1000;
     img.fillSprite(TFT_BLACK);
-    img.setCursor(0, 0, 1);
+    img.setCursor(0, 0, 2);
     img.setTextColor(TFT_WHITE);
     img.print(modes[mode]->name());
     img.println(" mode");
