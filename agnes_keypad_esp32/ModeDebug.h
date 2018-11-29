@@ -18,11 +18,11 @@ class ModeDebug : public Mode
     virtual void draw() {
       img.setTextFont(1);
       img.setTextColor(TFT_WHITE);
-      img.print("Sketch has been running for ");
+      img.print("Sketch has been\nrunning for ");
       img.setTextColor(TFT_MAGENTA, TFT_BLACK);
       img.print(millis() / 1000);
       img.setTextColor(TFT_WHITE, TFT_BLACK);
-      img.println(" seconds.");
+      img.println(" secs");
     
       img.print("Battery: ");
       img.println(battery);
