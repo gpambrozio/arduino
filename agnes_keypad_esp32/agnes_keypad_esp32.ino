@@ -8,7 +8,6 @@
 #include <WiFiMulti.h>
 
 #include <WebServer.h>
-#include <HTTPClient.h>
 #include <ArduinoOTA.h>
 #include <ESPmDNS.h>
 
@@ -16,10 +15,12 @@
 // To fix see this: https://github.com/espressif/arduino-esp32/issues/741#issuecomment-374325594
 
 #include <Wire.h>
-#include "Adafruit_Trellis.h"
-
 #include <SPI.h>
-#include <TFT_eSPI.h>       // Hardware-specific library
+
+#include "Common.h"
+#include "Mode.h"
+#include "ModeDebug.h"
+#include "ModeDrive.h"
 
 #define WLAN_AGNES
 
@@ -50,6 +51,14 @@ Adafruit_TrellisSet trellis =  Adafruit_TrellisSet(&matrix0);
 // For 1.44" and 1.8" TFT with ST7735 use
 TFT_eSPI tft = TFT_eSPI();
 TFT_eSprite img = TFT_eSprite(&tft);
+
+Mode *modes[] = {
+  new ModeDebug(),
+  new ModeDrive(),
+};
+
+#define NUMBER_OF_MODES  (sizeof(modes) / sizeof(Mode *))
+byte mode = 0;
 
 void setup() {
 
@@ -137,16 +146,16 @@ void setup() {
   }
 
   tft.fillScreen(TFT_BLACK);
+
+  for (uint8_t i=0; i<NUMBER_OF_MODES; i++) {
+    modes[i]->init();
+  }
+  
   Serial.println("setup done");
 }
 
 HTTPClient http;
 WiFiClient client;
-
-float temperatureOutside = 0;
-float temperatureInside = 0;
-float thermostatTarget = 0;
-bool thermostatOn = false;
 
 String wifiSsid = "";
 
@@ -167,38 +176,22 @@ void loop() {
 
   // If a button was just pressed or released...
   if (trellis.readSwitches()) {
-    // go through every button
-    for (uint8_t i=0; i<numKeys; i++) {
-      // if it was pressed...
-      if (trellis.justPressed(i)) {
-        Serial.printf("v%d\n", i);
-        // Alternate the LED
-        trellis.setLED(i);
-
-        if (i == 15) {
-          light += LIGHT_CHANGE;
-        } else if (i == 14) {
-          light -= LIGHT_CHANGE;
-        } else {
-          if (i % 2 == 1) {
-            http.begin("agnespanel", 8080, "/text//0");
-          } else {
-            http.begin("agnespanel", 8080, "/image/thanks/1");
-          }
-          
-          int httpCode = http.GET();
-          if (httpCode > 0) {
-            Serial.printf("[HTTP] GET... code: %d\n", httpCode);
-          } else {
-            Serial.print("[HTTP] GET... failed, error: "); Serial.println(http.errorToString(httpCode).c_str());
-          }
-  
-          http.end();
-        }
-      } else if (trellis.justReleased(i)) {
-        trellis.clrLED(i);
-      }
+    if (trellis.justPressed(12)) {
+      if (mode == 0) mode = NUMBER_OF_MODES - 1;
+      else mode--;
+      nextTFTUpdate = 0;
     }
+    if (trellis.justPressed(13)) {
+      if (++mode >= NUMBER_OF_MODES) mode = 0;
+      nextTFTUpdate = 0;
+    }
+    if (trellis.justPressed(14)) {
+      light -= LIGHT_CHANGE;
+    }
+    if (trellis.justPressed(15)) {
+      light += LIGHT_CHANGE;
+    }
+    modes[mode]->checkKeys();
     // tell the trellis to set the LEDs we requested
     trellis.writeDisplay();
   }
@@ -207,16 +200,8 @@ void loop() {
     if (client.available()) {
       String line = client.readStringUntil('\n');
       Serial.print("Received "); Serial.println(line);
-      if (line.startsWith("To")) {
-        temperatureOutside = line.substring(2).toFloat() / 10.0;
-      } else if (line.startsWith("Ti")) {
-        temperatureInside = line.substring(2).toFloat() / 10.0;
-      } else if (line.startsWith("TO")) {
-        thermostatOn = line.substring(2).toInt() != 0;
-      } else if (line.startsWith("Tt")) {
-        thermostatTarget = line.substring(2).toFloat() / 10.0;
-      } else if (line.startsWith("Ws")) {
-        wifiSsid = line.substring(2);
+      for (uint8_t i=0; i<NUMBER_OF_MODES; i++) {
+        modes[i]->checkCommand(line);
       }
     }
   } else {
@@ -240,46 +225,12 @@ void loop() {
   server.handleClient();
   if (millis() > nextTFTUpdate) {
     nextTFTUpdate = millis() + 1000;
-    tftPrintTest();
+    img.fillSprite(TFT_BLACK);
+    img.setCursor(0, 0, 1);
+    img.setTextColor(TFT_WHITE);
+    img.print(modes[mode]->name());
+    img.println(" mode");
+    modes[mode]->draw();
+    img.pushSprite(0, 0);
   }
-}
-
-void tftPrintTest() {
-  img.fillSprite(TFT_BLACK);
-  img.setCursor(0, 0, 1);
-  img.setTextColor(TFT_WHITE);
-  img.println("Sketch has been\nrunning for");
-  img.setTextColor(TFT_MAGENTA, TFT_BLACK);
-  img.print(millis() / 1000);
-  img.setTextColor(TFT_WHITE, TFT_BLACK);
-  img.println(" seconds.");
-
-  img.print("Battery: ");
-  img.println(battery);
-  
-  img.print("Power: ");
-  img.println(power);
-  
-  if (wifiSsid != "") {
-    img.setTextFont(1);
-    img.printf("WiFi: ");
-    img.println(wifiSsid);
-  }
-  if (temperatureInside > 0) {
-    img.setTextFont(2);
-    img.printf("Inside: %.1f", temperatureInside);
-    img.setTextFont(1);
-    img.printf("o");
-    img.setTextFont(2);
-    img.printf("F\n");
-  }
-  if (temperatureOutside > 0) {
-    img.setTextFont(2);
-    img.printf("Outside: %.1f", temperatureOutside);
-    img.setTextFont(1);
-    img.printf("o");
-    img.setTextFont(2);
-    img.printf("F\n");
-  }
-  img.pushSprite(0, 0);
 }
