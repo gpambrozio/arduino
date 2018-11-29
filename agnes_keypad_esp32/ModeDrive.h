@@ -10,6 +10,7 @@ class ModeDrive : public Mode
     virtual String name() { return "Drive"; }
     virtual void init() { }
     virtual void setup() {}
+    virtual void tearDown() {}
     virtual void checkKeys() {
       for (uint8_t i=0; i<12; i++) {
         if (trellis.justPressed(i)) {

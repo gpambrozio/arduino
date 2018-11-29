@@ -176,16 +176,14 @@ void loop() {
 
   // If a button was just pressed or released...
   if (trellis.readSwitches()) {
-    bool changedMode = false;
+    byte previousMode = mode;
     
     if (trellis.justPressed(12)) {
       if (mode == 0) mode = NUMBER_OF_MODES - 1;
       else mode--;
-      changedMode = true;
     }
     if (trellis.justPressed(13)) {
       if (++mode >= NUMBER_OF_MODES) mode = 0;
-      changedMode = true;
     }
     if (trellis.justPressed(14)) {
       light -= LIGHT_CHANGE;
@@ -193,8 +191,9 @@ void loop() {
     if (trellis.justPressed(15)) {
       light += LIGHT_CHANGE;
     }
-    if (changedMode) {
+    if (previousMode != mode) {
       nextTFTUpdate = 0;
+      modes[previousMode]->tearDown();
       for (uint8_t i=0; i<numKeys; i++) {
         trellis.clrLED(i);
       }

@@ -10,6 +10,7 @@ class ModeDebug : public Mode
     virtual String name() { return "Debug"; }
     virtual void init() {}
     virtual void setup() {}
+    virtual void tearDown() {}
     virtual void checkKeys() {}
     virtual void checkCommand(String command) {
       if (command.startsWith("Ws")) {

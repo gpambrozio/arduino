@@ -11,6 +11,9 @@ void Mode::init() {
 void Mode::setup() {
 }
 
+void Mode::tearDown() {
+}
+
 String Mode::name() {
   return "";
 }

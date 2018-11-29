@@ -11,6 +11,7 @@ class Mode
     virtual void init();
     virtual String name();
     virtual void setup();
+    virtual void tearDown();
     virtual void checkKeys();
     virtual void checkCommand(String command);
     virtual void draw();

@@ -10,6 +10,7 @@ class ModeHouse : public Mode
     virtual String name() { return "House"; }
     virtual void init() {}
     virtual void setup() {}
+    virtual void tearDown() {}
     virtual void checkKeys() {}
     virtual void checkCommand(String command) {
       if (command.startsWith("To")) {
