@@ -9,6 +9,7 @@ class ModeDebug : public Mode
     explicit ModeDebug() {}
     virtual String name() { return "Debug"; }
     virtual void init() {}
+    virtual void setup() {}
     virtual void checkKeys() {}
     virtual void checkCommand(String command) {
       if (command.startsWith("Ws")) {

@@ -176,20 +176,29 @@ void loop() {
 
   // If a button was just pressed or released...
   if (trellis.readSwitches()) {
+    bool changedMode = false;
+    
     if (trellis.justPressed(12)) {
       if (mode == 0) mode = NUMBER_OF_MODES - 1;
       else mode--;
-      nextTFTUpdate = 0;
+      changedMode = true;
     }
     if (trellis.justPressed(13)) {
       if (++mode >= NUMBER_OF_MODES) mode = 0;
-      nextTFTUpdate = 0;
+      changedMode = true;
     }
     if (trellis.justPressed(14)) {
       light -= LIGHT_CHANGE;
     }
     if (trellis.justPressed(15)) {
       light += LIGHT_CHANGE;
+    }
+    if (changedMode) {
+      nextTFTUpdate = 0;
+      for (uint8_t i=0; i<numKeys; i++) {
+        trellis.clrLED(i);
+      }
+      modes[mode]->setup();
     }
     modes[mode]->checkKeys();
     // tell the trellis to set the LEDs we requested

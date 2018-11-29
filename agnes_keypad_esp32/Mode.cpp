@@ -8,6 +8,9 @@ Mode::Mode() {
 void Mode::init() {
 }
 
+void Mode::setup() {
+}
+
 String Mode::name() {
   return "";
 }

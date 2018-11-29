@@ -9,6 +9,7 @@ class ModeHouse : public Mode
     explicit ModeHouse() {}
     virtual String name() { return "House"; }
     virtual void init() {}
+    virtual void setup() {}
     virtual void checkKeys() {}
     virtual void checkCommand(String command) {
       if (command.startsWith("To")) {
@@ -34,6 +35,14 @@ class ModeHouse : public Mode
       if (temperatureOutside > 0) {
         img.setTextFont(2);
         img.printf("Outside: %.1f", temperatureOutside);
+        img.setTextFont(1);
+        img.printf("o");
+        img.setTextFont(2);
+        img.printf("F\n");
+      }
+      if (thermostatTarget > 0) {
+        img.setTextFont(2);
+        img.printf("Thermostat: %.1f", thermostatTarget);
         img.setTextFont(1);
         img.printf("o");
         img.setTextFont(2);
