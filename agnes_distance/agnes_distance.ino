@@ -49,14 +49,16 @@ void setup() {
   pCharacteristic = pService->createCharacteristic(
                       CHARACTERISTIC_UUID,
                       BLECharacteristic::PROPERTY_READ   |
-                      BLECharacteristic::PROPERTY_WRITE  |
-                      BLECharacteristic::PROPERTY_NOTIFY |
-                      BLECharacteristic::PROPERTY_INDICATE
+                      BLECharacteristic::PROPERTY_WRITE
                     );
 
   pCharacteristic->setValue(distance);
   pService->start();
+
+  BLEAdvertisementData avdData = BLEAdvertisementData();
+  avdData.setCompleteServices(pService->getUUID());
   pAdvertising = pServer->getAdvertising();
+  pAdvertising->setScanResponseData(avdData);
   pAdvertising->start();
 }
 
@@ -86,7 +88,6 @@ void loop() {
       distanceBufferPosition = 0;
     
     pCharacteristic->setValue(distance);
-    pCharacteristic->notify();
 
     Serial.print("Distance: ");
     Serial.println(distance);
