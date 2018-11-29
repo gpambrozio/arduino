@@ -12,3 +12,5 @@ extern WiFiClient client;
 
 extern float battery;
 extern float power;
+
+void addCommand(String command);

@@ -17,6 +17,8 @@
 #include <Wire.h>
 #include <SPI.h>
 
+#include <vector>
+
 #include "Common.h"
 #include "Mode.h"
 #include "ModeDebug.h"
@@ -164,6 +166,8 @@ long nextTFTUpdate = 0;
 float battery;
 float power;
 
+std::vector<String> commandsToSend;
+
 #define LIGHT_CHANGE 32
 #define MAX_LIGHT_POWER 255
 #define MAX_LIGHT_BATTERY 96
@@ -204,21 +208,24 @@ void loop() {
     trellis.writeDisplay();
   }
 
-  if (client.connected()) {
-    if (client.available()) {
-      String line = client.readStringUntil('\n');
-      Serial.print("Received "); Serial.println(line);
-      for (uint8_t i=0; i<NUMBER_OF_MODES; i++) {
-        modes[i]->checkCommand(line);
-      }
-    }
-  } else {
+  if (!client.connected()) {
     Serial.println("connecting to server.");
     client.stop();
     if (client.connect(WiFi.gatewayIP(), 5000)) {
       Serial.println("connected to server.");
       client.print("Panel\n");
     }
+  } else if (client.available()) {
+    String line = client.readStringUntil('\n');
+    Serial.print("Received "); Serial.println(line);
+    for (uint8_t i=0; i<NUMBER_OF_MODES; i++) {
+      modes[i]->checkCommand(line);
+    }
+  } else if (!commandsToSend.empty()) {
+    for (uint8_t i=0; i<commandsToSend.size(); i++) {
+      client.print(commandsToSend[i] + "\n");
+    }
+    commandsToSend.clear();
   }
   
   // Formula from http://cuddletech.com/?p=1030
@@ -241,4 +248,8 @@ void loop() {
     modes[mode]->draw();
     img.pushSprite(0, 0);
   }
+}
+
+void addCommand(String command) {
+  commandsToSend.push_back(command);
 }

@@ -9,8 +9,12 @@ class ModeDrive : public Mode
     explicit ModeDrive() {}
     virtual String name() { return "Drive"; }
     virtual void init() { }
-    virtual void setup() {}
-    virtual void tearDown() {}
+    virtual void setup() {
+      addCommand("ParkingSensor:1");
+    }
+    virtual void tearDown() {
+      addCommand("ParkingSensor:0");
+    }
     virtual void checkKeys() {
       for (uint8_t i=0; i<12; i++) {
         if (trellis.justPressed(i)) {
@@ -33,14 +37,20 @@ class ModeDrive : public Mode
         }
       }
     }
-    virtual void checkCommand(String command) {}
+    virtual void checkCommand(String command) {
+      if (command.startsWith("Ds")) {
+        distance = command.substring(2).toFloat();
+      }
+    }
     virtual void draw() {
+      img.setTextColor(TFT_WHITE);
+      if (distance > 0) {
+        img.setTextFont(2);
+        img.printf("Distance: %.1f\n", distance);
+      }
     }
   private:
-  float temperatureOutside = 0;
-  float temperatureInside = 0;
-  float thermostatTarget = 0;
-  bool thermostatOn = false;
+    float distance = 0;
 };
 
 #endif
