@@ -25,9 +25,19 @@
 //#define ILI9486_DRIVER
 //#define ILI9488_DRIVER
 //#define ST7789_DRIVER // Define the screen size below for this display
+//#define R61581_DRIVER
+
+// Some displays support SPI reads via the MISO pin, if the display has a single
+// bi-directional SDA pin the library will try to use bit banging to read the line
+// To use the SDA line for reading data from the TFT uncomment the following line:
+// #define TFT_SDA_READ
 
 // For M5Stack ESP32 module with integrated display ONLY, remove // in line below
 //#define M5STACK
+
+// For ST7789 ONLY, define the colour order IF the blue and red are swapped on your display
+//#define TFT_RGB_ORDER TFT_RGB  // Colour order Red-Green-Blue
+//#define TFT_RGB_ORDER TFT_BGR  // Colour order Blue-Green-Red
 
 // For ST7789, ST7735 and ILI9163 ONLY, define the pixel width and height in portrait orientation
 // #define TFT_WIDTH  80
@@ -55,6 +65,7 @@
 // #define ST7735_GREENTAB160x80 // For 160 x 80 display (BGR, inverted, 26 offset)
 // #define ST7735_REDTAB
 // #define ST7735_BLACKTAB
+// #define ST7735_REDTAB160x80 // For 160 x 80 display (24 offset) (https://www.aliexpress.com/item/ShengYang-1pcs-IPS-0-96-inch-7P-SPI-HD-65K-Full-Color-OLED-Module-ST7735-Drive/32918394604.html)
 
 // ##################################################################################
 //
@@ -96,9 +107,9 @@
 // ###### EDIT THE PIN NUMBERS IN THE LINES FOLLOWING TO SUIT YOUR ESP8266 SETUP ######
 
 // For NodeMCU - use pin numbers in the form PIN_Dx where Dx is the NodeMCU pin designation
-#define TFT_CS   12  // Chip select control pin D8
-#define TFT_DC   32  // Data Command control pin
-#define TFT_RST  15  // Reset pin (could connect to NodeMCU RST, see next line)
+#define TFT_CS   PIN_D8  // Chip select control pin D8
+#define TFT_DC   PIN_D3  // Data Command control pin
+#define TFT_RST  PIN_D4  // Reset pin (could connect to NodeMCU RST, see next line)
 //#define TFT_RST  -1    // Set TFT_RST to -1 if the display RESET is connected to NodeMCU RST or 3.3V
 
 //#define TFT_BL PIN_D1  // LED back-light (only for ST7789 with backlight control pin)
@@ -114,14 +125,15 @@
 // but saves pins for other functions.
 // Use NodeMCU SD0=MISO, SD1=MOSI, CLK=SCLK to connect to TFT in overlap mode
 
+// In ESP8266 overlap mode the following must be defined
+//#define TFT_SPI_OVERLAP
+
 // In ESP8266 overlap mode the TFT chip select MUST connect to pin D3
 //#define TFT_CS   PIN_D3
 //#define TFT_DC   PIN_D5  // Data Command control pin
 //#define TFT_RST  PIN_D4  // Reset pin (could connect to NodeMCU RST, see next line)
 //#define TFT_RST  -1  // Set TFT_RST to -1 if the display RESET is connected to NodeMCU RST or 3.3V
 
-// In ESP8266 overlap mode the following must be defined
-//#define TFT_SPI_OVERLAP
 
 // ###### EDIT THE PIN NUMBERS IN THE LINES FOLLOWING TO SUIT YOUR ESP32 SETUP   ######
 
@@ -137,6 +149,9 @@
 //#define TFT_RST  -1  // Set TFT_RST to -1 if display RESET is connected to ESP32 board RST
 //#define TFT_BL   32  // LED back-light (only for ST7789 with backlight control pin)
 
+//#define TOUCH_CS 21     // Chip select pin (T_CS) of touch screen
+
+//#define TFT_WR 22    // Write strobe for modified Raspberry Pi TFT only
 
 // For the M5Stack module use these #define lines
 //#define TFT_MISO 19
@@ -146,10 +161,6 @@
 //#define TFT_DC   27  // Data Command control pin
 //#define TFT_RST  33  // Reset pin (could connect to Arduino RESET pin)
 //#define TFT_BL   32  // LED back-light (required for M5Stack)
-
-//#define TOUCH_CS 21     // Chip select pin (T_CS) of touch screen
-
-//#define TFT_WR 22    // Write strobe for modified Raspberry Pi TFT only
 
 // ######       EDIT THE PINs BELOW TO SUIT YOUR ESP32 PARALLEL TFT SETUP        ######
 
@@ -164,9 +175,9 @@
 //#define ESP32_PARALLEL
 
 // The ESP32 and TFT the pins used for testing are:
-//#define TFT_CS   33  // Chip select control pin (library pulls permanently low
-//#define TFT_DC   15  // Data Command control pin - use a pin in the range 0-31
-//#define TFT_RST  32  // Reset pin, toggles on startup
+#define TFT_CS   12  // Chip select control pin (library pulls permanently low
+#define TFT_DC   32  // Data Command control pin - use a pin in the range 0-31
+#define TFT_RST  15  // Reset pin, toggles on startup
 
 //#define TFT_WR    4  // Write strobe control pin - use a pin in the range 0-31
 //#define TFT_RD    2  // Read strobe control pin  - use a pin in the range 0-31
