@@ -16,7 +16,7 @@ class ModeDrive : public Mode
       addCommand("ParkingSensor:0");
     }
     virtual void checkKeys() {
-      for (uint8_t i=0; i<12; i++) {
+      for (uint8_t i = 0; i < MODE_KEYS; i++) {
         if (trellis.justPressed(i)) {
           Serial.printf("v%d\n", i);
 

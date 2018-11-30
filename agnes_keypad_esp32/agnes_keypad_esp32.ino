@@ -35,11 +35,6 @@
 #define BATTERY_PIN   A13
 #define POWER_PIN     A2
 
-// set to however many you're working with here, up to 8
-#define NUMTRELLIS 1
-
-#define numKeys (NUMTRELLIS * 16)
-
 #define TFT_LIGHT  27
 #define TFT_LIGHT_CHANNEL 0
 
@@ -79,7 +74,7 @@ void setup() {
 
   // begin() with the addresses of each panel in order
   trellis.begin(0x70);  // only one
-  for (uint8_t i=0; i<numKeys; i++) {
+  for (uint8_t i = 0; i < NUM_KEYS; i++) {
     trellis.clrLED(i);
   }
   trellis.writeDisplay();
@@ -137,13 +132,13 @@ void setup() {
   sigmaDeltaWrite(TFT_LIGHT_CHANNEL, 255);
 
   // light up all the LEDs in order
-  for (uint8_t i=0; i<numKeys; i++) {
+  for (uint8_t i = 0; i < NUM_KEYS; i++) {
     trellis.setLED(i);
     trellis.writeDisplay();
     delay(30);
   }
   // then turn them off
-  for (uint8_t i=0; i<numKeys; i++) {
+  for (uint8_t i = 0; i < NUM_KEYS; i++) {
     trellis.clrLED(i);
     trellis.writeDisplay();
     delay(30);
@@ -151,7 +146,7 @@ void setup() {
 
   tft.fillScreen(TFT_BLACK);
 
-  for (uint8_t i=0; i<NUMBER_OF_MODES; i++) {
+  for (uint8_t i = 0; i < NUMBER_OF_MODES; i++) {
     modes[i]->init();
   }
   
@@ -198,7 +193,7 @@ void loop() {
     if (previousMode != mode) {
       nextTFTUpdate = 0;
       modes[previousMode]->tearDown();
-      for (uint8_t i=0; i<numKeys; i++) {
+      for (uint8_t i = 0; i < NUM_KEYS; i++) {
         trellis.clrLED(i);
       }
       modes[mode]->setup();
