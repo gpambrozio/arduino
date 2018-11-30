@@ -39,18 +39,19 @@ class ModeDrive : public Mode
     }
     virtual void checkCommand(String command) {
       if (command.startsWith("Ds")) {
-        distance = command.substring(2).toFloat();
+        distance.setValue(command.substring(2).toFloat());
       }
     }
     virtual void draw() {
       img.setTextColor(TFT_WHITE);
-      if (distance > 0) {
+      float value = distance.value();
+      if (value > 0) {
         img.setTextFont(2);
-        img.printf("Distance: %.1f\n", distance);
+        img.printf("Distance: %.1f\n", value);
       }
     }
   private:
-    float distance = 0;
+    VolatileValue<float> distance = VolatileValue<float>(0, 5);
 };
 
 #endif

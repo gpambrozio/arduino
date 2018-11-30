@@ -14,36 +14,40 @@ class ModeHouse : public Mode
     virtual void checkKeys() {}
     virtual void checkCommand(String command) {
       if (command.startsWith("To")) {
-        temperatureOutside = command.substring(2).toFloat() / 10.0;
+        temperatureOutside.setValue(command.substring(2).toFloat() / 10.0);
       } else if (command.startsWith("Ti")) {
-        temperatureInside = command.substring(2).toFloat() / 10.0;
+        temperatureInside.setValue(command.substring(2).toFloat() / 10.0);
       } else if (command.startsWith("TO")) {
-        thermostatOn = command.substring(2).toInt() != 0;
+        thermostatOn.setValue(command.substring(2).toInt() != 0);
       } else if (command.startsWith("Tt")) {
-        thermostatTarget = command.substring(2).toFloat() / 10.0;
+        thermostatTarget.setValue(command.substring(2).toFloat() / 10.0);
       }
     }
     virtual void draw() {
       img.setTextColor(TFT_WHITE);
-      if (temperatureInside > 0) {
+      float value;
+      value = temperatureInside.value();
+      if (value > 0) {
         img.setTextFont(2);
-        img.printf("Inside: %.1f", temperatureInside);
+        img.printf("Inside: %.1f", value);
         img.setTextFont(1);
         img.printf("o");
         img.setTextFont(2);
         img.printf("F\n");
       }
-      if (temperatureOutside > 0) {
+      value = temperatureOutside.value();
+      if (value > 0) {
         img.setTextFont(2);
-        img.printf("Outside: %.1f", temperatureOutside);
+        img.printf("Outside: %.1f", value);
         img.setTextFont(1);
         img.printf("o");
         img.setTextFont(2);
         img.printf("F\n");
       }
-      if (thermostatTarget > 0) {
+      value = thermostatTarget.value();
+      if (value > 0) {
         img.setTextFont(2);
-        img.printf("Thermostat: %.1f", thermostatTarget);
+        img.printf("Thermostat: %.1f", value);
         img.setTextFont(1);
         img.printf("o");
         img.setTextFont(2);
@@ -52,10 +56,10 @@ class ModeHouse : public Mode
     }
   
   private:
-    float temperatureOutside = 0;
-    float temperatureInside = 0;
-    float thermostatTarget = 0;
-    bool thermostatOn = false;
+    VolatileValue<float> temperatureOutside = VolatileValue<float>(0);
+    VolatileValue<float> temperatureInside = VolatileValue<float>(0);
+    VolatileValue<float> thermostatTarget = VolatileValue<float>(0);
+    VolatileValue<bool>  thermostatOn = VolatileValue<bool>(false);
 };
 
 #endif

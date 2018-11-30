@@ -1,6 +1,7 @@
 #include <TFT_eSPI.h>
 #include <HTTPClient.h>
 #include <Adafruit_Trellis.h>
+#include "VolatileValue.h"
 
 extern Adafruit_TrellisSet trellis;
 

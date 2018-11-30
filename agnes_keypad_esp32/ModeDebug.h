@@ -14,7 +14,7 @@ class ModeDebug : public Mode
     virtual void checkKeys() {}
     virtual void checkCommand(String command) {
       if (command.startsWith("Ws")) {
-        wifiSsid = command.substring(2);
+        wifiSsid.setValue(command.substring(2));
       }
     }
     virtual void draw() {
@@ -31,16 +31,17 @@ class ModeDebug : public Mode
       
       img.print("Power: ");
       img.println(power);
-      
-      if (wifiSsid != "") {
+
+      String ssid = wifiSsid.value();
+      if (ssid != "") {
         img.setTextFont(1);
         img.printf("WiFi: ");
-        img.println(wifiSsid);
+        img.println(ssid);
       }
     }
   
   private:
-    String wifiSsid = "";
+    VolatileValue<String> wifiSsid = VolatileValue<String>("");
 };
 
 #endif
