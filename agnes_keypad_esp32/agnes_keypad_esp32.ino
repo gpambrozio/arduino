@@ -193,9 +193,11 @@ void loop() {
     if (previousMode != mode) {
       nextTFTUpdate = 0;
       modes[previousMode]->tearDown();
+      modes[previousMode]->isActive = false;
       for (uint8_t i = 0; i < NUM_KEYS; i++) {
         trellis.clrLED(i);
       }
+      modes[mode]->isActive = true;
       modes[mode]->setup();
     }
     modes[mode]->checkKeys();

@@ -15,6 +15,7 @@ class Mode
     virtual void checkKeys();
     virtual void checkCommand(String command);
     virtual void draw();
+    bool isActive = false;
   protected:
 };
 

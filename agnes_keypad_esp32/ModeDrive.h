@@ -3,6 +3,9 @@
 
 #include "Mode.h"
 
+#define FAR   1400.0
+#define CLOSE 400.0
+
 class ModeDrive : public Mode
 {
   public:
@@ -39,7 +42,20 @@ class ModeDrive : public Mode
     }
     virtual void checkCommand(String command) {
       if (command.startsWith("Ds")) {
-        distance.setValue(command.substring(2).toFloat());
+        float value = command.substring(2).toFloat();
+        distance.setValue(value);
+        if (isActive) {
+          float relative = min(1.0, 1.0 - (value - CLOSE) / (FAR - CLOSE));
+          if (relative < 0.0) relative = 0.0;
+          uint8_t keys = (uint8_t)(relative * NUM_KEYS);
+          for (uint8_t i = 0; i < keys; i++) {
+            trellis.setLED(i);
+          }
+          for (uint8_t i = keys; i < NUM_KEYS; i++) {
+            trellis.clrLED(i);
+          }
+          trellis.writeDisplay();
+        }
       }
     }
     virtual void draw() {
