@@ -15,25 +15,32 @@ class ModeHouse : public Mode
       if (trellis.justPressed(0)) {
         thermostatTarget += 1;
         addCommand("ThermostatTarget:" + String(thermostatTarget, 0));
+        scheduleScreenRefresh();
       }
       if (trellis.justPressed(4)) {
         thermostatTarget -= 1;
         addCommand("ThermostatTarget:" + String(thermostatTarget, 0));
+        scheduleScreenRefresh();
       }
       if (trellis.justPressed(1)) {
         thermostatOn = !thermostatOn;
         addCommand("ThermostatOnOff:" + String(thermostatOn ? "1" : "0"));
+        scheduleScreenRefresh();
       }
     }
     virtual void checkCommand(String command) {
       if (command.startsWith("To")) {
         temperatureOutside.setValue(command.substring(2).toFloat() / 10.0);
+        scheduleScreenRefresh();
       } else if (command.startsWith("Ti")) {
         temperatureInside.setValue(command.substring(2).toFloat() / 10.0);
+        scheduleScreenRefresh();
       } else if (command.startsWith("TO")) {
         thermostatOn = command.substring(2).toInt() != 0;
+        scheduleScreenRefresh();
       } else if (command.startsWith("Tt")) {
         thermostatTarget = command.substring(2).toFloat() / 10.0;
+        scheduleScreenRefresh();
       }
     }
     virtual void draw() {
@@ -63,7 +70,7 @@ class ModeHouse : public Mode
         img.setTextFont(1);
         img.printf("o");
         img.setTextFont(2);
-        img.printf("F (");
+        img.printf("F\n(");
         img.printf(thermostatOn ? "On)\n" : "Off)\n");
       }
     }

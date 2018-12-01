@@ -44,6 +44,7 @@ class ModeDrive : public Mode
       if (command.startsWith("Ds")) {
         float value = command.substring(2).toFloat();
         distance.setValue(value);
+        scheduleScreenRefresh();
         if (isActive) {
           float relative = min(1.0, 1.0 - (value - CLOSE) / (FAR - CLOSE));
           if (relative < 0.0) relative = 0.0;

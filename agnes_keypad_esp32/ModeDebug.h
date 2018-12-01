@@ -15,6 +15,7 @@ class ModeDebug : public Mode
     virtual void checkCommand(String command) {
       if (command.startsWith("Ws")) {
         wifiSsid.setValue(command.substring(2));
+        scheduleScreenRefresh();
       }
     }
     virtual void draw() {

@@ -15,6 +15,7 @@ extern float battery;
 extern float power;
 
 void addCommand(String command);
+void scheduleScreenRefresh();
 
 // set to however many you're working with here, up to 8
 #define NUMTRELLIS 1

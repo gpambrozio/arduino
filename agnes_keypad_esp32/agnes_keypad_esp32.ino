@@ -191,7 +191,7 @@ void loop() {
       light += LIGHT_CHANGE;
     }
     if (previousMode != mode) {
-      nextTFTUpdate = 0;
+      scheduleScreenRefresh();
       modes[previousMode]->tearDown();
       modes[previousMode]->isActive = false;
       for (uint8_t i = 0; i < NUM_KEYS; i++) {
@@ -245,6 +245,10 @@ void loop() {
     modes[mode]->draw();
     img.pushSprite(0, 0);
   }
+}
+
+inline void scheduleScreenRefresh() {
+  nextTFTUpdate = 0;
 }
 
 void addCommand(String command) {
