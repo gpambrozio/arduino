@@ -11,16 +11,29 @@ class ModeHouse : public Mode
     virtual void init() {}
     virtual void setup() {}
     virtual void tearDown() {}
-    virtual void checkKeys() {}
+    virtual void checkKeys() {
+      if (trellis.justPressed(0)) {
+        thermostatTarget += 1;
+        addCommand("ThermostatTarget:" + String(thermostatTarget, 0));
+      }
+      if (trellis.justPressed(4)) {
+        thermostatTarget -= 1;
+        addCommand("ThermostatTarget:" + String(thermostatTarget, 0));
+      }
+      if (trellis.justPressed(1)) {
+        thermostatOn = !thermostatOn;
+        addCommand("ThermostatOnOff:" + String(thermostatOn ? "1" : "0"));
+      }
+    }
     virtual void checkCommand(String command) {
       if (command.startsWith("To")) {
         temperatureOutside.setValue(command.substring(2).toFloat() / 10.0);
       } else if (command.startsWith("Ti")) {
         temperatureInside.setValue(command.substring(2).toFloat() / 10.0);
       } else if (command.startsWith("TO")) {
-        thermostatOn.setValue(command.substring(2).toInt() != 0);
+        thermostatOn = command.substring(2).toInt() != 0;
       } else if (command.startsWith("Tt")) {
-        thermostatTarget.setValue(command.substring(2).toFloat() / 10.0);
+        thermostatTarget = command.substring(2).toFloat() / 10.0;
       }
     }
     virtual void draw() {
@@ -44,22 +57,22 @@ class ModeHouse : public Mode
         img.setTextFont(2);
         img.printf("F\n");
       }
-      value = thermostatTarget.value();
-      if (value > 0) {
+      if (thermostatTarget > 0) {
         img.setTextFont(2);
-        img.printf("Thermostat: %.1f", value);
+        img.printf("Thermostat: %.1f", thermostatTarget);
         img.setTextFont(1);
         img.printf("o");
         img.setTextFont(2);
-        img.printf("F\n");
+        img.printf("F (");
+        img.printf(thermostatOn ? "On)\n" : "Off)\n");
       }
     }
   
   private:
     VolatileValue<float> temperatureOutside = VolatileValue<float>(0);
     VolatileValue<float> temperatureInside = VolatileValue<float>(0);
-    VolatileValue<float> thermostatTarget = VolatileValue<float>(0);
-    VolatileValue<bool>  thermostatOn = VolatileValue<bool>(false);
+    float thermostatTarget = 71;
+    bool  thermostatOn = false;
 };
 
 #endif
