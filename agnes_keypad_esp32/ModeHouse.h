@@ -13,12 +13,12 @@ class ModeHouse : public Mode
     virtual void tearDown() {}
     virtual void checkKeys() {
       if (trellis.justPressed(0)) {
-        thermostatTarget += 1;
+        thermostatTarget += 1.0;
         addCommand("ThermostatTarget:" + String(thermostatTarget, 0));
         scheduleScreenRefresh();
       }
       if (trellis.justPressed(4)) {
-        thermostatTarget -= 1;
+        thermostatTarget -= 1.0;
         addCommand("ThermostatTarget:" + String(thermostatTarget, 0));
         scheduleScreenRefresh();
       }
@@ -39,7 +39,7 @@ class ModeHouse : public Mode
         thermostatOn = command.substring(2).toInt() != 0;
         scheduleScreenRefresh();
       } else if (command.startsWith("Tt")) {
-        thermostatTarget = command.substring(2).toFloat() / 10.0;
+        thermostatTarget = command.substring(2).toFloat();
         scheduleScreenRefresh();
       }
     }
@@ -66,7 +66,7 @@ class ModeHouse : public Mode
       }
       if (thermostatTarget > 0) {
         img.setTextFont(2);
-        img.printf("Thermostat: %.1f", thermostatTarget);
+        img.printf("Thermostat: %.0f", thermostatTarget);
         img.setTextFont(1);
         img.printf("o");
         img.setTextFont(2);
@@ -78,7 +78,7 @@ class ModeHouse : public Mode
   private:
     VolatileValue<float> temperatureOutside = VolatileValue<float>(0);
     VolatileValue<float> temperatureInside = VolatileValue<float>(0);
-    float thermostatTarget = 71;
+    float thermostatTarget = 71.0;
     bool  thermostatOn = false;
 };
 
