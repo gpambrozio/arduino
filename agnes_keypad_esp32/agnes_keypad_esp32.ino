@@ -57,7 +57,7 @@ Mode *modes[] = {
 };
 
 #define NUMBER_OF_MODES  (sizeof(modes) / sizeof(Mode *))
-byte mode = 0;
+byte mode = 1;
 
 void setup() {
 

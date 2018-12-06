@@ -9,8 +9,13 @@ class ModeHouse : public Mode
     explicit ModeHouse() {}
     virtual String name() { return "House"; }
     virtual void init() {}
-    virtual void setup() {}
-    virtual void tearDown() {}
+    virtual void setup() {
+      trellis.setBrightness(1);
+      refreshThermostatLed();
+    }
+    virtual void tearDown() {
+      trellis.setBrightness(15);
+    }
     virtual void checkKeys() {
       if (trellis.justPressed(0)) {
         thermostatTarget += 1.0;
@@ -26,6 +31,7 @@ class ModeHouse : public Mode
         thermostatOn = !thermostatOn;
         addCommand("ThermostatOnOff:" + String(thermostatOn ? "1" : "0"));
         scheduleScreenRefresh();
+        refreshThermostatLed();
       }
     }
     virtual void checkCommand(String command) {
@@ -37,6 +43,7 @@ class ModeHouse : public Mode
         scheduleScreenRefresh();
       } else if (command.startsWith("TO")) {
         thermostatOn = command.substring(2).toInt() != 0;
+        refreshThermostatLed();
         scheduleScreenRefresh();
       } else if (command.startsWith("Tt")) {
         thermostatTarget = command.substring(2).toFloat();
@@ -80,6 +87,15 @@ class ModeHouse : public Mode
     VolatileValue<float> temperatureInside = VolatileValue<float>(0);
     float thermostatTarget = 71.0;
     bool  thermostatOn = false;
+
+    void refreshThermostatLed() {
+      if (thermostatOn) {
+        trellis.setLED(1);
+      } else {
+        trellis.clrLED(1);
+      }
+      trellis.writeDisplay();
+    }
 };
 
 #endif
