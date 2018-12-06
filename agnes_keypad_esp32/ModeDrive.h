@@ -11,7 +11,12 @@ class ModeDrive : public Mode
   public:
     explicit ModeDrive() {}
     virtual String name() { return "Drive"; }
-    virtual void init() { }
+    virtual void init() {
+      // To initialize the DNS as it takes a while the first time.
+      http.begin("agnespanel", 8080, "/text//0");
+      http.GET();
+      http.end();
+    }
     virtual void setup() {
       addCommand("ParkingSensor:1");
     }
