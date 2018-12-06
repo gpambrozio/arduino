@@ -149,6 +149,8 @@ void setup() {
   for (uint8_t i = 0; i < NUMBER_OF_MODES; i++) {
     modes[i]->init();
   }
+  modes[mode]->isActive = true;
+  modes[mode]->setup();
   
   Serial.println("setup done");
 }
