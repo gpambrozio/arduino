@@ -77,8 +77,7 @@ class ModeHouse : public Mode
         img.setTextFont(1);
         img.printf("o");
         img.setTextFont(2);
-        img.printf("F\n(");
-        img.printf(thermostatOn ? "On)\n" : "Off)\n");
+        img.printf("F\n");
       }
     }
   
