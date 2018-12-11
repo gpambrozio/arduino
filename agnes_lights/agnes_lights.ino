@@ -58,12 +58,12 @@ void setup() {
   DL("Ending setup");
 }
 
-unsigned long next_blink = 0;
+unsigned long nextBlink = 0;
 void loop() {
-  if (millis() >= next_blink) {
-    if (millis() >= next_blink + 10) {
+  if (millis() >= nextBlink) {
+    if (millis() >= nextBlink + 10) {
       digitalWrite(LED_RED, LOW);
-      next_blink = millis() + 15000;
+      nextBlink = millis() + 15000;
       DL("Loop");
     } else {
       digitalWrite(LED_RED, HIGH);
@@ -116,12 +116,11 @@ void startAdv(void) {
 
 void connectCallback(uint16_t conn_handle) {
   D("Connected to ");
-  char central_name[32] = { 0 };
-  Bluefruit.Gap.getPeerName(conn_handle, central_name, sizeof(central_name));
-  DL(central_name);
+  char centralName[32] = { 0 };
+  Bluefruit.Gap.getPeerName(conn_handle, centralName, sizeof(centralName));
+  DL(centralName);
 }
 
 void disconnectCallback(uint16_t conn_handle, uint8_t reason) {
   DL("Disconnected");
-  DL("Advertising!");
 }

@@ -6,7 +6,7 @@
 class Strip
 {
   public:
-    Strip(BLEUuid bleuuid, int leds, int pin, int max_brightness);
+    Strip(BLEUuid bleuuid, int leds, int pin, int maxBrightness);
     virtual void begin();
     virtual void loop();
     virtual void setupService();
@@ -18,7 +18,7 @@ class Strip
 
     struct CharactericticData {
       uint8_t mode = 'C';
-      uint16_t target_brightness = 0;
+      uint16_t targetBrightness = 0;
       uint16_t cycleDelay = 1;
       uint32_t color = 0;
       // Padding. Sizes are always multiple of 4
@@ -29,8 +29,8 @@ class Strip
     CharactericticData charactericticData;
     uint16_t brightness = 0;
     uint16_t cyclePosition = 0;
-    unsigned long next_cycle_change = 0;
-    int max_brightness;
+    unsigned long nextCycleChange = 0;
+    int maxBrightness;
 
     // Fill the dots one after the other with a color
     virtual void colorWipe(uint32_t c);
@@ -43,7 +43,7 @@ class Strip
     
     // Input a value 0 to 255 to get a color value.
     // The colours are a transition r - g - b - back to r.
-    virtual uint32_t Wheel(byte WheelPos);
+    virtual uint32_t wheel(byte wheelPos);
 };
 
 #endif

@@ -1,6 +1,6 @@
 #include "Common.h"
 
-Strip::Strip(BLEUuid bleuuid, int leds, int pin, int max_brightness) :
+Strip::Strip(BLEUuid bleuuid, int leds, int pin, int maxBrightness) :
 
   // Parameter 1 = number of pixels in strip
   // Parameter 2 = Arduino pin number (most are valid)
@@ -11,7 +11,7 @@ Strip::Strip(BLEUuid bleuuid, int leds, int pin, int max_brightness) :
   //   NEO_RGB     Pixels are wired for RGB bitstream (v1 FLORA pixels, not v2)
   //   NEO_RGBW    Pixels are wired for RGBW bitstream (NeoPixel RGBW products)
   strip(leds, pin, NEO_GRB + NEO_KHZ800),
-  max_brightness(max_brightness),
+  maxBrightness(maxBrightness),
   characteristic(bleuuid, this)
   {}
 
@@ -19,7 +19,7 @@ void Strip::begin() {
   strip.begin();
 
   DL("Resetting strip");
-  strip.setBrightness(max_brightness);
+  strip.setBrightness(maxBrightness);
   strip.show(); // Initialize all pixels to 'off'
 
   colorWipe(0xFF0000);
@@ -32,8 +32,8 @@ void Strip::begin() {
 }
 
 void Strip::loop() {
-  if (charactericticData.target_brightness != brightness) {
-    brightness += (charactericticData.target_brightness > brightness) ? 1 : -1;
+  if (charactericticData.targetBrightness != brightness) {
+    brightness += (charactericticData.targetBrightness > brightness) ? 1 : -1;
     strip.setBrightness(brightness);
   }
   switch (charactericticData.mode) {
@@ -50,8 +50,8 @@ void Strip::loop() {
       break;
   }
 
-  if (millis() > next_cycle_change) {
-    next_cycle_change += charactericticData.cycleDelay;
+  if (millis() > nextCycleChange) {
+    nextCycleChange += charactericticData.cycleDelay;
     cyclePosition++;
   }
 }
@@ -70,9 +70,9 @@ void Strip::writeCallback(uint8_t* data, uint16_t len, uint16_t offset) {
     D("wrong size "); D(len); D(" should be "); DL(sizeof(CharactericticData));
     return;
   }
-  D("Got data "); DL(len);
   memcpy(&charactericticData, data, sizeof(CharactericticData));
-  charactericticData.target_brightness = min(charactericticData.target_brightness, max_brightness);
+  D("Got data "); D(len); D(" Mode "); DL(charactericticData.mode);
+  charactericticData.targetBrightness = min(charactericticData.targetBrightness, maxBrightness);
   if (charactericticData.mode == 'C') {
     colorWipe(charactericticData.color);
   }
@@ -92,7 +92,7 @@ void Strip::rainbowCycle() {
   j &= 0xFF;
 
   for (uint16_t i = 0; i < strip.numPixels(); i++) {
-    strip.setPixelColor(i, Wheel((((i << 8) / strip.numPixels()) + j) & 0xFF));
+    strip.setPixelColor(i, wheel((((i << 8) / strip.numPixels()) + j) & 0xFF));
   }
   strip.show();
 }
@@ -107,22 +107,22 @@ void Strip::theaterChaseRainbow() {
     strip.setPixelColor(i, 0);
   }
   for (uint16_t i = 0; i < strip.numPixels(); i = i + 3) {
-    strip.setPixelColor(i+q, Wheel( (i+j) & 0xFF));    //turn every third pixel on
+    strip.setPixelColor(i+q, wheel( (i+j) & 0xFF));    //turn every third pixel on
   }
   strip.show();
 }
 
 // Input a value 0 to 255 to get a color value.
 // The colours are a transition r - g - b - back to r.
-uint32_t Strip::Wheel(byte WheelPos) {
-  WheelPos = 255 - WheelPos;
-  if(WheelPos < 85) {
-    return strip.Color(255 - WheelPos * 3, 0, WheelPos * 3);
+uint32_t Strip::wheel(byte wheelPos) {
+  wheelPos = 255 - wheelPos;
+  if(wheelPos < 85) {
+    return strip.Color(255 - wheelPos * 3, 0, wheelPos * 3);
   }
-  if(WheelPos < 170) {
-    WheelPos -= 85;
-    return strip.Color(0, WheelPos * 3, 255 - WheelPos * 3);
+  if(wheelPos < 170) {
+    wheelPos -= 85;
+    return strip.Color(0, wheelPos * 3, 255 - wheelPos * 3);
   }
-  WheelPos -= 170;
-  return strip.Color(WheelPos * 3, 255 - WheelPos * 3, 0);
+  wheelPos -= 170;
+  return strip.Color(wheelPos * 3, 255 - wheelPos * 3, 0);
 }
