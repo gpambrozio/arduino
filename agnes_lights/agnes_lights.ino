@@ -13,7 +13,7 @@ BLEDis diService;    // DIS (Device Information Service) helper class instance
 
 #define READ_BUFSIZE                    (20)
  
-Strip inside = Strip(0x2235, 259, PIN_INSIDE, MAX_BRIGHTNESS_INSIDE);
+Strip inside  = Strip(0x2235, 259, PIN_INSIDE, MAX_BRIGHTNESS_INSIDE);
 Strip outside = Strip(0x2236, 150, PIN_OUTSIDE, MAX_BRIGHTNESS_OUTSIDE);
 
 void setup() {
@@ -25,7 +25,6 @@ void setup() {
 
   delay(1000);
 
-  DL("Starting strips");
   inside.begin();
   outside.begin();
   
