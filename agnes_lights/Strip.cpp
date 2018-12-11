@@ -70,12 +70,10 @@ void Strip::writeCallback(uint8_t* data, uint16_t len, uint16_t offset) {
     D("wrong size "); D(len); D(" should be "); DL(sizeof(CharactericticData));
     return;
   }
-  memcpy(&charactericticData, data, sizeof(CharactericticData));
+  memcpy(&charactericticData, data+offset, sizeof(CharactericticData));
   D("Got data "); D(len); D(" Mode "); DL(charactericticData.mode);
   charactericticData.targetBrightness = min(charactericticData.targetBrightness, maxBrightness);
-  if (charactericticData.mode == 'C') {
-    colorWipe(charactericticData.color);
-  }
+  // DON'T do any strip stuff here!
 }
 
 // Fill the dots one after the other with a color

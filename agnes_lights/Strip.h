@@ -17,12 +17,12 @@ class Strip
     AddressableCharacteristic characteristic;
 
     struct CharactericticData {
-      uint8_t mode = 'C';
+      char mode = 'C';
       uint8_t targetBrightness = 0;
       uint8_t cycleDelay = 1;
-      uint32_t color = 0;
       // Padding. Sizes are always multiple of 4
-      uint8_t a = 0;
+      uint8_t a = 0x55;
+      uint32_t color = 255;
     };
     CharactericticData charactericticData;
     uint16_t brightness = 0;
