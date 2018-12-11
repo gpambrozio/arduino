@@ -22,7 +22,6 @@ void Strip::begin() {
   strip.setBrightness(max_brightness);
   strip.show(); // Initialize all pixels to 'off'
 
-  delay(1000);
   colorWipe(0xFF0000);
   delay(300);
   colorWipe(0x00FF00);
@@ -68,11 +67,12 @@ void Strip::setupService() {
 
 void Strip::writeCallback(uint8_t* data, uint16_t len, uint16_t offset) {
   if (len < sizeof(CharactericticData)) {
-    D("wrong size "); DL(len);
+    D("wrong size "); D(len); D(" should be "); DL(sizeof(CharactericticData));
     return;
   }
   D("Got data "); DL(len);
   memcpy(&charactericticData, data, sizeof(CharactericticData));
+  charactericticData.target_brightness = min(charactericticData.target_brightness, max_brightness);
   if (charactericticData.mode == 'C') {
     colorWipe(charactericticData.color);
   }
