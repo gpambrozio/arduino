@@ -175,6 +175,11 @@ int light = MAX_LIGHT_POWER;
 void loop() {
   delay(30); // 30ms delay is required, dont remove me!
 
+  if (wifiMulti.run() != WL_CONNECTED) {
+    Serial.println("WiFi not connected!");
+    delay(1000);
+  }
+
   // If a button was just pressed or released...
   if (trellis.readSwitches()) {
     byte previousMode = mode;

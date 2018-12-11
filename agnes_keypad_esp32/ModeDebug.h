@@ -2,6 +2,7 @@
 #define ModeDebug_h
 
 #include "Mode.h"
+#include <WiFi.h>
 
 class ModeDebug : public Mode
 {
@@ -32,6 +33,13 @@ class ModeDebug : public Mode
       
       img.print("Power: ");
       img.println(power);
+
+      if (WiFi.isConnected()) {
+        img.print("IP: ");
+        img.println(WiFi.localIP());
+      } else {
+        img.println("Disconnected!!");
+      }
 
       String ssid = wifiSsid.value();
       if (ssid != "") {
