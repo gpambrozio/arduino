@@ -18,6 +18,10 @@ class ModeDebug : public Mode
         wifiSsid.setValue(command.substring(2));
         scheduleScreenRefresh();
       }
+      else if (command.startsWith("WI")) {
+        wifiIP.setValue(command.substring(2));
+        scheduleScreenRefresh();
+      }
     }
     virtual void draw() {
       img.setTextFont(1);
@@ -41,16 +45,22 @@ class ModeDebug : public Mode
         img.println("Disconnected!!");
       }
 
-      String ssid = wifiSsid.value();
-      if (ssid != "") {
-        img.setTextFont(1);
-        img.printf("WiFi: ");
-        img.println(ssid);
+      String value = wifiSsid.value();
+      if (value != "") {
+        img.print("WiFi: ");
+        img.print(value);
+        value = wifiIP.value();
+        if (value != "") {
+          img.print(" (");
+          img.print(value);
+          img.println(")");
+        }
       }
     }
   
   private:
     VolatileValue<String> wifiSsid = VolatileValue<String>("");
+    VolatileValue<String> wifiIP = VolatileValue<String>("");
 };
 
 #endif
