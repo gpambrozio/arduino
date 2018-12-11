@@ -18,13 +18,11 @@ class Strip
 
     struct CharactericticData {
       uint8_t mode = 'C';
-      uint16_t targetBrightness = 0;
-      uint16_t cycleDelay = 1;
+      uint8_t targetBrightness = 0;
+      uint8_t cycleDelay = 1;
       uint32_t color = 0;
       // Padding. Sizes are always multiple of 4
       uint8_t a = 0;
-      uint8_t b = 0;
-      uint8_t c = 0;
     };
     CharactericticData charactericticData;
     uint16_t brightness = 0;
