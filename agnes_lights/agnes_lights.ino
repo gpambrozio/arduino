@@ -365,4 +365,3 @@ uint8_t readPacket(BLEUart *ble_uart)  {
   MARK;
   return messagesize;
 }
-
