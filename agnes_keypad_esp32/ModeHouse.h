@@ -11,7 +11,7 @@ class ModeHouse : public Mode
     virtual void init() {}
     virtual void setup() {
       trellis.setBrightness(1);
-      refreshThermostatLed();
+      refreshLeds();
     }
     virtual void tearDown() {
       trellis.setBrightness(15);
@@ -31,7 +31,53 @@ class ModeHouse : public Mode
         thermostatOn = !thermostatOn;
         addCommand("ThermostatOnOff:" + String(thermostatOn ? "1" : "0"));
         scheduleScreenRefresh();
-        refreshThermostatLed();
+        refreshLeds();
+      }
+      
+      if (trellis.justPressed(2)) {
+        int brightness = lightOutside.value();
+        if (brightness >= 0 && brightness < 100) {
+          brightness = min(100, brightness + 10);
+          lightOutside.setValue(brightness);
+          addCommand("LO:" + String(brightness));
+          refreshLeds();
+        }
+      }
+      if (trellis.justPressed(6)) {
+        int brightness = lightOutside.value();
+        if (brightness > 0) {
+          brightness = brightness - 10;
+          if (brightness < 0) brightness = 0;
+          lightOutside.setValue(brightness);
+          addCommand("LO:" + String(brightness));
+          refreshLeds();
+        }
+      }
+      if (trellis.justPressed(3)) {
+        int brightness = lightInside.value();
+        if (brightness >= 0 && brightness < 100) {
+          brightness = min(100, brightness + 10);
+          lightInside.setValue(brightness);
+          addCommand("LI:" + String(brightness));
+          refreshLeds();
+        }
+      }
+      if (trellis.justPressed(7)) {
+        int brightness = lightInside.value();
+        if (brightness > 0) {
+          brightness = brightness - 10;
+          if (brightness < 0) brightness = 0;
+          lightInside.setValue(brightness);
+          addCommand("LI:" + String(brightness));
+          refreshLeds();
+        }
+      }
+      if (trellis.justPressed(11)) {
+        lightOutside.setValue(0);
+        lightInside.setValue(0);
+        addCommand("LO:0");
+        addCommand("LI:0");
+        refreshLeds();
       }
     }
     virtual void checkCommand(String command) {
@@ -43,11 +89,17 @@ class ModeHouse : public Mode
         scheduleScreenRefresh();
       } else if (command.startsWith("TO")) {
         thermostatOn = command.substring(2).toInt() != 0;
-        refreshThermostatLed();
+        refreshLeds();
         scheduleScreenRefresh();
       } else if (command.startsWith("Tt")) {
         thermostatTarget = command.substring(2).toFloat();
         scheduleScreenRefresh();
+      } else if (command.startsWith("LO")) {
+        lightOutside.setValue(command.substring(2).toInt());
+        refreshLeds();
+      } else if (command.startsWith("LI")) {
+        lightInside.setValue(command.substring(2).toInt());
+        refreshLeds();
       }
     }
     virtual void draw() {
@@ -84,14 +136,35 @@ class ModeHouse : public Mode
   private:
     VolatileValue<float> temperatureOutside = VolatileValue<float>(0);
     VolatileValue<float> temperatureInside = VolatileValue<float>(0);
+    VolatileValue<int> lightOutside = VolatileValue<int>(-1);
+    VolatileValue<int> lightInside = VolatileValue<int>(-1);
     float thermostatTarget = 71.0;
     bool  thermostatOn = false;
 
-    void refreshThermostatLed() {
+    void refreshLeds() {
       if (thermostatOn) {
         trellis.setLED(1);
       } else {
         trellis.clrLED(1);
+      }
+      if (lightOutside.value() > 0) {
+        trellis.setLED(2);
+        trellis.setLED(6);
+      } else {
+        trellis.clrLED(2);
+        trellis.clrLED(6);
+      }
+      if (lightInside.value() > 0) {
+        trellis.setLED(3);
+        trellis.setLED(7);
+      } else {
+        trellis.clrLED(3);
+        trellis.clrLED(7);
+      }
+      if (lightInside.value() > 0 || lightOutside.value() > 0) {
+        trellis.setLED(11);
+      } else {
+        trellis.clrLED(11);
       }
       trellis.writeDisplay();
     }
