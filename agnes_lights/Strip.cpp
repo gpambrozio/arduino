@@ -32,8 +32,8 @@ void Strip::begin() {
 }
 
 void Strip::loop() {
-  if (charactericticData.targetBrightness != brightness) {
-    brightness += (charactericticData.targetBrightness > brightness) ? 1 : -1;
+  if (targetBrightness != brightness) {
+    brightness += (targetBrightness > brightness) ? 1 : -1;
     strip.setBrightness(brightness);
   }
   switch (charactericticData.mode) {
@@ -72,7 +72,7 @@ void Strip::writeCallback(uint8_t* data, uint16_t len, uint16_t offset) {
   }
   memcpy(&charactericticData, data+offset, sizeof(CharactericticData));
   D("Got data "); D(len); D(" Mode "); DL(charactericticData.mode);
-  charactericticData.targetBrightness = min(charactericticData.targetBrightness, maxBrightness);
+  targetBrightness = charactericticData.targetBrightness * maxBrightness / 100;
   // DON'T do any strip stuff here!
 }
 

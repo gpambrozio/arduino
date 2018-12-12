@@ -25,6 +25,7 @@ class Strip
       uint32_t color = 0;
     };
     CharactericticData charactericticData;
+    uint16_t targetBrightness = 0;
     uint16_t brightness = 0;
     uint16_t cyclePosition = 0;
     unsigned long nextCycleChange = 0;
