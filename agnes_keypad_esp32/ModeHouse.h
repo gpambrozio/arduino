@@ -17,6 +17,7 @@ class ModeHouse : public Mode
       trellis.setBrightness(15);
     }
     virtual void checkKeys() {
+      // Thermostat
       if (trellis.justPressed(0)) {
         thermostatTarget += 1.0;
         addCommand("ThermostatTarget:" + String(thermostatTarget, 0));
@@ -33,7 +34,8 @@ class ModeHouse : public Mode
         scheduleScreenRefresh();
         refreshLeds();
       }
-      
+
+      // Outside lights
       if (trellis.justPressed(2)) {
         int brightness = lightOutside.value();
         if (brightness >= 0 && brightness < 100) {
@@ -53,6 +55,28 @@ class ModeHouse : public Mode
           refreshLeds();
         }
       }
+      if (trellis.justPressed(10)) {
+        int brightness = lightOutside.value();
+        if (brightness == 0) {
+          lightOutside.setValue(100);
+          addCommand("LO:100");
+          String mode = lightModes.substring(0, 1);
+          lightOutsideMode.setValue(mode);
+          addCommand("MO:" + mode);
+          refreshLeds();
+        } else if (brightness > 0) {
+          String mode = lightOutsideMode.value();
+          if (mode.length() > 0) {
+            int currentMode = lightModes.indexOf(mode) + 1;
+            if (currentMode >= lightModes.length()) currentMode = 0;
+            mode = lightModes.substring(currentMode, currentMode + 1);
+            lightOutsideMode.setValue(mode);
+            addCommand("MO:" + mode);
+          }
+        }
+      }
+
+      // Inside lights
       if (trellis.justPressed(3)) {
         int brightness = lightInside.value();
         if (brightness >= 0 && brightness < 100) {
@@ -72,6 +96,28 @@ class ModeHouse : public Mode
           refreshLeds();
         }
       }
+      if (trellis.justPressed(11)) {
+        int brightness = lightInside.value();
+        if (brightness == 0) {
+          lightInside.setValue(100);
+          addCommand("LI:100");
+          String mode = lightModes.substring(0, 1);
+          lightInsideMode.setValue(mode);
+          addCommand("MI:" + mode);
+          refreshLeds();
+        } else if (brightness > 0) {
+          String mode = lightInsideMode.value();
+          if (mode.length() > 0) {
+            int currentMode = lightModes.indexOf(mode) + 1;
+            if (currentMode >= lightModes.length()) currentMode = 0;
+            mode = lightModes.substring(currentMode, currentMode + 1);
+            lightInsideMode.setValue(mode);
+            addCommand("MI:" + mode);
+          }
+        }
+      }
+
+      // All lights
       if (trellis.justPressed(5) && (lightInside.value() > 0 || lightOutside.value() > 0)) {
         lightOutside.setValue(0);
         lightInside.setValue(0);
@@ -95,10 +141,12 @@ class ModeHouse : public Mode
         thermostatTarget = command.substring(2).toFloat();
         scheduleScreenRefresh();
       } else if (command.startsWith("LO")) {
-        lightOutside.setValue(command.substring(2).toInt());
+        lightOutsideMode.setValue(command.substring(2, 3));
+        lightOutside.setValue(command.substring(3).toInt());
         refreshLeds();
       } else if (command.startsWith("LI")) {
-        lightInside.setValue(command.substring(2).toInt());
+        lightInsideMode.setValue(command.substring(2, 3));
+        lightInside.setValue(command.substring(3).toInt());
         refreshLeds();
       }
     }
@@ -134,10 +182,13 @@ class ModeHouse : public Mode
     }
   
   private:
+    String lightModes = "CRT";
     VolatileValue<float> temperatureOutside = VolatileValue<float>(0);
     VolatileValue<float> temperatureInside = VolatileValue<float>(0);
     VolatileValue<int> lightOutside = VolatileValue<int>(-1);
     VolatileValue<int> lightInside = VolatileValue<int>(-1);
+    VolatileValue<String> lightOutsideMode = VolatileValue<String>("");
+    VolatileValue<String> lightInsideMode = VolatileValue<String>("");
     float thermostatTarget = 71.0;
     bool  thermostatOn = false;
 
@@ -150,16 +201,20 @@ class ModeHouse : public Mode
       if (lightOutside.value() > 0) {
         trellis.setLED(2);
         trellis.setLED(6);
+        trellis.setLED(10);
       } else {
         trellis.clrLED(2);
         trellis.clrLED(6);
+        trellis.clrLED(10);
       }
       if (lightInside.value() > 0) {
         trellis.setLED(3);
         trellis.setLED(7);
+        trellis.setLED(11);
       } else {
         trellis.clrLED(3);
         trellis.clrLED(7);
+        trellis.clrLED(11);
       }
       if (lightInside.value() > 0 || lightOutside.value() > 0) {
         trellis.setLED(5);
