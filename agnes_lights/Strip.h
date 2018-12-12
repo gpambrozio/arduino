@@ -22,7 +22,7 @@ class Strip
       uint8_t cycleDelay = 1;
       // Padding. Sizes are always multiple of 4
       uint8_t a = 0x55;
-      uint32_t color = 255;
+      uint32_t color = 0;
     };
     CharactericticData charactericticData;
     uint16_t brightness = 0;
