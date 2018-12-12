@@ -72,7 +72,7 @@ class ModeHouse : public Mode
           refreshLeds();
         }
       }
-      if (trellis.justPressed(11)) {
+      if (trellis.justPressed(5) && (lightInside.value() > 0 || lightOutside.value() > 0)) {
         lightOutside.setValue(0);
         lightInside.setValue(0);
         addCommand("LO:0");
@@ -162,9 +162,9 @@ class ModeHouse : public Mode
         trellis.clrLED(7);
       }
       if (lightInside.value() > 0 || lightOutside.value() > 0) {
-        trellis.setLED(11);
+        trellis.setLED(5);
       } else {
-        trellis.clrLED(11);
+        trellis.clrLED(5);
       }
       trellis.writeDisplay();
     }
