@@ -23,4 +23,6 @@
 
 #endif
 
+void blink();
+
 #endif

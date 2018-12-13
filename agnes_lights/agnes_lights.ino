@@ -22,6 +22,7 @@ void setup() {
 #endif
   DL("Start");
   pinMode(LED_RED, OUTPUT);
+  digitalWrite(LED_RED, HIGH);
 
   delay(1000);
 
@@ -58,9 +59,13 @@ void setup() {
 }
 
 unsigned long nextBlink = 0;
+void blink() {
+  nextBlink = millis();
+}
+
 void loop() {
   if (millis() >= nextBlink) {
-    if (millis() >= nextBlink + 10) {
+    if (millis() >= nextBlink + 20) {
       digitalWrite(LED_RED, LOW);
       nextBlink = millis() + 15000;
       DL("Loop");
