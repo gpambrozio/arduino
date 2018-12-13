@@ -10,52 +10,43 @@ class Strip
     bool checkKeys() {
       bool shouldRefreshLeds = false;
       if (trellis.justPressed(baseKey)) {
-        int current = brightness.value();
-        if (current >= 0 && current < 100) {
-          if (current == 0) {
+        if (brightness < 100) {
+          if (brightness == 0) {
             String mode = lightModes.substring(0, 1);
-            lightMode.setValue(mode);
+            lightMode = mode;
             addCommand("M" + identifier + ":" + mode);
           }
-          current = min(100, current + 10);
-          brightness.setValue(current);
-          addCommand("L" + identifier + ":" + String(current));
+          brightness = min(100, brightness + 10);
+          addCommand("L" + identifier + ":" + String(brightness));
           shouldRefreshLeds = true;
         }
       }
       if (trellis.justPressed(baseKey+4)) {
-        int current = brightness.value();
-        if (current > 0) {
-          current = current - 10;
-          if (current < 0) current = 0;
-          brightness.setValue(current);
-          addCommand("L" + identifier + ":" + String(current));
+        if (brightness > 0) {
+          brightness -= 10;
+          if (brightness < 0) brightness = 0;
+          addCommand("L" + identifier + ":" + String(brightness));
           shouldRefreshLeds = true;
         }
       }
       if (trellis.justPressed(baseKey+8)) {
-        int current = brightness.value();
-        if (current == 0) {
-          brightness.setValue(100);
+        if (brightness == 0) {
+          brightness = 100;
           addCommand("L" + identifier + ":100");
           String mode = lightModes.substring(0, 1);
-          lightMode.setValue(mode);
+          lightMode = mode;
           addCommand("M" + identifier + ":" + mode);
           shouldRefreshLeds = true;
-        } else if (current > 0) {
-          String mode = lightMode.value();
-          if (mode.length() > 0) {
-            int currentMode = lightModes.indexOf(mode) + 1;
-            if (currentMode >= lightModes.length()) {
-              turnOff();
-            } else {
-              mode = lightModes.substring(currentMode, currentMode + 1);
-              lightMode.setValue(mode);
-              addCommand("M" + identifier + ":" + mode);
-            }
-            shouldRefreshLeds = true;
+        } else if (brightness > 0) {
+          int currentMode = lightModes.indexOf(lightMode) + 1;
+          if (currentMode >= lightModes.length()) {
+            turnOff();
+          } else {
+            lightMode = lightModes.substring(currentMode, currentMode + 1);
+            addCommand("M" + identifier + ":" + lightMode);
           }
-        }
+          shouldRefreshLeds = true;
+          }
       }
       
       if (shouldRefreshLeds) {
@@ -65,12 +56,12 @@ class Strip
     }
 
     void turnOff() {
-      brightness.setValue(0);
+      brightness = 0;
       addCommand("L" + identifier + ":0");
     }
     
     void refreshLeds() {
-      if (brightness.value() > 0) {
+      if (brightness > 0) {
         trellis.setLED(baseKey);
         trellis.setLED(baseKey+4);
         trellis.setLED(baseKey+8);
@@ -83,13 +74,13 @@ class Strip
     }
 
     bool isOn() {
-      return brightness.value() > 0;
+      return brightness > 0;
     }
   
     bool checkCommand(String command) {
       if (command.startsWith("L" + identifier)) {
-        lightMode.setValue(command.substring(2, 3));
-        brightness.setValue(command.substring(3).toInt());
+        lightMode = command.substring(2, 3);
+        brightness = command.substring(3).toInt();
         refreshLeds();
         return true;
       }
@@ -100,8 +91,8 @@ class Strip
     String lightModes = "CRT";
     int baseKey;
     String identifier;
-    VolatileValue<int> brightness = VolatileValue<int>(-1);
-    VolatileValue<String> lightMode = VolatileValue<String>("");
+    int brightness = 0;
+    String lightMode = "C";
 };
 
 class ModeHouse : public Mode
