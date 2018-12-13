@@ -127,6 +127,14 @@ class ModeHouse : public Mode
         refreshLeds();
       }
 
+      // Lock / unlock
+      if (trellis.justPressed(8)) {
+        addCommand("Locks:lock");
+      } else if (trellis.justPressed(9)) {
+        addCommand("Locks:unlock");
+      }
+
+      // Strips
       if (outside.checkKeys() ||
           inside.checkKeys()) {
         refreshLeds();
