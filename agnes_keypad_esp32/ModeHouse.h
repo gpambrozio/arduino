@@ -7,27 +7,33 @@ class Strip
 {
   public:
     Strip(int baseKey, String identifier) : baseKey(baseKey), identifier(identifier) {}
-    void checkKeys() {
-      if (trellis.justPressed(2)) {
+    bool checkKeys() {
+      bool shouldRefreshLeds = false;
+      if (trellis.justPressed(baseKey)) {
         int current = brightness.value();
         if (current >= 0 && current < 100) {
+          if (current == 0) {
+            String mode = lightModes.substring(0, 1);
+            lightMode.setValue(mode);
+            addCommand("M" + identifier + ":" + mode);
+          }
           current = min(100, current + 10);
           brightness.setValue(current);
           addCommand("L" + identifier + ":" + String(current));
-          refreshLeds();
+          shouldRefreshLeds = true;
         }
       }
-      if (trellis.justPressed(6)) {
+      if (trellis.justPressed(baseKey+4)) {
         int current = brightness.value();
         if (current > 0) {
           current = current - 10;
           if (current < 0) current = 0;
           brightness.setValue(current);
           addCommand("L" + identifier + ":" + String(current));
-          refreshLeds();
+          shouldRefreshLeds = true;
         }
       }
-      if (trellis.justPressed(10)) {
+      if (trellis.justPressed(baseKey+8)) {
         int current = brightness.value();
         if (current == 0) {
           brightness.setValue(100);
@@ -35,19 +41,27 @@ class Strip
           String mode = lightModes.substring(0, 1);
           lightMode.setValue(mode);
           addCommand("M" + identifier + ":" + mode);
-          refreshLeds();
+          shouldRefreshLeds = true;
         } else if (current > 0) {
           String mode = lightMode.value();
           if (mode.length() > 0) {
             int currentMode = lightModes.indexOf(mode) + 1;
-            if (currentMode >= lightModes.length()) currentMode = 0;
-            mode = lightModes.substring(currentMode, currentMode + 1);
-            lightMode.setValue(mode);
-            addCommand("M" + identifier + ":" + mode);
-            refreshLeds();
+            if (currentMode >= lightModes.length()) {
+              turnOff();
+            } else {
+              mode = lightModes.substring(currentMode, currentMode + 1);
+              lightMode.setValue(mode);
+              addCommand("M" + identifier + ":" + mode);
+            }
+            shouldRefreshLeds = true;
           }
         }
       }
+      
+      if (shouldRefreshLeds) {
+        refreshLeds();
+      }
+      return shouldRefreshLeds;
     }
 
     void turnOff() {
@@ -72,12 +86,14 @@ class Strip
       return brightness.value() > 0;
     }
   
-    void checkCommand(String command) {
+    bool checkCommand(String command) {
       if (command.startsWith("L" + identifier)) {
         lightMode.setValue(command.substring(2, 3));
         brightness.setValue(command.substring(3).toInt());
         refreshLeds();
+        return true;
       }
+      return false;
     }
 
   private:
@@ -120,8 +136,10 @@ class ModeHouse : public Mode
         refreshLeds();
       }
 
-      outside.checkKeys();
-      inside.checkKeys();
+      if (outside.checkKeys() ||
+          inside.checkKeys()) {
+        refreshLeds();
+      }
 
       // All lights
       if (trellis.justPressed(5) && (inside.isOn() || outside.isOn())) {
@@ -145,8 +163,10 @@ class ModeHouse : public Mode
         thermostatTarget = command.substring(2).toFloat();
         scheduleScreenRefresh();
       }
-      inside.checkCommand(command);
-      outside.checkCommand(command);
+      if (inside.checkCommand(command) ||
+          outside.checkCommand(command)) {
+        refreshLeds();
+      }
     }
     virtual void draw() {
       img.setTextColor(TFT_WHITE);
