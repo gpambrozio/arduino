@@ -24,13 +24,20 @@ class ModeDebug : public Mode
       }
     }
     virtual void draw() {
+      long runningSeconds = millis() / 1000;
       img.setTextFont(1);
       img.setTextColor(TFT_WHITE);
-      img.print("Sketch has been\nrunning for ");
+      img.println("Sketch running time:");
       img.setTextColor(TFT_MAGENTA, TFT_BLACK);
-      img.print(millis() / 1000);
+      long days = runningSeconds / (24 * 60 * 60);
+      if (days > 0) {
+        img.printf("%dd, ", days);
+        runningSeconds %= 24 * 60 * 60;
+      }
+      img.printf("%02d:", runningSeconds / (60 * 60));
+      runningSeconds %= 60 * 60;
+      img.printf("%02d.%02d\n", runningSeconds / 60, runningSeconds % 60);
       img.setTextColor(TFT_WHITE, TFT_BLACK);
-      img.println(" secs");
     
       img.print("Battery: ");
       img.println(battery);
