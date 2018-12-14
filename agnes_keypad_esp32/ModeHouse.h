@@ -12,12 +12,10 @@ class Strip
       if (trellis.justPressed(baseKey)) {
         if (brightness < 100) {
           if (brightness == 0) {
-            String mode = lightModes.substring(0, 1);
-            lightMode = mode;
-            addCommand("M" + identifier + ":" + mode);
+            lightMode = lightModes.substring(0, 1);
           }
           brightness = min(100, brightness + 10);
-          addCommand("L" + identifier + ":" + String(brightness));
+          sendState();
           shouldRefreshLeds = true;
         }
       }
@@ -25,17 +23,15 @@ class Strip
         if (brightness > 0) {
           brightness -= 10;
           if (brightness < 0) brightness = 0;
-          addCommand("L" + identifier + ":" + String(brightness));
+          sendState();
           shouldRefreshLeds = true;
         }
       }
       if (trellis.justPressed(baseKey+8)) {
         if (brightness == 0) {
           brightness = 100;
-          addCommand("L" + identifier + ":100");
-          String mode = lightModes.substring(0, 1);
-          lightMode = mode;
-          addCommand("M" + identifier + ":" + mode);
+          lightMode = lightModes.substring(0, 1);
+          sendState();
           shouldRefreshLeds = true;
         } else if (brightness > 0) {
           int currentMode = lightModes.indexOf(lightMode) + 1;
@@ -43,10 +39,10 @@ class Strip
             turnOff();
           } else {
             lightMode = lightModes.substring(currentMode, currentMode + 1);
-            addCommand("M" + identifier + ":" + lightMode);
+            sendState();
           }
           shouldRefreshLeds = true;
-          }
+        }
       }
       
       if (shouldRefreshLeds) {
@@ -57,9 +53,9 @@ class Strip
 
     void turnOff() {
       brightness = 0;
-      addCommand("L" + identifier + ":0");
+      sendState();
     }
-    
+
     void refreshLeds() {
       if (brightness > 0) {
         trellis.setLED(baseKey);
@@ -72,7 +68,7 @@ class Strip
       }
       trellis.writeDisplay();
     }
-
+    
     bool isOn() {
       return brightness > 0;
     }
@@ -93,6 +89,10 @@ class Strip
     String identifier;
     int brightness = 0;
     String lightMode = "C";
+
+    void sendState() {
+      addCommand("Light:" + identifier + ":" + lightMode + ":" + String(brightness));
+    }
 };
 
 class ModeHouse : public Mode
