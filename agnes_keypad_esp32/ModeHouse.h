@@ -199,8 +199,8 @@ class ModeHouse : public Mode
     }
   
   private:
-    Strip inside = Strip(3, "I");
-    Strip outside = Strip(2, "O");
+    Strip inside = Strip(2, "I");
+    Strip outside = Strip(3, "O");
     VolatileValue<float> temperatureOutside = VolatileValue<float>(0);
     VolatileValue<float> temperatureInside = VolatileValue<float>(0);
     float thermostatTarget = 71.0;
