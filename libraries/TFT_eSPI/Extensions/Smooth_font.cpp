@@ -76,15 +76,13 @@ void TFT_eSPI::loadFont(String fontName)
 
    unloadFont();
     
-  _gFontFilename = "/" + fontName + ".vlw";
-
   // Avoid a crash on the ESP32 if the file does not exist
-  if (SPIFFS.exists(_gFontFilename) == false) {
+  if (SPIFFS.exists("/" + fontName + ".vlw") == false) {
     Serial.println("Font file " + fontName + " not found!");
     return;
   }
 
-  fontFile = SPIFFS.open( _gFontFilename, "r");
+  fontFile = SPIFFS.open( "/" + fontName + ".vlw", "r");
 
   if(!fontFile) return;
 
@@ -97,7 +95,7 @@ void TFT_eSPI::loadFont(String fontName)
   gFont.ascent   = (uint16_t)readInt32(); // top of "d"
   gFont.descent  = (uint16_t)readInt32(); // bottom of "p"
 
-  // These next gFont values will be updated when the Metrics are fetched
+  // These next gFont values might be updated when the Metrics are fetched
   gFont.maxAscent  = gFont.ascent;   // Determined from metrics
   gFont.maxDescent = gFont.descent;  // Determined from metrics
   gFont.yAdvance   = gFont.ascent + gFont.descent;
@@ -126,7 +124,7 @@ void TFT_eSPI::loadMetrics(uint16_t gCount)
   gHeight   =  (uint8_t*)malloc( gCount );    // Height of glyph
   gWidth    =  (uint8_t*)malloc( gCount );    // Width of glyph
   gxAdvance =  (uint8_t*)malloc( gCount );    // xAdvance - to move x cursor
-  gdY       =   (int8_t*)malloc( gCount );    // offset from bitmap top edge from lowest point in any character
+  gdY       =  (int16_t*)malloc( gCount * 2); // offset from bitmap top edge from lowest point in any character
   gdX       =   (int8_t*)malloc( gCount );    // offset for bitmap left edge relative to cursor X
   gBitmap   = (uint32_t*)malloc( gCount * 4); // seek pointer to glyph bitmap in SPIFFS file
 
@@ -143,15 +141,23 @@ void TFT_eSPI::loadMetrics(uint16_t gCount)
     gHeight[gNum]   =  (uint8_t)readInt32(); // Height of glyph
     gWidth[gNum]    =  (uint8_t)readInt32(); // Width of glyph
     gxAdvance[gNum] =  (uint8_t)readInt32(); // xAdvance - to move x cursor
-    gdY[gNum]       =   (int8_t)readInt32(); // y delta from baseline
+    gdY[gNum]       =  (int16_t)readInt32(); // y delta from baseline
     gdX[gNum]       =   (int8_t)readInt32(); // x delta from cursor
     readInt32(); // ignored
 
-    // Different glyph sets have different ascent values not always based on "d", so get maximum glyph ascent
+    //Serial.print("Unicode = 0x"); Serial.print(gUnicode[gNum], HEX); Serial.print(", gHeight  = "); Serial.println(gHeight[gNum]);
+    //Serial.print("Unicode = 0x"); Serial.print(gUnicode[gNum], HEX); Serial.print(", gWidth  = "); Serial.println(gWidth[gNum]);
+    //Serial.print("Unicode = 0x"); Serial.print(gUnicode[gNum], HEX); Serial.print(", gxAdvance  = "); Serial.println(gxAdvance[gNum]);
+    //Serial.print("Unicode = 0x"); Serial.print(gUnicode[gNum], HEX); Serial.print(", gdY  = "); Serial.println(gdY[gNum]);
+
+    // Different glyph sets have different ascent values not always based on "d", so we could get
+    // the maximum glyph ascent by checking all characters. BUT this method can generate bad values
+    // for non-existant glyphs, so we will reply on processing for the value and disable this code for now...
+    /*
     if (gdY[gNum] > gFont.maxAscent)
     {
-      // Avoid UTF coding values and characters that tend to give duff values
-      if (((gUnicode[gNum] > 0x20) && (gUnicode[gNum] < 0xA0) && (gUnicode[gNum] != 0x7F)) || (gUnicode[gNum] > 0xFF))
+      // Try to avoid UTF coding values and characters that tend to give duff values
+      if (((gUnicode[gNum] > 0x20) && (gUnicode[gNum] < 0x7F)) || (gUnicode[gNum] > 0xA0))
       {
         gFont.maxAscent   = gdY[gNum];
 #ifdef SHOW_ASCENT_DESCENT
@@ -159,6 +165,7 @@ void TFT_eSPI::loadMetrics(uint16_t gCount)
 #endif
       }
     }
+    */
 
     // Different glyph sets have different descent values not always based on "p", so get maximum glyph descent
     if (((int16_t)gHeight[gNum] - (int16_t)gdY[gNum]) > gFont.maxDescent)
@@ -246,6 +253,7 @@ void TFT_eSPI::unloadFont( void )
 ** Function name:           decodeUTF8
 ** Description:             Line buffer UTF-8 decoder with fall-back to extended ASCII
 *************************************************************************************x*/
+/* Function moved to TFT_eSPI.cpp
 #define DECODE_UTF8
 uint16_t TFT_eSPI::decodeUTF8(uint8_t *buf, uint16_t *index, uint16_t remaining)
 {
@@ -273,20 +281,26 @@ uint16_t TFT_eSPI::decodeUTF8(uint8_t *buf, uint16_t *index, uint16_t remaining)
 
   return c; // fall-back to extended ASCII
 }
+*/
 
 /***************************************************************************************
 ** Function name:           decodeUTF8
 ** Description:             Serial UTF-8 decoder with fall-back to extended ASCII
 *************************************************************************************x*/
+/* Function moved to TFT_eSPI.cpp
 uint16_t TFT_eSPI::decodeUTF8(uint8_t c)
 {
 
 #ifdef DECODE_UTF8
+
+  // 7 bit Unicode
+  if ((c & 0x80) == 0x00) {
+    decoderState = 0;
+    return (uint16_t)c;
+  }
+
   if (decoderState == 0)
   {
-    // 7 bit Unicode
-    if ((c & 0x80) == 0x00) return (uint16_t)c;
-
     // 11 bit Unicode
     if ((c & 0xE0) == 0xC0)
     {
@@ -322,8 +336,10 @@ uint16_t TFT_eSPI::decodeUTF8(uint8_t c)
   }
 #endif
 
+  decoderState = 0;
   return (uint16_t)c; // fall-back to extended ASCII
 }
+*/
 
 
 
@@ -436,6 +452,8 @@ void TFT_eSPI::drawGlyph(uint16_t code)
     int16_t cy = cursor_y + gFont.maxAscent - gdY[gNum];
     int16_t cx = cursor_x + gdX[gNum];
 
+    startWrite(); // Avoid slow ESP32 transaction overhead for every pixel
+
     for (int y = 0; y < gHeight[gNum]; y++)
     {
       fontFile.read(pbuffer, gWidth[gNum]); //<//
@@ -475,7 +493,8 @@ void TFT_eSPI::drawGlyph(uint16_t code)
     drawRect(cursor_x, cursor_y + gFont.maxAscent - gFont.ascent, gFont.spaceWidth, gFont.ascent, fg);
     cursor_x += gFont.spaceWidth + 1;
   }
-  
+
+  endWrite();
 }
 
 /***************************************************************************************
