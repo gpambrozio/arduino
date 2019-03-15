@@ -1,18 +1,8 @@
 /*
- * Ultrasonic Sensor HC-SR04 and Arduino Tutorial
- *
- * by Dejan Nedelkovski,
- * https://howtomechatronics.com/tutorials/arduino/ultrasonic-sensor-hc-sr04/
- *
+ * Sparkfun ESP32 Thing
  */
 
-/*
-    Based on Neil Kolban example for IDF: https://github.com/nkolban/esp32-snippets/blob/master/cpp_utils/tests/BLE%20Tests/SampleServer.cpp
-    Ported to Arduino ESP32 by Evandro Copercini
-*/
-
 #include <BLEDevice.h>
-#include <BLEUtils.h>
 #include <BLEServer.h>
 
 #define SERVICE_UUID        (BLEUUID((uint16_t) 0x8242))
@@ -27,25 +17,15 @@ BLEService *pService;
 BLECharacteristic *pCharacteristic;
 BLEAdvertising *pAdvertising;
 
-#define BUFFER_SIZE  20
-
-#define SOUND_SPEED_BY_2    0.1715 // 343 m/s divided by 2
-#define MAX_DISTANCE   2500
-
 float distance = 0;
-float distanceBuffer[BUFFER_SIZE];
-float distanceBufferSum = 0;
-int distanceBufferPosition = 0;
 
 void setup() {
-  memset(distanceBuffer, 0, sizeof(float) * BUFFER_SIZE);
-  
   pinMode(LED, OUTPUT);
   digitalWrite(LED, LOW);
   
   Serial.begin(115200); // Starts the serial communication
 
-  BLEDevice::init("AgnesBehinds");
+  BLEDevice::init("Behinds");
   pServer = BLEDevice::createServer();
   pService = pServer->createService(SERVICE_UUID);
   pCharacteristic = pService->createCharacteristic(
