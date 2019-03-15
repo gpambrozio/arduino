@@ -15,12 +15,8 @@
 #include <BLEUtils.h>
 #include <BLEServer.h>
 
-#define SERVICE_UUID        "4fafc201-1fb5-459e-8fcc-c5c9c331914b"
-#define CHARACTERISTIC_UUID "beb5483e-36e1-4688-b7f5-ea07361b26a8"
-
-// defines pins numbers
-#define trigPin  26
-#define echoPin  25
+#define SERVICE_UUID        (BLEUUID((uint16_t) 0x8242))
+#define CHARACTERISTIC_UUID (BLEUUID((uint16_t) 0x4242))
 
 #define LED      5
 
@@ -47,8 +43,6 @@ void setup() {
   pinMode(LED, OUTPUT);
   digitalWrite(LED, LOW);
   
-  pinMode(trigPin, OUTPUT); // Sets the trigPin as an Output
-  pinMode(echoPin, INPUT); // Sets the echoPin as an Input
   Serial.begin(115200); // Starts the serial communication
 
   BLEDevice::init("AgnesBehinds");
@@ -63,39 +57,50 @@ void setup() {
   pService->start();
 
   BLEAdvertisementData avdData = BLEAdvertisementData();
+  avdData.setShortName("Behinds");
   avdData.setCompleteServices(pService->getUUID());
   pAdvertising = pServer->getAdvertising();
   pAdvertising->setScanResponseData(avdData);
   pAdvertising->start();
 }
 
+int distanceCM = 0;
+int strength = 0;
+
 void loop() {
-  // Clears the trigPin
-  digitalWrite(trigPin, LOW);
-  delayMicroseconds(2);
+  distanceCM = 0;
+  getTFminiData(&distanceCM, &strength);
   
-  // Sets the trigPin on HIGH state for 10 micro seconds
-  digitalWrite(trigPin, HIGH);
-  delayMicroseconds(10);
-  digitalWrite(trigPin, LOW);
-  
-  // Reads the echoPin, returns the sound wave travel time in microseconds
-  long duration = pulseIn(echoPin, HIGH, (long)((float)MAX_DISTANCE / SOUND_SPEED_BY_2));
-  
-  if (duration > 20) {
-    // Calculating the distance
-    distance = (float)duration * SOUND_SPEED_BY_2;
-
-    distanceBufferSum -= distanceBuffer[distanceBufferPosition];
-    distanceBufferSum += distance;
-    distanceBuffer[distanceBufferPosition] = distance;
-
-    if (++distanceBufferPosition >= BUFFER_SIZE)
-      distanceBufferPosition = 0;
-    
-    distance = distanceBufferSum / BUFFER_SIZE;
+  if (distanceCM) {
+    distance = 10.0 * distanceCM;
     pCharacteristic->setValue(distance);
-
     Serial.println(distance);
   }
+}
+
+// From https://github.com/TFmini/TFmini-Arduino#tfmini_arduino_hardware_serialpolling
+void getTFminiData(int* distance, int* strength) {
+  static char i = 0;
+  char j = 0;
+  int checksum = 0; 
+  static int rx[9];
+  if (Serial.available()) {  
+    rx[i] = Serial.read();
+    if (rx[0] != 0x59) {
+      i = 0;
+    } else if (i == 1 && rx[1] != 0x59) {
+      i = 0;
+    } else if (i == 8) {
+      for (j = 0; j < 8; j++) {
+        checksum += rx[j];
+      }
+      if (rx[8] == (checksum % 256)) {
+        *distance = rx[2] + rx[3] * 256;
+        *strength = rx[4] + rx[5] * 256;
+      }
+      i = 0;
+    } else {
+      i++;
+    } 
+  }  
 }
