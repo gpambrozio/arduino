@@ -17,6 +17,8 @@ BLEService *pService;
 BLECharacteristic *pCharacteristic;
 BLEAdvertising *pAdvertising;
 
+HardwareSerial SerialTFMini(2);
+
 float distance = 0;
 
 void setup() {
@@ -24,6 +26,8 @@ void setup() {
   digitalWrite(LED, LOW);
   
   Serial.begin(115200); // Starts the serial communication
+  
+  SerialTFMini.begin(115200, SERIAL_8N1, 25, 26);
 
   BLEDevice::init("Behinds");
   pServer = BLEDevice::createServer();
@@ -42,16 +46,19 @@ void setup() {
   pAdvertising = pServer->getAdvertising();
   pAdvertising->setScanResponseData(avdData);
   pAdvertising->start();
+  Serial.println("started");
 }
 
 int distanceCM = 0;
+int lastDistance = 0;
 int strength = 0;
 
 void loop() {
   distanceCM = 0;
   getTFminiData(&distanceCM, &strength);
   
-  if (distanceCM) {
+  if (distanceCM && lastDistance != distanceCM) {
+    lastDistance = distanceCM;
     distance = 10.0 * distanceCM;
     pCharacteristic->setValue(distance);
     Serial.println(distance);
@@ -64,8 +71,8 @@ void getTFminiData(int* distance, int* strength) {
   char j = 0;
   int checksum = 0; 
   static int rx[9];
-  if (Serial.available()) {  
-    rx[i] = Serial.read();
+  if (SerialTFMini.available()) {  
+    rx[i] = SerialTFMini.read();
     if (rx[0] != 0x59) {
       i = 0;
     } else if (i == 1 && rx[1] != 0x59) {
