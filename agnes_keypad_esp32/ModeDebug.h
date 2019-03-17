@@ -31,12 +31,12 @@ class ModeDebug : public Mode
       img.setTextColor(TFT_MAGENTA, TFT_BLACK);
       long days = runningSeconds / (24 * 60 * 60);
       if (days > 0) {
-        img.printf("%dd, ", days);
+        img.printf("%ldd, ", days);
         runningSeconds %= 24 * 60 * 60;
       }
-      img.printf("%02d:", runningSeconds / (60 * 60));
+      img.printf("%02ld:", runningSeconds / (60 * 60));
       runningSeconds %= 60 * 60;
-      img.printf("%02d.%02d\n", runningSeconds / 60, runningSeconds % 60);
+      img.printf("%02ld.%02ld\n", runningSeconds / 60, runningSeconds % 60);
       img.setTextColor(TFT_WHITE, TFT_BLACK);
     
       img.print("Battery: ");
