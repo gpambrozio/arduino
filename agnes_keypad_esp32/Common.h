@@ -22,3 +22,21 @@ void scheduleScreenRefresh();
 
 #define NUM_KEYS  (NUMTRELLIS * 16)
 #define MODE_KEYS (NUM_KEYS - 4)
+
+#define DEBUG
+
+#ifdef DEBUG
+
+#define D(d)  Serial.print(d)
+#define DL(d) Serial.println(d)
+#define DP(args...) Serial.printf(args)
+#define MARK  {Serial.print(F("Running line "));Serial.println(__LINE__);}
+
+#else
+
+#define D(d)  {}
+#define DL(d) {}
+#define DP(...) {}
+#define MARK  {}
+
+#endif

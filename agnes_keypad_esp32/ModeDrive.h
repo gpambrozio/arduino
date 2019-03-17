@@ -26,7 +26,7 @@ class ModeDrive : public Mode
     virtual void checkKeys() {
       for (uint8_t i = 0; i < MODE_KEYS; i++) {
         if (trellis.justPressed(i)) {
-          Serial.printf("v%d\n", i);
+          DP("v%d\n", i);
 
           if (i % 2 == 1) {
             http.begin("agnespanel", 8080, "/text//0");
@@ -36,9 +36,9 @@ class ModeDrive : public Mode
 
           int httpCode = http.GET();
           if (httpCode > 0) {
-            Serial.printf("[HTTP] GET... code: %d\n", httpCode);
+            DP("[HTTP] GET... code: %d\n", httpCode);
           } else {
-            Serial.print("[HTTP] GET... failed, error: "); Serial.println(http.errorToString(httpCode).c_str());
+            D(F("[HTTP] GET... failed, error: ")); DL(http.errorToString(httpCode).c_str());
           }
 
           http.end();

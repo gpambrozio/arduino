@@ -29,6 +29,8 @@
 
 #include <Passwords.h>
 
+#define NAME  "keypad"
+
 // The built in LED
 #define LED 13
 
@@ -62,7 +64,7 @@ byte mode = 1;
 void setup() {
 
   Serial.begin(115200);
-  Serial.println("Keypad");
+  DL(F(NAME));
 
   pinMode(BATTERY_PIN, INPUT);
   pinMode(POWER_PIN, INPUT);
@@ -108,12 +110,12 @@ void setup() {
   Serial.println("IP address: ");
   Serial.println(WiFi.localIP());
 
-  if (MDNS.begin("keypad")) {
-    Serial.println("MDNS responder started");
+  if (MDNS.begin(NAME)) {
+    DL(F("MDNS responder started"));
   }
 
   ArduinoOTA.setPort(8266);
-  ArduinoOTA.setHostname("keypad");
+  ArduinoOTA.setHostname(NAME);
   ArduinoOTA.begin();
   
   server.on("/", []() {
@@ -152,7 +154,7 @@ void setup() {
   modes[mode]->isActive = true;
   modes[mode]->setup();
   
-  Serial.println("setup done");
+  DL(F("setup done"));
 }
 
 HTTPClient http;
@@ -176,8 +178,8 @@ void loop() {
   delay(30); // 30ms delay is required, dont remove me!
 
   if (wifiMulti.run() != WL_CONNECTED) {
-    Serial.println("WiFi not connected!");
     delay(1000);
+    DL(F("WiFi not connected!"));
   }
 
   // If a button was just pressed or released...
@@ -213,15 +215,15 @@ void loop() {
   }
 
   if (!client.connected()) {
-    Serial.println("connecting to server.");
+    DL(F("connecting to server."));
     client.stop();
     if (client.connect(WiFi.gatewayIP(), 5000)) {
-      Serial.println("connected to server.");
+      DL(F("connected to server."));
       client.print("Panel\n");
     }
   } else if (client.available()) {
     String line = client.readStringUntil('\n');
-    Serial.print("Received "); Serial.println(line);
+    MARK;
     for (uint8_t i=0; i<NUMBER_OF_MODES; i++) {
       modes[i]->checkCommand(line);
     }
