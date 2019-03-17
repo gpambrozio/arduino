@@ -45,6 +45,15 @@ class ModeDrive : public Mode
         }
       }
     }
+    virtual void setLEDs(uint8_t keys) {
+      for (uint8_t i = 0; i < keys; i++) {
+        trellis.setLED(i);
+      }
+      for (uint8_t i = keys; i < NUM_KEYS; i++) {
+        trellis.clrLED(i);
+      }
+      trellis.writeDisplay();
+    }
     virtual void checkCommand(String command) {
       if (command.startsWith("Ds")) {
         float value = command.substring(2).toFloat();
@@ -53,14 +62,7 @@ class ModeDrive : public Mode
         if (isActive) {
           float relative = min(1.0, 1.0 - (value - CLOSE) / (FAR - CLOSE));
           if (relative < 0.0) relative = 0.0;
-          uint8_t keys = (uint8_t)(relative * NUM_KEYS);
-          for (uint8_t i = 0; i < keys; i++) {
-            trellis.setLED(i);
-          }
-          for (uint8_t i = keys; i < NUM_KEYS; i++) {
-            trellis.clrLED(i);
-          }
-          trellis.writeDisplay();
+          setLEDs((uint8_t)(relative * NUM_KEYS));
         }
       }
     }
@@ -70,10 +72,12 @@ class ModeDrive : public Mode
       if (value > 0) {
         img.setTextFont(2);
         img.printf("Distance: %.1f\n", value);
+      } else {
+        setLEDs(NUM_KEYS);
       }
     }
   private:
-    VolatileValue<float> distance = VolatileValue<float>(0, 5);
+    VolatileValue<float> distance = VolatileValue<float>(0, 2);
 };
 
 #endif
