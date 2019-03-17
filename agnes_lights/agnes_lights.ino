@@ -1,3 +1,7 @@
+/***********************************************************
+ *  Agnes' light controller using adafruit's feather ???
+ ***********************************************************/
+
 #include "Common.h"
 #include "Strip.h"
 
@@ -20,7 +24,7 @@ void setup() {
 #ifdef DEBUG
   Serial.begin(115200);
 #endif
-  DL("Start");
+  DL(F("Start"));
   pinMode(LED_RED, OUTPUT);
   digitalWrite(LED_RED, HIGH);
 
@@ -29,7 +33,7 @@ void setup() {
   inside.begin();
   outside.begin();
   
-  DL("Starting BT");
+  DL(F("Starting BT"));
   Bluefruit.begin();
   Bluefruit.autoConnLed(false);
 
@@ -41,21 +45,21 @@ void setup() {
   Bluefruit.setConnectCallback(connectCallback);
   Bluefruit.setDisconnectCallback(disconnectCallback);
 
-  DL("Configuring the Device Information Service");
+  DL(F("Configuring the Device Information Service"));
   diService.setManufacturer("VanTomation");
   diService.setModel("Lights");
   diService.begin();
 
   // Setup the Heart Rate Monitor service using
   // BLEService and BLECharacteristic classes
-  DL("Configuring Service");
+  DL(F("Configuring Service"));
   setupService();
 
   // Setup the advertising packet(s)
-  DL("Setting up the advertising payload(s)");
+  DL(F("Setting up the advertising payload(s)"));
   startAdv();
 
-  DL("Ending setup");
+  DL(F("Ending setup"));
 }
 
 unsigned long nextBlink = 0;
@@ -68,7 +72,7 @@ void loop() {
     if (millis() >= nextBlink + 20) {
       digitalWrite(LED_RED, LOW);
       nextBlink = millis() + 15000;
-      DL("Loop");
+      DL(F("Loop"));
     } else {
       digitalWrite(LED_RED, HIGH);
     }
@@ -119,12 +123,12 @@ void startAdv(void) {
 }
 
 void connectCallback(uint16_t conn_handle) {
-  D("Connected to ");
+  D(F("Connected to "));
   char centralName[32] = { 0 };
   Bluefruit.Gap.getPeerName(conn_handle, centralName, sizeof(centralName));
   DL(centralName);
 }
 
 void disconnectCallback(uint16_t conn_handle, uint8_t reason) {
-  DL("Disconnected");
+  DL(F("Disconnected"));
 }

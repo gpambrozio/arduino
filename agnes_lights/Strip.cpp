@@ -18,7 +18,7 @@ Strip::Strip(BLEUuid bleuuid, int leds, int pin, int maxBrightness) :
 void Strip::begin() {
   strip.begin();
 
-  DL("Resetting strip");
+  DL(F("Resetting strip"));
   strip.setBrightness(maxBrightness);
   strip.show(); // Initialize all pixels to 'off'
 
@@ -67,11 +67,11 @@ void Strip::setupService() {
 
 void Strip::writeCallback(uint8_t* data, uint16_t len, uint16_t offset) {
   if (len < sizeof(CharactericticData)) {
-    D("wrong size "); D(len); D(" should be "); DL(sizeof(CharactericticData));
+    D(F("wrong size ")); D(len); D(F(" should be ")); DL(sizeof(CharactericticData));
     return;
   }
   memcpy(&charactericticData, data+offset, sizeof(CharactericticData));
-  D("Got data "); D(len); D(" Mode "); DL(charactericticData.mode);
+  D(F("Got data ")); D(len); D(F(" Mode ")); DL(charactericticData.mode);
   targetBrightness = charactericticData.targetBrightness * maxBrightness / 100;
   blink();
   // DON'T do any strip stuff here!
