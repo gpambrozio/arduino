@@ -96,20 +96,6 @@ void setup() {
 
   wifiMulti.addAP(WLAN_SSID, WLAN_PASS);
 
-  while (wifiMulti.run() != WL_CONNECTED) {
-    Serial.println("WiFi Connect Failed! Retrying...");
-    delay(1000);
-  }
-  img.fillSprite(TFT_BLACK);
-  img.setCursor(0, 0, 2);
-  img.printf("Connected to %s ", WLAN_SSID);
-  img.pushSprite(0, 0);
-  
-  Serial.println("");
-  Serial.println("WiFi connected");
-  Serial.println("IP address: ");
-  Serial.println(WiFi.localIP());
-
   if (MDNS.begin(NAME)) {
     DL(F("MDNS responder started"));
   }
@@ -167,10 +153,12 @@ float power;
 
 std::vector<String> commandsToSend;
 
+#define USING_BATTERY  (power < 4.0)
+
 #define LIGHT_CHANGE 32
 #define MAX_LIGHT_POWER 255
 #define MAX_LIGHT_BATTERY 96
-#define MAX_LIGHT (power < 4.0 ? MAX_LIGHT_BATTERY : MAX_LIGHT_POWER)
+#define MAX_LIGHT (USING_BATTERY ? MAX_LIGHT_BATTERY : MAX_LIGHT_POWER)
 
 int light = MAX_LIGHT_POWER;
 
@@ -178,9 +166,16 @@ void loop() {
   delay(30); // 30ms delay is required, dont remove me!
 
   if (wifiMulti.run() != WL_CONNECTED) {
-    delay(1000);
     DL(F("WiFi not connected!"));
   }
+
+  // Formula from http://cuddletech.com/?p=1030
+  battery = ((float)(analogRead(BATTERY_PIN)) / 4095) * 2.0 * 3.3 * 1.1;
+  power = ((float)(analogRead(POWER_PIN)) / 4095) * 2.0 * 3.3 * 1.1;
+
+  light = min(light, MAX_LIGHT);
+  if (light < 0) light = 0;   // min is not defined for some reason...
+  sigmaDeltaWrite(TFT_LIGHT_CHANNEL, light);
 
   // If a button was just pressed or released...
   if (trellis.readSwitches()) {
@@ -234,14 +229,6 @@ void loop() {
     commandsToSend.clear();
   }
   
-  // Formula from http://cuddletech.com/?p=1030
-  battery = ((float)(analogRead(BATTERY_PIN)) / 4095) * 2.0 * 3.3 * 1.1;
-  power = ((float)(analogRead(POWER_PIN)) / 4095) * 2.0 * 3.3 * 1.1;
-
-  light = min(light, MAX_LIGHT);
-  if (light < 0) light = 0;   // min is not defined for some reason...
-  sigmaDeltaWrite(TFT_LIGHT_CHANNEL, light);
-
   ArduinoOTA.handle();
   server.handleClient();
   if (millis() > nextTFTUpdate) {
