@@ -16,8 +16,8 @@
 // ##################################################################################
 
 // Only define one driver, the other ones must be commented out
-#define ILI9341_DRIVER
-//#define ST7735_DRIVER      // Define additional parameters below for this display
+//#define ILI9341_DRIVER
+#define ST7735_DRIVER      // Define additional parameters below for this display
 //#define ILI9163_DRIVER     // Define additional parameters below for this display
 //#define S6D02A1_DRIVER
 //#define RPI_ILI9486_DRIVER // 20MHz maximum SPI
@@ -52,6 +52,8 @@
 // #define TFT_HEIGHT 128
 // #define TFT_HEIGHT 240 // ST7789 240 x 240
 // #define TFT_HEIGHT 320 // ST7789 240 x 320
+#define TFT_WIDTH  128
+#define TFT_HEIGHT 128
 
 // For ST7735 ONLY, define the type of display, originally this was based on the
 // colour of the tab on the screen protector film but this is not always true, so try
@@ -62,7 +64,7 @@
 
 // #define ST7735_INITB
 // #define ST7735_GREENTAB
-// #define ST7735_GREENTAB2
+#define ST7735_GREENTAB2
 // #define ST7735_GREENTAB3
 // #define ST7735_GREENTAB128    // For 128 x 128 display
 // #define ST7735_GREENTAB160x80 // For 160 x 80 display (BGR, inverted, 26 offset)
@@ -192,12 +194,12 @@
 //#define ESP32_PARALLEL
 
 // The ESP32 and TFT the pins used for testing are:
-//#define TFT_CS   33  // Chip select control pin (library pulls permanently low
-//#define TFT_DC   15  // Data Command control pin - must use a pin in the range 0-31
-//#define TFT_RST  32  // Reset pin, toggles on startup
+#define TFT_CS   12  // Chip select control pin (library pulls permanently low
+#define TFT_DC   32  // Data Command control pin - use a pin in the range 0-31
+#define TFT_RST  15  // Reset pin, toggles on startup
 
-//#define TFT_WR    4  // Write strobe control pin - must use a pin in the range 0-31
-//#define TFT_RD    2  // Read strobe control pin
+//#define TFT_WR    4  // Write strobe control pin - use a pin in the range 0-31
+//#define TFT_RD    2  // Read strobe control pin  - use a pin in the range 0-31
 
 //#define TFT_D0   12  // Must use pins in the range 0-31 for the data bus
 //#define TFT_D1   13  // so a single register write sets/clears all bits.
@@ -227,11 +229,11 @@
 #define LOAD_FONT7  // Font 7. 7 segment 48 pixel font, needs ~2438 bytes in FLASH, only characters 1234567890:-.
 #define LOAD_FONT8  // Font 8. Large 75 pixel font needs ~3256 bytes in FLASH, only characters 1234567890:-.
 //#define LOAD_FONT8N // Font 8. Alternative to Font 8 above, slightly narrower, so 3 digits fit a 160 pixel TFT
-#define LOAD_GFXFF  // FreeFonts. Include access to the 48 Adafruit_GFX free fonts FF1 to FF48 and custom fonts
+// #define LOAD_GFXFF  // FreeFonts. Include access to the 48 Adafruit_GFX free fonts FF1 to FF48 and custom fonts
 
 // Comment out the #define below to stop the SPIFFS filing system and smooth font code being loaded
 // this will save ~20kbytes of FLASH
-#define SMOOTH_FONT
+// #define SMOOTH_FONT
 
 
 // ##################################################################################
