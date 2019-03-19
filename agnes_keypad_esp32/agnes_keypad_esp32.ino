@@ -56,7 +56,7 @@ Mode *modes[] = {
 };
 
 #define NUMBER_OF_MODES  (sizeof(modes) / sizeof(Mode *))
-byte mode = 1;
+byte mode = 0;
 
 void setup() {
 
@@ -96,11 +96,6 @@ void setup() {
   if (MDNS.begin(NAME)) {
     DL(F("MDNS responder started"));
   }
-
-  ArduinoOTA.setPort(8266);
-  ArduinoOTA.setHostname(NAME);
-  ArduinoOTA.begin();
-  
 
   pinMode(TFT_LIGHT, OUTPUT);
 
@@ -159,6 +154,10 @@ void loop() {
 
   if (wifiMulti.run() != WL_CONNECTED) {
     DL(F("WiFi not connected!"));
+  } else {
+    ArduinoOTA.setPort(8266);
+    ArduinoOTA.setHostname(NAME);
+    ArduinoOTA.begin();
   }
 
   // Formula from http://cuddletech.com/?p=1030
