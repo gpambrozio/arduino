@@ -88,7 +88,7 @@ void setup() {
   img.setTextColor(TFT_WHITE, TFT_BLACK);
   img.fillSprite(TFT_BLACK);
   img.setCursor(0, 0, 2);
-  img.printf("Connecting to %s", WLAN_SSID);
+  img.printf("Starting...");
   img.pushSprite(0, 0);
 
   wifiMulti.addAP(WLAN_SSID, WLAN_PASS);
@@ -118,8 +118,6 @@ void setup() {
     trellis.writeDisplay();
     delay(30);
   }
-
-  tft.fillScreen(TFT_BLACK);
 
   for (uint8_t i = 0; i < NUMBER_OF_MODES; i++) {
     modes[i]->init();
