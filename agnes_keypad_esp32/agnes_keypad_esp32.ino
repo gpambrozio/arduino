@@ -7,7 +7,6 @@
 #include <WiFi.h>
 #include <WiFiMulti.h>
 
-#include <WebServer.h>
 #include <ArduinoOTA.h>
 #include <ESPmDNS.h>
 
@@ -40,7 +39,6 @@
 #define TFT_LIGHT_CHANNEL 0
 
 WiFiMulti wifiMulti;
-WebServer server(80);
 
 Adafruit_Trellis matrix0 = Adafruit_Trellis();
 
@@ -103,11 +101,6 @@ void setup() {
   ArduinoOTA.setHostname(NAME);
   ArduinoOTA.begin();
   
-  server.on("/", []() {
-    trellis.begin(0x70);  // only one
-    server.send(200, "text/plain", "OK");
-  });
-  server.begin();
 
   pinMode(TFT_LIGHT, OUTPUT);
 
@@ -229,7 +222,6 @@ void loop() {
   }
   
   ArduinoOTA.handle();
-  server.handleClient();
   if (millis() > nextTFTUpdate) {
     nextTFTUpdate = millis() + 1000;
     img.fillSprite(TFT_BLACK);
