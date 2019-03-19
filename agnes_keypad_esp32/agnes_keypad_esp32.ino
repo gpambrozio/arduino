@@ -11,8 +11,7 @@
 #include <ArduinoOTA.h>
 #include <ESPmDNS.h>
 
-// IMPORTANT: Wire might be broken for ESP32
-// To fix see this: https://github.com/espressif/arduino-esp32/issues/741#issuecomment-374325594
+// IMPORTANT: Check if libraries/TFT_eSPI/User_Setup.h didn't change in latest library update
 
 #include <Wire.h>
 #include <SPI.h>
