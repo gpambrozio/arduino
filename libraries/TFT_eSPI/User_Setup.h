@@ -194,6 +194,7 @@
 //#define ESP32_PARALLEL
 
 // The ESP32 and TFT the pins used for testing are:
+// For agnes panel:
 #define TFT_CS   12  // Chip select control pin (library pulls permanently low
 #define TFT_DC   32  // Data Command control pin - use a pin in the range 0-31
 #define TFT_RST  15  // Reset pin, toggles on startup
