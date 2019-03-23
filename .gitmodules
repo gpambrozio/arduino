@@ -10,6 +10,3 @@
 [submodule "libraries/FastLED"]
 	path = libraries/FastLED
 	url = git@github.com:gpambrozio/FastLED.git
-[submodule "libraries/DHT_sensor_library"]
-	path = libraries/DHT_sensor_library
-	url = git@github.com:gpambrozio/DHT-sensor-library.git
