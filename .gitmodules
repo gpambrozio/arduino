@@ -7,6 +7,3 @@
 [submodule "libraries/TinyWireS"]
 	path = libraries/TinyWireS
 	url = git@github.com:gpambrozio/TinyWire.git
-[submodule "libraries/FastLED"]
-	path = libraries/FastLED
-	url = git@github.com:gpambrozio/FastLED.git
