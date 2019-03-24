@@ -1,6 +1,5 @@
 // CREEPY SPORTS MASCOT EYE
 
-#define COLOR_EYE
 #define EYE_RADIUS 51.0
 
 const uint16_t borderData[128][128] = {

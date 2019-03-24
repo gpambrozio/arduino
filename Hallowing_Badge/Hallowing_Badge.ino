@@ -1,11 +1,9 @@
-// "Googly eye" demo for Adafruit Hallowing.  Uses accelerometer for
-// motion plus DMA and related shenanigans for smooth animation.
+// Badge code for Adafruit Hallowing. Uses DMA and related shenanigans for smooth animation.
 
 #include <Adafruit_LIS3DH.h>
-#include <Adafruit_GFX.h>
 #include <Adafruit_ST7735.h>
 #include <Adafruit_ZeroDMA.h>
-#include "graphics.h"
+#include "eyes.h"
 
 #define G_SCALE       40.0   // Accel scale; no science, just looks good
 #define ELASTICITY     0.80  // Edge-bounce coefficient (MUST be <1.0!)
@@ -54,6 +52,9 @@ static void dma_callback(Adafruit_ZeroDMA *dma) {
 // SETUP FUNCTION -- runs once at startup ----------------------------------
 
 void setup(void) {
+  Serial.begin(9600);
+  //while (!Serial);
+
   // Hardware init
   tft.initR(INITR_144GREENTAB);
   tft.setRotation(2); // Display is rotated 180° on Hallowing
@@ -65,41 +66,12 @@ void setup(void) {
     accel.setRange(LIS3DH_RANGE_8_G);
   }
 
-  // Set up SPI DMA.  While the Hallowing has a known SPI peripheral and
-  // this could be much simpler, the extra code here will help if adapting
-  // the sketch to other SAMD boards (Feather M0, M4, etc.)
+  // Set up SPI DMA.
   int                dmac_id;
   volatile uint32_t *data_reg;
   dma.allocate();
-  if(&PERIPH_SPI == &sercom0) {
-    dma.setTrigger(SERCOM0_DMAC_ID_TX);
-    data_reg = &SERCOM0->SPI.DATA.reg;
-#if defined SERCOM1
-  } else if(&PERIPH_SPI == &sercom1) {
-    dma.setTrigger(SERCOM1_DMAC_ID_TX);
-    data_reg = &SERCOM1->SPI.DATA.reg;
-#endif
-#if defined SERCOM2
-  } else if(&PERIPH_SPI == &sercom2) {
-    dma.setTrigger(SERCOM2_DMAC_ID_TX);
-    data_reg = &SERCOM2->SPI.DATA.reg;
-#endif
-#if defined SERCOM3
-  } else if(&PERIPH_SPI == &sercom3) {
-    dma.setTrigger(SERCOM3_DMAC_ID_TX);
-    data_reg = &SERCOM3->SPI.DATA.reg;
-#endif
-#if defined SERCOM4
-  } else if(&PERIPH_SPI == &sercom4) {
-    dma.setTrigger(SERCOM4_DMAC_ID_TX);
-    data_reg = &SERCOM4->SPI.DATA.reg;
-#endif
-#if defined SERCOM5
-  } else if(&PERIPH_SPI == &sercom5) {
-    dma.setTrigger(SERCOM5_DMAC_ID_TX);
-    data_reg = &SERCOM5->SPI.DATA.reg;
-#endif
-  }
+  dma.setTrigger(SERCOM5_DMAC_ID_TX);
+  data_reg = &SERCOM5->SPI.DATA.reg;
   dma.setAction(DMA_TRIGGER_ACTON_BEAT);
   descriptor = dma.addDescriptor(
     NULL,               // move data
@@ -284,7 +256,6 @@ void loop(void) {
 
   descriptor->BTCNT.reg = nBytes = (x2 - x1 + 1) * 2;
 
-#ifdef COLOR_EYE
   uint16_t *srcPtr1,    // Pointer into eye background bitmap (16bpp)
            *srcPtr2,    // Pointer into pupil bitmap (16bpp)
             rgb1, rgb2; // Colors of above
@@ -339,61 +310,6 @@ void loop(void) {
     }
     dmaXfer(nBytes);
   }
-
-#else // Grayscale eye
-
-  uint8_t  *srcPtr1,  // Pointer into eye background bitmap (8bpp)
-           *srcPtr2,  // Pointer into pupil bitmap (8bpp)
-            b;        // Resulting pixel brightness (0-255)
-
-  // Macro converts 8-bit grayscale to 16-bit '565' RGB value
-  #define STORE565(x)                                            \
-   result   = (((x * 0x801) >> 3) & 0xF81F) | ((x & 0xFC) << 3); \
-  *dmaPtr++ = __builtin_bswap16(result);
-
-  // Process rows ABOVE pupil
-  for(row=y1; row<py1; row++) {
-    dmaPtr  = &dmaBuf[dmaIdx][0];
-    srcPtr1 = (uint8_t *)&borderData[row][x1];
-    for(col=x1; col<=x2; col++) {
-      b = *srcPtr1++;
-      STORE565(b)
-    }
-    dmaXfer(nBytes);
-  }
-
-  // Process rows WITH pupil
-  for(; row<=py2; row++) {
-    dmaPtr  = &dmaBuf[dmaIdx][0];                // Output to start of DMA buf
-    srcPtr1 = (uint8_t *)&borderData[row][x1];   // Initial byte of eye border
-    srcPtr2 = (uint8_t *)&pupilData[row-py1][0]; // Initial byte of pupil
-    for(col=x1; col<px1; col++) {                // LEFT of pupil
-      b = *srcPtr1++;
-      STORE565(b)
-    }
-    for(; col<=px2; col++) {      // Overlap pupil
-      b = (*srcPtr1++ * (*srcPtr2++ + 1)) >> 8;
-      STORE565(b)
-    }
-    for(; col<=x2; col++) {       // RIGHT of pupil
-      b = *srcPtr1++;
-      STORE565(b)
-    }
-    dmaXfer(nBytes);
-  }
-
-  // Process rows BELOW pupil
-  for(; row<=y2; row++) {
-    dmaPtr  = &dmaBuf[dmaIdx][0];
-    srcPtr1 = (uint8_t *)&borderData[row][x1];
-    for(col=x1; col<=x2; col++) {
-      b = *srcPtr1++;
-      STORE565(b)
-    }
-    dmaXfer(nBytes);
-  }
-
-#endif // !COLOR_EYE
 
   while(dma_busy);            // Wait for last DMA transfer to complete
   digitalWrite(TFT_CS, HIGH); // Deselect
