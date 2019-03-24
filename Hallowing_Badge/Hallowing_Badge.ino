@@ -4,6 +4,7 @@
 #include "common.h"
 #include "mode.h"
 #include "mode_eyes.h"
+#include "mode_name.h"
 
 #define TFT_CS        39    // Hallowing display control pins: chip select
 #define TFT_RST       37    // Display reset
@@ -31,6 +32,7 @@ static void dma_callback(Adafruit_ZeroDMA *dma) {
 }
 
 Mode *modes[] = {
+  new ModeName(),
   new ModeEyes(),
 };
 #define NUMBER_OF_MODES  (sizeof(modes) / sizeof(Mode *))
