@@ -5,10 +5,11 @@ import os
 import sys
 import struct
 
-image_name = "image1.png"
+image_name = "image2.png"
 
 script_path = os.path.dirname(sys.argv[0])
-image_path = os.path.join(script_path, image_name)
+images_path = os.path.join(script_path, "images")
+image_path = os.path.join(images_path, image_name)
 
 img = Image.open(image_path)
 w = img.width
@@ -17,7 +18,7 @@ h = img.height
 px = img.load()
 
 name = os.path.splitext(image_name)[0]
-raw_path = os.path.join(script_path, "%s.raw" % name)
+raw_path = os.path.join(images_path, "%s.raw" % name)
 raw_file = open(raw_path, "w+")
 
 print "// Data from %s" % image_path
