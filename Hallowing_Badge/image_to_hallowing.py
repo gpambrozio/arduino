@@ -15,12 +15,14 @@ h = img.height
 
 px = img.load()
 
-name = os.path.splitext(image_name)[0].upper()
+name = os.path.splitext(image_name)[0]
 
 print "// Data from %s" % image_path
-print "#define %s_ROWS %d" % (name, h)
-print "#define %s_COLS %d" % (name, w)
-print "const uint16_t %sData[%s_ROWS][%s_COLS] = {" % (name.lower(), name, name)
+print ""
+print "#define %s_ROWS %d" % (name.upper(), h)
+print "#define %s_COLS %d" % (name.upper(), w)
+print ""
+print "const uint16_t %sData[%s_ROWS][%s_COLS] = {" % (name, name.upper(), name.upper())
 for row in range(h):
 	print("  {    // row %d" % row)
 	line = "    "
