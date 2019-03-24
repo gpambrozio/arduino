@@ -13,7 +13,7 @@ class ModeName : public Mode
       column = 0;
     }
     virtual void tearDown() {}
-    virtual void draw() {
+    virtual void draw(bool hasClick) {
       setAddrWindow(0, 0, 128, 128);
 
       uint16_t *dmaPtr;   // Pointer into DMA output buffer (16 bits/pixel)

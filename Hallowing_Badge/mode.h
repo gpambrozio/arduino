@@ -8,7 +8,8 @@ class Mode
     virtual void init();
     virtual void setup();
     virtual void tearDown();
-    virtual void draw();
+    virtual void draw(bool hasClick);
+    virtual bool manualAdvance() { return false; }
   protected:
 };
 

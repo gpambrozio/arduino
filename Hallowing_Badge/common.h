@@ -11,3 +11,4 @@ extern uint8_t           dmaIdx; // Active DMA buffer # (alternate fill/send)
 
 void dmaXfer(uint16_t n);
 void setAddrWindow(int x, int y, int w, int h);
+void nextMode();

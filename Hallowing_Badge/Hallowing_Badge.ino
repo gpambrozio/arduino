@@ -51,8 +51,9 @@ void setup(void) {
 
   pinMode(TFT_BACKLIGHT, OUTPUT);
 
-  if(accel.begin(0x18) || accel.begin(0x19)) {
+  if (accel.begin(0x18) || accel.begin(0x19)) {
     accel.setRange(LIS3DH_RANGE_8_G);
+    accel.setClick(1, 80);
   }
 
   // Set up SPI DMA.
@@ -80,12 +81,35 @@ void setup(void) {
 
 // LOOP FUNCTION -- repeats indefinitely -----------------------------------
 
+long nextClick = 0;
+
 void loop(void) {
+  bool hasClick = false;
+  uint8_t click = accel.getClick();
+  if (click & 0x30 && millis() > nextClick) {
+    nextClick = millis() + 500;
+    hasClick = true;
+    Serial.print("Click detected (0x"); Serial.print(click, HEX); Serial.print("): ");
+    if (click & 0x10) Serial.println("single click");
+    if (click & 0x20) Serial.println("double click");
+    if (!modes[mode]->manualAdvance()) {
+      nextMode();
+      hasClick = false;
+    }
+  }
   accel.read();
-  modes[mode]->draw();
+  modes[mode]->draw(hasClick);
   while(dma_busy);            // Wait for last DMA transfer to complete
   digitalWrite(TFT_CS, HIGH); // Deselect
   SPI.endTransaction();       // SPI done
+}
+
+void nextMode() {
+  modes[mode]->tearDown();
+  if (++mode >= NUMBER_OF_MODES) {
+    mode = 0;
+  }
+  modes[mode]->setup();
 }
 
 void setAddrWindow(int x, int y, int w, int h) {
