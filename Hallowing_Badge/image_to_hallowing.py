@@ -44,6 +44,8 @@ for row in range(h):
 		b = b >> 3   # 5 bits
 		rgb16 = (r << 11) + (g << 5) + b;
 		raw_file.write(struct.pack('>H', rgb16))
+		# swapping bytes
+		rgb16 = struct.unpack("<H", struct.pack(">H", rgb16))[0]
 		line += "0x%04x, " % rgb16
 		if col % 16 == 15:
 			print(line)
