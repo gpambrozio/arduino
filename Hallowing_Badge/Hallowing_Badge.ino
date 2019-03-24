@@ -98,12 +98,15 @@ void setup(void) {
   tft.fillScreen(0);
 
   pinMode(TFT_BACKLIGHT, OUTPUT);
+  analogWrite(TFT_BACKLIGHT, 50);
 
+  Serial.println("Setting up accelerometer");
   if (accel.begin(0x18) || accel.begin(0x19)) {
     accel.setRange(LIS3DH_RANGE_8_G);
     accel.setClick(1, 60);
   }
 
+  Serial.println("Setting up dma");
   // Set up SPI DMA.
   int                dmac_id;
   volatile uint32_t *data_reg;
@@ -120,11 +123,12 @@ void setup(void) {
     false);             // increment dest addr?
   dma.setCallback(dma_callback);
 
-  analogWrite(TFT_BACKLIGHT, 40);
+  Serial.println("Setting modes");
   for (uint8_t i = 0; i < NUMBER_OF_MODES; i++) {
     modes[i]->init();
   }
   modes[mode]->setup();
+  Serial.println("Setup done");
 }
 
 // LOOP FUNCTION -- repeats indefinitely -----------------------------------
@@ -155,6 +159,7 @@ void nextMode() {
     mode = 0;
   }
   modes[mode]->setup();
+  Serial.print("Changed mode to "); Serial.println(mode);
 }
 
 void setAddrWindow(int x, int y, int w, int h) {
