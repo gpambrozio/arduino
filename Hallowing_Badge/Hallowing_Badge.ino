@@ -101,7 +101,7 @@ void setup(void) {
 
   if (accel.begin(0x18) || accel.begin(0x19)) {
     accel.setRange(LIS3DH_RANGE_8_G);
-    accel.setClick(1, 80);
+    accel.setClick(1, 60);
   }
 
   // Set up SPI DMA.
