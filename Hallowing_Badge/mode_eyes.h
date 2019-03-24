@@ -26,6 +26,7 @@ class ModeEyes : public Mode
     }
     virtual void tearDown() {}
     virtual void draw(bool hasClick) {
+      accel.read();
       // Get time since last frame, in floating-point seconds
       uint32_t t       = micros();
       float    elapsed = (float)(t - lastTime) / 1000000.0;

@@ -149,7 +149,6 @@ void loop(void) {
       hasClick = false;
     }
   }
-  accel.read();
   modes[mode]->draw(hasClick);
 }
 
