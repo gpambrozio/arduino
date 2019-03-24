@@ -20,6 +20,9 @@ class ModeEyes : public Mode
     virtual void init() {}
     virtual void setup() {
       lastTime = micros();
+      firstFrame = true;
+      x  = 0.0, y  = 0.0, // Pupil position, start at center
+      vx = 0.0, vy = 0.0; // Pupil velocity (X,Y components)
     }
     virtual void tearDown() {}
     virtual void draw(bool hasClick) {
@@ -249,7 +252,7 @@ class ModeEyes : public Mode
     float    x  = 0.0, y  = 0.0, // Pupil position, start at center
              vx = 0.0, vy = 0.0; // Pupil velocity (X,Y components)
     uint32_t lastTime;           // Last-rendered frame time, microseconds
-    bool     firstFrame = true;  // Force full-screen update on initial frame
+    bool     firstFrame;         // Force full-screen update on initial frame
 };
 
 #endif
