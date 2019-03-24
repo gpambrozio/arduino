@@ -27,14 +27,23 @@ class ModeName : public Mode
       // Process rows
       for (row=0; row<128; row++) {
         dmaPtr  = &dmaBuf[dmaIdx][0];
-        srcPtr = (uint16_t *)&nameData[row][column];
+
+        // max below is for when column < 0.
+        // In that case the if inside the for only starts
+        // actually reading the line when column + col >= 0
+        srcPtr = (uint16_t *)&nameData[row][max(0, column)];
         for (col=0; col<128; col++) {
-          *dmaPtr++ = __builtin_bswap16(*srcPtr++);
+          // Allows to wrap around nicely.
+          if (col >= -column && column + col < NAME_COLS) {
+            *dmaPtr++ = __builtin_bswap16(*srcPtr++);
+          } else {
+            *dmaPtr++ = 0xffff;
+          }
         }
         dmaXfer(nBytes);
       }
-      if (++column >= COLS) {
-        column = 0;
+      if (++column >= NAME_COLS) {
+        column = -128;
       }
     }
   
