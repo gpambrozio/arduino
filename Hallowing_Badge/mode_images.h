@@ -38,14 +38,14 @@ class ModeImages : public Mode
       uint8_t   row;
       uint16_t  nBytes;   // Size of DMA transfer
 
-      descriptor->BTCNT.reg = nBytes = 128 * 2;
+      descriptor->BTCNT.reg = nBytes = TFT_W * 2;
 
       uint16_t *srcPtr;
 
-      setAddrWindow(0, 0, 128, 128);
+      setAddrWindow(0, 0, TFT_W, TFT_H);
 
       // Process rows
-      for (row=0; row<128; row++) {
+      for (row=0; row<TFT_H; row++) {
         dmaPtr = &dmaBuf[dmaIdx][0];
         if (!imageFile.read(dmaPtr, nBytes)) {
           memset(dmaPtr, 0xff, nBytes);

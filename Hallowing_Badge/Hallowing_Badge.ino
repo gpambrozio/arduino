@@ -25,7 +25,7 @@ SPISettings settings(12000000, MSBFIRST, SPI_MODE0);
 // means this is not trivially ported to other devices.
 Adafruit_ZeroDMA  dma;
 DmacDescriptor   *descriptor;
-uint16_t          dmaBuf[2][128];
+uint16_t          dmaBuf[2][TFT_W];
 uint8_t           dmaIdx = 0; // Active DMA buffer # (alternate fill/send)
 
 // Configuration of the flash chip pins and flash fatfs object.
