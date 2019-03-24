@@ -35,7 +35,7 @@ class ModeImages : public Mode
       File imageFile = fs.open(fileName, FILE_READ);
       
       uint16_t *dmaPtr;   // Pointer into DMA output buffer (16 bits/pixel)
-      uint8_t   col, row; // X,Y pixel counters
+      uint8_t   row;
       uint16_t  nBytes;   // Size of DMA transfer
 
       descriptor->BTCNT.reg = nBytes = 128 * 2;
@@ -46,14 +46,9 @@ class ModeImages : public Mode
 
       // Process rows
       for (row=0; row<128; row++) {
-        dmaPtr  = &dmaBuf[dmaIdx][0];
-
-        for (col=0; col<128; col++) {
-          if (imageFile.read(dmaPtr, 2)) {
-            dmaPtr++;
-          } else {
-            *dmaPtr++ = 0xffff;
-          }
+        dmaPtr = &dmaBuf[dmaIdx][0];
+        if (!imageFile.read(dmaPtr, nBytes)) {
+          memset(dmaPtr, 0xff, nBytes);
         }
         dmaXfer(nBytes);
       }
