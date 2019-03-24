@@ -1,8 +1,13 @@
 #!/usr/bin/python
 
 from PIL import Image
+import os
+import sys
 
-image_path = "/Users/gustavoambrozio/Downloads/gustavo.bmp"
+image_name = "name.png"
+
+script_path = os.path.dirname(sys.argv[0])
+image_path = os.path.join(script_path, image_name)
 
 img = Image.open(image_path)
 w = img.width
@@ -10,15 +15,19 @@ h = img.height
 
 px = img.load()
 
-print "#define ROWS %d" % h
-print "#define COLS %d" % w
-print "const uint16_t xData[ROWS][COLS] = {"
+name = os.path.splitext(image_name)[0].upper()
+
+print "// Data from %s" % image_path
+print "#define %s_ROWS %d" % (name, h)
+print "#define %s_COLS %d" % (name, w)
+print "const uint16_t %sData[%s_ROWS][%s_COLS] = {" % (name.lower(), name, name)
 for row in range(h):
-	print("// row %d" % row)
-	print("  {")
+	print("  {    // row %d" % row)
 	line = "    "
 	for col in range(w):
-		(r, g, b) = px[col, row]
+		(r, g, b, a) = px[col, row]
+		if a == 0:   # If alpha is zero then it should be white
+			r = g = b = 255
 		r = r >> 3   # 5 bits
 		g = g >> 2   # 6 bits
 		b = b >> 3   # 5 bits
