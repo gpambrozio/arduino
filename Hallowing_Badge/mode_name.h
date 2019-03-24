@@ -48,6 +48,7 @@ class ModeName : public Mode
       if (++column >= NAME_COLS) {
         column = -128;
       }
+      endDrawing();
     }
   
   private:

@@ -1,10 +1,13 @@
 // Badge code for Adafruit Hallowing. Uses DMA and related shenanigans for smooth animation.
 
 #include <Adafruit_ZeroDMA.h>
+#include <Adafruit_SPIFlash.h>
+
 #include "common.h"
 #include "mode.h"
 #include "mode_eyes.h"
 #include "mode_name.h"
+#include "mode_images.h"
 
 #define TFT_CS        39    // Hallowing display control pins: chip select
 #define TFT_RST       37    // Display reset
@@ -25,6 +28,34 @@ DmacDescriptor   *descriptor;
 uint16_t          dmaBuf[2][128];
 uint8_t           dmaIdx = 0; // Active DMA buffer # (alternate fill/send)
 
+// Configuration of the flash chip pins and flash fatfs object.
+// You don't normally need to change these if using a Feather/Metro
+// M0 express board.
+#define FLASH_TYPE     SPIFLASHTYPE_W25Q16BV  // Flash chip type.
+                                              // If you change this be
+                                              // sure to change the fatfs
+                                              // object type below to match.
+
+#if defined(__SAMD51__)
+  // Alternatively you can define and use non-SPI pins, QSPI isnt on a sercom
+  Adafruit_SPIFlash flash(PIN_QSPI_SCK, PIN_QSPI_IO1, PIN_QSPI_IO0, PIN_QSPI_CS);
+#else
+  #if (SPI_INTERFACES_COUNT == 1)
+    #define FLASH_SS       SS                    // Flash chip SS pin.
+    #define FLASH_SPI_PORT SPI                   // What SPI port is Flash on?
+  #else
+    #define FLASH_SS       SS1                    // Flash chip SS pin.
+    #define FLASH_SPI_PORT SPI1                   // What SPI port is Flash on?
+  #endif
+
+Adafruit_SPIFlash flash(FLASH_SS, &FLASH_SPI_PORT);     // Use hardware SPI
+#endif
+
+// Finally create an Adafruit_M0_Express_CircuitPython object which gives
+// an SD card-like interface to interacting with files stored in CircuitPython's
+// flash filesystem.
+Adafruit_M0_Express_CircuitPython fs(flash);
+
 // DMA transfer-in-progress indicator and callback
 static volatile bool dma_busy = false;
 static void dma_callback(Adafruit_ZeroDMA *dma) {
@@ -33,6 +64,7 @@ static void dma_callback(Adafruit_ZeroDMA *dma) {
 
 Mode *modes[] = {
   new ModeName(),
+  new ModeImages(),
   new ModeEyes(),
 };
 #define NUMBER_OF_MODES  (sizeof(modes) / sizeof(Mode *))
@@ -43,6 +75,22 @@ byte mode = 0;
 void setup(void) {
   Serial.begin(9600);
   //while (!Serial);
+
+  // Initialize flash library and check its chip ID.
+  if (!flash.begin(FLASH_TYPE)) {
+    Serial.println("Error, failed to initialize flash chip!");
+    while(1);
+  }
+  Serial.print("Flash chip JEDEC ID: 0x"); Serial.println(flash.GetJEDECID(), HEX);
+
+  // First call begin to mount the filesystem.  Check that it returns true
+  // to make sure the filesystem was mounted.
+  if (!fs.begin()) {
+    Serial.println("Failed to mount filesystem!");
+    Serial.println("Was CircuitPython loaded on the board first to create the filesystem?");
+    while(1);
+  }
+  Serial.println("Mounted filesystem!");
 
   // Hardware init
   tft.initR(INITR_144GREENTAB);
@@ -99,9 +147,6 @@ void loop(void) {
   }
   accel.read();
   modes[mode]->draw(hasClick);
-  while(dma_busy);            // Wait for last DMA transfer to complete
-  digitalWrite(TFT_CS, HIGH); // Deselect
-  SPI.endTransaction();       // SPI done
 }
 
 void nextMode() {
@@ -118,6 +163,12 @@ void setAddrWindow(int x, int y, int w, int h) {
   tft.setAddrWindow(x, y, w, h);
   digitalWrite(TFT_CS, LOW);         // Re-select after addr function
   digitalWrite(TFT_DC, HIGH);        // Data mode...
+}
+
+void endDrawing() {
+  while(dma_busy);            // Wait for last DMA transfer to complete
+  digitalWrite(TFT_CS, HIGH); // Deselect
+  SPI.endTransaction();       // SPI done
 }
 
 void dmaXfer(uint16_t n) { // n = Transfer size in bytes

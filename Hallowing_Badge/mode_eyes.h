@@ -241,6 +241,7 @@ class ModeEyes : public Mode
         }
         dmaXfer(nBytes);
       }
+      endDrawing();
     }
   
   private:
