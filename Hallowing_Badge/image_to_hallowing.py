@@ -47,7 +47,8 @@ for row in range(h):
 		if col % 16 == 15:
 			print(line)
 			line = "    "
-	print line
+	if line.strip():
+		print line
 	print "  },"
 	
 print("};")

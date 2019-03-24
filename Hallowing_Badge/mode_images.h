@@ -52,7 +52,7 @@ class ModeImages : public Mode
           if (imageFile.read(dmaPtr, 2)) {
             dmaPtr++;
           } else {
-            *dmaPtr++ = 0x00ff;
+            *dmaPtr++ = 0xffff;
           }
         }
         dmaXfer(nBytes);

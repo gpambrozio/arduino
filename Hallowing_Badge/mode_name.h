@@ -10,7 +10,7 @@ class ModeName : public Mode
     explicit ModeName() {}
     virtual void init() {}
     virtual void setup() {
-      column = 0;
+      column = -128;
     }
     virtual void tearDown() {}
     virtual void draw(bool hasClick) {
