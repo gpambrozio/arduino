@@ -4,8 +4,8 @@
 #include "mode.h"
 #include "eyes.h"
 
-#define G_SCALE       40.0   // Accel scale; no science, just looks good
-#define ELASTICITY     0.80  // Edge-bounce coefficient (MUST be <1.0!)
+#define G_SCALE       45.0   // Accel scale; no science, just looks good
+#define ELASTICITY     0.90  // Edge-bounce coefficient (MUST be <1.0!)
 #define DRAG           0.996 // Dampens motion slightly
 
 #define PUPIL_RADIUS  (PUPIL_SIZE / 2.0)  // Radius of pupil, same units
