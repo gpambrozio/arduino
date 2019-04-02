@@ -154,6 +154,9 @@ class ModeHouse : public Mode
       } else if (command.startsWith("Ti")) {
         temperatureInside.setValue(command.substring(2).toFloat() / 10.0);
         scheduleScreenRefresh();
+      } else if (command.startsWith("Bo")) {
+        batteryOutside.setValue(command.substring(2).toInt());
+        scheduleScreenRefresh();
       } else if (command.startsWith("TO")) {
         thermostatOn = command.substring(2).toInt() != 0;
         refreshLeds();
@@ -186,7 +189,13 @@ class ModeHouse : public Mode
         img.setTextFont(1);
         img.printf("o");
         img.setTextFont(2);
-        img.printf("F\n");
+        img.printf("F");
+        value = batteryOutside.value();
+        if (value > 0 && value <= 30) {
+          img.setTextFont(1);
+          img.printf(" %.0f%%", value);
+        }
+        img.printf("\n");
       }
       if (thermostatTarget > 0) {
         img.setTextFont(2);
@@ -203,6 +212,7 @@ class ModeHouse : public Mode
     Strip outside = Strip(3, "O");
     VolatileValue<float> temperatureOutside = VolatileValue<float>(0);
     VolatileValue<float> temperatureInside = VolatileValue<float>(0);
+    VolatileValue<int> batteryOutside = VolatileValue<int>(0);
     float thermostatTarget = 71.0;
     bool  thermostatOn = false;
 
