@@ -73,7 +73,7 @@ class ModeDrive : public Mode
         img.setTextFont(2);
         img.printf("Distance: %.1f\n", value);
       } else {
-        setLEDs(NUM_KEYS);
+        setLEDs(0);
       }
     }
   private:
