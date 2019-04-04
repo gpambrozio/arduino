@@ -17,8 +17,10 @@ class ModeDebug : public Mode
       if (command.startsWith("Ws")) {
         wifiSsid.setValue(command.substring(2));
         scheduleScreenRefresh();
-      }
-      else if (command.startsWith("WI")) {
+      } else if (command.startsWith("Bo")) {
+        batteryOutside.setValue(command.substring(2).toInt());
+        scheduleScreenRefresh();
+      } else if (command.startsWith("WI")) {
         wifiIP.setValue(command.substring(2));
         scheduleScreenRefresh();
       }
@@ -39,12 +41,14 @@ class ModeDebug : public Mode
       img.printf("%02ld.%02ld\n", runningSeconds / 60, runningSeconds % 60);
       img.setTextColor(TFT_WHITE, TFT_BLACK);
     
-      img.print("Battery: ");
-      img.println(battery);
-      
-      img.print("Power: ");
-      img.println(power);
+      img.printf("Battery: %.2fV\n", battery);
+      img.printf("Power: %.2fV\n", power);
 
+      int outsideBattery = batteryOutside.value();
+      if (outsideBattery > 0) {
+        img.printf("Outside batt: %d%%\n", outsideBattery);
+      }
+      
       if (WiFi.isConnected()) {
         img.print("IP: ");
         img.println(WiFi.localIP());
@@ -68,6 +72,7 @@ class ModeDebug : public Mode
   private:
     VolatileValue<String> wifiSsid = VolatileValue<String>("");
     VolatileValue<String> wifiIP = VolatileValue<String>("");
+    VolatileValue<int> batteryOutside = VolatileValue<int>(0);
 };
 
 #endif
