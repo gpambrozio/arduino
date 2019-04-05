@@ -2,6 +2,7 @@
 #define ModeDrive_h
 
 #include "Mode.h"
+#include <WiFi.h>
 
 #define FAR   1400.0
 #define CLOSE 400.0
@@ -78,6 +79,7 @@ class ModeDrive : public Mode
     }
   private:
     VolatileValue<float> distance = VolatileValue<float>(0, 2);
+    HTTPClient http;
 };
 
 #endif

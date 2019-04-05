@@ -4,7 +4,6 @@
 
 #include <Arduino.h>
 
-#include <WiFi.h>
 #include <WiFiMulti.h>
 
 #include <ArduinoOTA.h>
@@ -58,6 +57,11 @@ Mode *modes[] = {
 #define NUMBER_OF_MODES  (sizeof(modes) / sizeof(Mode *))
 byte mode = 1;
 
+void recreateWifi() {
+  wifiMulti = WiFiMulti();
+  wifiMulti.addAP(WLAN_SSID, WLAN_PASS);
+}
+
 void setup() {
 
   Serial.begin(115200);
@@ -91,7 +95,7 @@ void setup() {
   img.printf("Starting...");
   img.pushSprite(0, 0);
 
-  wifiMulti.addAP(WLAN_SSID, WLAN_PASS);
+  recreateWifi();
 
   if (MDNS.begin(NAME)) {
     DL(F("MDNS responder started"));
@@ -128,7 +132,6 @@ void setup() {
   DL(F("setup done"));
 }
 
-HTTPClient http;
 WiFiClient client;
 
 long nextTFTUpdate = 0;
@@ -152,6 +155,7 @@ void loop() {
 
   if (wifiMulti.run() != WL_CONNECTED) {
     DL(F("WiFi not connected!"));
+    recreateWifi();
   } else {
     ArduinoOTA.setPort(8266);
     ArduinoOTA.setHostname(NAME);

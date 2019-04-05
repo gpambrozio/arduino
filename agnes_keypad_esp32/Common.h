@@ -8,9 +8,6 @@ extern Adafruit_TrellisSet trellis;
 extern TFT_eSPI tft;
 extern TFT_eSprite img;
 
-extern HTTPClient http;
-extern WiFiClient client;
-
 extern float battery;
 extern float power;
 
