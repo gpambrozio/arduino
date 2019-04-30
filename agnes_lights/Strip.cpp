@@ -65,12 +65,12 @@ void Strip::setupService() {
   characteristic.write(&charactericticData, sizeof(CharactericticData));
 }
 
-void Strip::writeCallback(uint8_t* data, uint16_t len, uint16_t offset) {
+void Strip::writeCallback(uint8_t* data, uint16_t len) {
   if (len < sizeof(CharactericticData)) {
     D(F("wrong size ")); D(len); D(F(" should be ")); DL(sizeof(CharactericticData));
     return;
   }
-  memcpy(&charactericticData, data+offset, sizeof(CharactericticData));
+  memcpy(&charactericticData, data, sizeof(CharactericticData));
   D(F("Got data ")); D(len); D(F(" Mode ")); DL(charactericticData.mode);
   targetBrightness = charactericticData.targetBrightness * maxBrightness / 100;
   blink();

@@ -1,8 +1,8 @@
 #include "Common.h"
 
-void writeCallback(BLECharacteristic& chr, uint8_t* data, uint16_t len, uint16_t offset) {
+void writeCallback(uint16_t conn_hdl, BLECharacteristic* chr, uint8_t* data, uint16_t len) {
   AddressableCharacteristic *addrChar = (AddressableCharacteristic*)&chr;
-  addrChar->strip->writeCallback(data, len, offset);
+  addrChar->strip->writeCallback(data, len);
 }
 
 void AddressableCharacteristic::setCallback() {

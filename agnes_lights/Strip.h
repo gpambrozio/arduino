@@ -10,7 +10,7 @@ class Strip
     virtual void begin();
     virtual void loop();
     virtual void setupService();
-    virtual void writeCallback(uint8_t* data, uint16_t len, uint16_t offset);
+    virtual void writeCallback(uint8_t* data, uint16_t len);
   
   protected:
     Adafruit_NeoPixel strip;
@@ -29,7 +29,7 @@ class Strip
     uint16_t brightness = 0;
     uint16_t cyclePosition = 0;
     unsigned long nextCycleChange = 0;
-    int maxBrightness;
+    int maxBrightness = 0;
 
     // Fill the dots one after the other with a color
     virtual void colorWipe(uint32_t c);

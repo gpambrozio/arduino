@@ -1,5 +1,5 @@
 /***********************************************************
- *  Agnes' light controller using adafruit's feather ???
+ *  Agnes' light controller using adafruit's feather nRF52832
  ***********************************************************/
 
 #include "Common.h"
@@ -39,11 +39,12 @@ void setup() {
 
   // Set max power. Accepted values are: -40, -30, -20, -16, -12, -8, -4, 0, 4
   Bluefruit.setTxPower(4);
+  
   Bluefruit.setName("AgnesLights");
 
   // Set the connect/disconnect callback handlers
-  Bluefruit.setConnectCallback(connectCallback);
-  Bluefruit.setDisconnectCallback(disconnectCallback);
+  Bluefruit.Central.setConnectCallback(connectCallback);
+  Bluefruit.Central.setDisconnectCallback(disconnectCallback);
 
   DL(F("Configuring the Device Information Service"));
   diService.setManufacturer("VanTomation");
@@ -125,7 +126,7 @@ void startAdv(void) {
 void connectCallback(uint16_t conn_handle) {
   D(F("Connected to "));
   char centralName[32] = { 0 };
-  Bluefruit.Gap.getPeerName(conn_handle, centralName, sizeof(centralName));
+  Bluefruit.Connection(conn_handle)->getPeerName(centralName, sizeof(centralName));
   DL(centralName);
 }
 
