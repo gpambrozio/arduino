@@ -13,15 +13,17 @@ class Adafruit_SPIFlash_FatFs;
 
 #include "utility/flashdisk.h"
 
+namespace Adafruit_SPIFlash_FAT {
+
 #define DEBUG 0
 #define DEBUG_PRINTER Serial
 
 #if DEBUG
-  #define DEBUG_PRINT(...) { DEBUG_PRINTER.print(__VA_ARGS__); }
-  #define DEBUG_PRINTLN(...) { DEBUG_PRINTER.println(__VA_ARGS__); }
+  #define FATFS_DEBUG_PRINT(...) { DEBUG_PRINTER.print(__VA_ARGS__); }
+  #define FATFS_DEBUG_PRINTLN(...) { DEBUG_PRINTER.println(__VA_ARGS__); }
 #else
-  #define DEBUG_PRINT(...) {}
-  #define DEBUG_PRINTLN(...) {}
+  #define FATFS_DEBUG_PRINT(...) {}
+  #define FATFS_DEBUG_PRINTLN(...) {}
 #endif
 
 
@@ -32,7 +34,6 @@ class Adafruit_SPIFlash_FatFs;
 // These just map to FatFs file modes.
 #define FILE_READ FA_READ
 #define FILE_WRITE (FA_READ | FA_WRITE | FA_OPEN_APPEND)
-
 
 class File : public Stream {
 public:
@@ -60,6 +61,10 @@ public:
   virtual void flush();
   int read(void *buf, uint16_t nbyte);
   bool seek(uint32_t pos);
+  bool seekSet(uint32_t pos);
+  bool seekCur(int32_t offset);
+  void rewind() { seekSet(0); }
+
   uint32_t position();
   uint32_t size();
   void close();
@@ -68,6 +73,9 @@ public:
   }
   char* name() {
     return _fileInfo.fname;
+  }
+  void getName(char *buf, uint16_t bufsize) {
+    strncpy(buf, _fileInfo.fname, bufsize);
   }
   bool isDirectory() {
     return (_fileInfo.fattrib & AM_DIR) > 0;
@@ -93,6 +101,8 @@ private:
   void activate();
 };
 
+}
+
 class Adafruit_SPIFlash_FatFs {
 public:
   Adafruit_SPIFlash_FatFs(Adafruit_SPIFlash& flash, int flashSectorSize,
@@ -113,8 +123,8 @@ public:
 
   // Functions that are similar to the Arduino SD library:
   bool begin();
-  ::File open(const char *filename, uint8_t mode = FILE_READ);
-  ::File open(const String &filename, uint8_t mode = FILE_READ) {
+  Adafruit_SPIFlash_FAT::File open(const char *filename, uint8_t mode = FILE_READ);
+  Adafruit_SPIFlash_FAT::File open(const String &filename, uint8_t mode = FILE_READ) {
     return open( filename.c_str(), mode );
   }
   bool exists(const char *filepath);

@@ -61,6 +61,8 @@ static void build_partition(uint8_t *buf, int boot, int type, uint32_t
     buf[15] = num_blocks >> 24;
 }
 
+namespace Adafruit_SPIFlash_FAT {
+
 File::File(const char* filepath, uint8_t mode, Adafruit_SPIFlash_FatFs* fatfs):
   _opened(false), _file({0}), _fileInfo({0}), _directory({0}), _dirPath(NULL),
   _fatfs(fatfs)
@@ -70,7 +72,7 @@ File::File(const char* filepath, uint8_t mode, Adafruit_SPIFlash_FatFs* fatfs):
   if (f_stat(filepath, &_fileInfo) != FR_OK) {
     // File doesn't exist, but should it? (i.e. we're not writing).
     if ((mode & FA_READ) == 0) {
-      DEBUG_PRINTLN("File/directory doesn't exist!");
+      FATFS_DEBUG_PRINTLN("File/directory doesn't exist!");
       return;
     }
   }
@@ -91,14 +93,14 @@ File::File(const char* filepath, uint8_t mode, Adafruit_SPIFlash_FatFs* fatfs):
     _dirPath = (char*)malloc(pathLength+1);
     if (_dirPath == NULL) {
       // Couldn't allocate memory for the directory path.
-      DEBUG_PRINTLN("Failed to allocate memory for directory path!");
+      FATFS_DEBUG_PRINTLN("Failed to allocate memory for directory path!");
       return;
     }
     memcpy(_dirPath, filepath, pathLength);
     _dirPath[pathLength] = 0;
     // Open the directory for later openNextFile calls.
     if (f_opendir(&_directory, filepath) != FR_OK) {
-      DEBUG_PRINTLN("Failed to open directory!");
+      FATFS_DEBUG_PRINTLN("Failed to open directory!");
       return;
     }
   }
@@ -106,8 +108,8 @@ File::File(const char* filepath, uint8_t mode, Adafruit_SPIFlash_FatFs* fatfs):
     // Else not a directory so open the file and return it.
     FRESULT fr = f_open(&_file, filepath, mode);
     if (fr != FR_OK) {
-      DEBUG_PRINT("Error opening file: "); DEBUG_PRINTLN(filepath);
-      DEBUG_PRINT("Error code: "); DEBUG_PRINTLN(fr, DEC);
+      FATFS_DEBUG_PRINT("Error opening file: "); FATFS_DEBUG_PRINTLN(filepath);
+      FATFS_DEBUG_PRINT("Error code: "); FATFS_DEBUG_PRINTLN(fr, DEC);
       return;
     }
   }
@@ -118,7 +120,7 @@ size_t File::write(const uint8_t *buf, size_t size) {
   activate();
   UINT bw = 0;
   if (f_write(&_file, buf, size, &bw) != FR_OK) {
-    DEBUG_PRINTLN("f_write failed!");
+    FATFS_DEBUG_PRINTLN("f_write failed!");
     return 0;
   }
   return bw;
@@ -129,11 +131,11 @@ int File::read() {
   UINT br = 0;
   uint8_t buff[1] = {0};
   if (f_read(&_file, buff, 1, &br) != FR_OK) {
-    DEBUG_PRINTLN("f_read failed!");
+    FATFS_DEBUG_PRINTLN("f_read failed!");
     return -1;
   }
   if (br != 1) {
-    DEBUG_PRINTLN("Failed to read byte from file!");
+    FATFS_DEBUG_PRINTLN("Failed to read byte from file!");
     return -1;
   }
   return buff[0];
@@ -162,15 +164,24 @@ int File::read(void *buf, uint16_t nbyte) {
   activate();
   UINT br = 0;
   if (f_read(&_file, buf, nbyte, &br) != FR_OK) {
-    DEBUG_PRINTLN("f_read failed!");
+    FATFS_DEBUG_PRINTLN("f_read failed!");
     return 0;
   }
   return br;
 }
 
 bool File::seek(uint32_t pos) {
+  return seekSet(pos);
+}
+
+bool File::seekSet(uint32_t pos) {
   activate();
   return f_lseek(&_file, pos) == FR_OK;
+}
+
+bool File::seekCur(int32_t offset) {
+  activate();
+  return f_lseek(&_file, position()+offset) == FR_OK;
 }
 
 uint32_t File::position() {
@@ -203,7 +214,7 @@ File File::openNextFile(uint8_t mode) {
   // Call f_readdir to read the next file from the directory and return it.
   FILINFO info = {0};
   if (f_readdir(&_directory, &info) != FR_OK) {
-    DEBUG_PRINTLN("Error calling f_readdir!");
+    FATFS_DEBUG_PRINTLN("Error calling f_readdir!");
     return File();
   }
   // Check if we've reached the end of enumeration.
@@ -214,7 +225,7 @@ File File::openNextFile(uint8_t mode) {
   // a separateorand the file name.
   char path[MAX_PATH+1] = {0};
   if (!concatPath(_dirPath, info.fname, path)) {
-    DEBUG_PRINTLN("Exceeded MAX_PATH trying to create file path!");
+    FATFS_DEBUG_PRINTLN("Exceeded MAX_PATH trying to create file path!");
     return File();
   }
   return File(path, mode, _fatfs);
@@ -224,7 +235,7 @@ void File::rewindDirectory() {
   activate();
   // Use f_readdir with a NULL fno to reset directory enumeration.
   if (f_readdir(&_directory, NULL) != FR_OK) {
-    DEBUG_PRINTLN("f_readdir failed to rewind directory enumeration!");
+    FATFS_DEBUG_PRINTLN("f_readdir failed to rewind directory enumeration!");
   }
 }
 
@@ -234,20 +245,22 @@ void File::activate() {
   }
 }
 
+} // Adafruit_SPIFlash_FAT namespace
+
 bool Adafruit_SPIFlash_FatFs::begin() {
   activate();
   // Mount the filesystem.
   FRESULT r = f_mount(&_fatFs, "", 1);
   if (r != FR_OK) {
-    DEBUG_PRINT("f_mount failed with error code: "); DEBUG_PRINTLN(r, DEC);
+    FATFS_DEBUG_PRINT("f_mount failed with error code: "); FATFS_DEBUG_PRINTLN(r, DEC);
     return false;
   }
   return true;
 }
 
-File Adafruit_SPIFlash_FatFs::open(const char *filename, uint8_t mode) {
+Adafruit_SPIFlash_FAT::File Adafruit_SPIFlash_FatFs::open(const char *filename, uint8_t mode) {
   activate();
-  return File(filename,  mode, this);
+  return Adafruit_SPIFlash_FAT::File(filename,  mode, this);
 }
 
 bool Adafruit_SPIFlash_FatFs::exists(const char *filepath) {
@@ -259,7 +272,7 @@ bool Adafruit_SPIFlash_FatFs::mkdir(const char *filepath) {
   activate();
   // Check the path to create can be fit inside a buffer.
   if (strlen(filepath) > MAX_PATH) {
-    DEBUG_PRINTLN("Can't make a directory deeper than the max path!");
+    FATFS_DEBUG_PRINTLN("Can't make a directory deeper than the max path!");
     return false;
   }
   // Copy the path to a buffer because it needs to be modified.
@@ -276,8 +289,8 @@ bool Adafruit_SPIFlash_FatFs::mkdir(const char *filepath) {
       if ((strlen(buffer) > 0) && (f_stat(buffer, NULL) != FR_OK)) {
         // Intermediate directory doesn't exist, try to create the directory.
         if (f_mkdir(buffer) != FR_OK) {
-          DEBUG_PRINT("Failed to create intermediate directory: ");
-          DEBUG_PRINTLN(buffer);
+          FATFS_DEBUG_PRINT("Failed to create intermediate directory: ");
+          FATFS_DEBUG_PRINTLN(buffer);
           return false;
         }
       }
@@ -297,26 +310,26 @@ bool Adafruit_SPIFlash_FatFs::remove(const char *filepath) {
 bool Adafruit_SPIFlash_FatFs::rmdir(const char *filepath) {
   activate();
   // Check the specified path is a directory and can be opened.
-  File root = open(filepath);
+  Adafruit_SPIFlash_FAT::File root = open(filepath);
   if (!root || !root.isDirectory()) {
-    DEBUG_PRINTLN("rmdir was not given a directory!");
+    FATFS_DEBUG_PRINTLN("rmdir was not given a directory!");
     return false;
   }
   // Walk through all the children, deleting if it's a file and traversing
   // down to delete if a subdirectory (depth first search).
-  File child = root.openNextFile();
+  Adafruit_SPIFlash_FAT::File child = root.openNextFile();
   while (child) {
     // Construct full path to the child by concatenating a path separateor
     // and the file name.
     char path[MAX_PATH+1] = {0};
     if (!concatPath(filepath, child.name(), path)) {
-      DEBUG_PRINTLN("Exceeded MAX_PATH trying to create file path!");
+      FATFS_DEBUG_PRINTLN("Exceeded MAX_PATH trying to create file path!");
       return false;
     }
     if (!child.isDirectory()) {
       // Not a directory, just delete it.
       if (!remove(path)) {
-        DEBUG_PRINT("Failed to delete file: "); DEBUG_PRINTLN(path);
+        FATFS_DEBUG_PRINT("Failed to delete file: "); FATFS_DEBUG_PRINTLN(path);
         return false;
       }
     }
@@ -324,7 +337,7 @@ bool Adafruit_SPIFlash_FatFs::rmdir(const char *filepath) {
       // Is a directory, call rmdir on its path to traverse through and clear
       // it out too.
       if (!rmdir(path)) {
-        DEBUG_PRINT("Failed to delete directory: "); DEBUG_PRINTLN(path);
+        FATFS_DEBUG_PRINT("Failed to delete directory: "); FATFS_DEBUG_PRINTLN(path);
         return false;
       }
     }
@@ -348,7 +361,7 @@ DRESULT Adafruit_SPIFlash_FatFs::diskRead(BYTE *buff, DWORD sector,
   // amount of sectors into the provided buffer.
   uint32_t address = _fatSectorAddress(sector);
   if (_flash.readBuffer(address, buff, count*_fatSectorSize) <= 0) {
-   DEBUG_PRINTLN("readBuffer failed!");
+   FATFS_DEBUG_PRINTLN("readBuffer failed!");
    return RES_ERROR;
   }
   return RES_OK;
@@ -357,7 +370,7 @@ DRESULT Adafruit_SPIFlash_FatFs::diskRead(BYTE *buff, DWORD sector,
 DRESULT Adafruit_SPIFlash_FatFs::diskWrite(const BYTE *buff, DWORD sector,
                                            UINT count) {
   if (_flashSectorBuffer == NULL) {
-    DEBUG_PRINTLN("Flash sector buffer was not allocated!");
+    FATFS_DEBUG_PRINTLN("Flash sector buffer was not allocated!");
     return RES_ERROR;
   }
   // Loop through each of the specified fat sectors and update them.
@@ -380,7 +393,7 @@ DRESULT Adafruit_SPIFlash_FatFs::diskWrite(const BYTE *buff, DWORD sector,
     if (_flash.readBuffer(sectorStart, _flashSectorBuffer, _flashSectorSize) !=
         _flashSectorSize) {
       // Error, couldn't read sector into before before performing update.
-      DEBUG_PRINTLN("Couldn't read sector before performing write!")
+      FATFS_DEBUG_PRINTLN("Couldn't read sector before performing write!")
       return RES_ERROR;
     }
 
@@ -395,7 +408,7 @@ DRESULT Adafruit_SPIFlash_FatFs::diskWrite(const BYTE *buff, DWORD sector,
     // etc. instead of an absolute address in memory).
     if (!_flash.EraseSector(sectorStart/_flashSectorSize)) {
       // Error, couldn't erase the sector.
-      DEBUG_PRINTLN("Couldn't erase sector before performing write!")
+      FATFS_DEBUG_PRINTLN("Couldn't erase sector before performing write!")
       return RES_ERROR;
     }
 
@@ -403,7 +416,7 @@ DRESULT Adafruit_SPIFlash_FatFs::diskWrite(const BYTE *buff, DWORD sector,
     if (_flash.writeBuffer(sectorStart, _flashSectorBuffer, _flashSectorSize) !=
         _flashSectorSize) {
       // Error, couldn't write the updated sector.
-      DEBUG_PRINTLN("Couldn't write updated sector!")
+      FATFS_DEBUG_PRINTLN("Couldn't write updated sector!")
       return RES_ERROR;
     }
 
