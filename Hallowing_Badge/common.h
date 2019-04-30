@@ -19,3 +19,4 @@ void dmaXfer(uint16_t n);
 void setAddrWindow(int x, int y, int w, int h);
 void endDrawing();
 void nextMode();
+void resetModeCounter();

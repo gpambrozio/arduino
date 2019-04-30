@@ -29,6 +29,8 @@ class ModeImages : public Mode
         nextMode();
         return;
       }
+      resetModeCounter();
+
       isFirstFile = false;
       
       String fileName = "image" + String(currentFile) + ".raw";

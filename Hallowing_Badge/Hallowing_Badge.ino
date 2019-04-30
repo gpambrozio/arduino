@@ -56,6 +56,9 @@ Adafruit_SPIFlash flash(FLASH_SS, &FLASH_SPI_PORT);     // Use hardware SPI
 // flash filesystem.
 Adafruit_M0_Express_CircuitPython fs(flash);
 
+#define MAX_BRIGHTNESS 60
+uint16_t brightness = MAX_BRIGHTNESS;
+
 // DMA transfer-in-progress indicator and callback
 static volatile bool dma_busy = false;
 static void dma_callback(Adafruit_ZeroDMA *dma) {
@@ -103,7 +106,7 @@ void setup(void) {
   Serial.println("Setting up accelerometer");
   if (accel.begin(0x18) || accel.begin(0x19)) {
     accel.setRange(LIS3DH_RANGE_8_G);
-    accel.setClick(1, 60);
+    accel.setClick(1, brightness);
   }
 
   Serial.println("Setting up dma");
@@ -134,6 +137,7 @@ void setup(void) {
 // LOOP FUNCTION -- repeats indefinitely -----------------------------------
 
 long nextClick = 0;
+long nextModeReset = 0;
 
 void loop(void) {
   bool hasClick = false;
@@ -149,15 +153,33 @@ void loop(void) {
       hasClick = false;
     }
   }
+  if (mode != 0 && millis() >= nextModeReset) {
+    resetMode();
+  }
   modes[mode]->draw(hasClick);
 }
 
+void resetModeCounter() {
+  nextModeReset = millis() + 20000;
+}
+
+void resetMode() {
+  setMode(0);
+}
+
 void nextMode() {
+  setMode(mode + 1);
+}
+
+void setMode(byte m) {
   modes[mode]->tearDown();
-  if (++mode >= NUMBER_OF_MODES) {
+  if (m >= NUMBER_OF_MODES) {
     mode = 0;
+  } else {
+    mode = m;
   }
   modes[mode]->setup();
+  resetModeCounter();
   Serial.print("Changed mode to "); Serial.println(mode);
 }
 
