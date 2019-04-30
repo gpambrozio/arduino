@@ -10,9 +10,15 @@ class ModeDebug : public Mode
     explicit ModeDebug() {}
     virtual String name() { return "Debug"; }
     virtual void init() {}
-    virtual void setup() {}
+    virtual void setup() { touches = 0; }
     virtual void tearDown() {}
-    virtual void checkKeys() {}
+    virtual void checkKeys() {
+      for (uint8_t i = 0; i < MODE_KEYS; i++) {
+        if (trellis.justPressed(i)) {
+          touches++;
+        }
+      }
+    }
     virtual void checkCommand(String command) {
       if (command.startsWith("Ws")) {
         wifiSsid.setValue(command.substring(2));
@@ -43,6 +49,7 @@ class ModeDebug : public Mode
     
       img.printf("Battery: %.2fV\n", battery);
       img.printf("Power: %.2fV\n", power);
+      img.printf("Touches: %d\n", touches);
 
       int outsideBattery = batteryOutside.value();
       if (outsideBattery > 0) {
@@ -73,6 +80,7 @@ class ModeDebug : public Mode
     VolatileValue<String> wifiSsid = VolatileValue<String>("");
     VolatileValue<String> wifiIP = VolatileValue<String>("");
     VolatileValue<int> batteryOutside = VolatileValue<int>(0);
+    int touches = 0;
 };
 
 #endif
