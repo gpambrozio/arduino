@@ -153,7 +153,8 @@ int light = MAX_LIGHT_POWER;
 void loop() {
   delay(30); // 30ms delay is required, dont remove me!
 
-  if (wifiMulti.run() != WL_CONNECTED) {
+  bool wifiConnected = wifiMulti.run() == WL_CONNECTED;
+  if (!wifiConnected) {
     DL(F("WiFi not connected!"));
     recreateWifi();
   } else {
@@ -202,27 +203,32 @@ void loop() {
     trellis.writeDisplay();
   }
 
-  if (!client.connected()) {
-    DL(F("connecting to server."));
+  if (wifiConnected) {
+    if (!client.connected()) {
+      DL(F("connecting to server."));
+      client.stop();
+      if (client.connect(WiFi.gatewayIP(), 5000)) {
+        DL(F("connected to server."));
+        client.print("Panel\n");
+      } else {
+        DL(F("failed connecting to server."));
+      }
+    } else if (client.available()) {
+      String line = client.readStringUntil('\n');
+      for (uint8_t i=0; i<NUMBER_OF_MODES; i++) {
+        modes[i]->checkCommand(line);
+      }
+    } else if (!commandsToSend.empty()) {
+      for (uint8_t i=0; i<commandsToSend.size(); i++) {
+        client.print(commandsToSend[i] + "\n");
+      }
+      commandsToSend.clear();
+    }
+    ArduinoOTA.handle();
+  } else {
     client.stop();
-    if (client.connect(WiFi.gatewayIP(), 5000)) {
-      DL(F("connected to server."));
-      client.print("Panel\n");
-    }
-  } else if (client.available()) {
-    String line = client.readStringUntil('\n');
-    MARK;
-    for (uint8_t i=0; i<NUMBER_OF_MODES; i++) {
-      modes[i]->checkCommand(line);
-    }
-  } else if (!commandsToSend.empty()) {
-    for (uint8_t i=0; i<commandsToSend.size(); i++) {
-      client.print(commandsToSend[i] + "\n");
-    }
-    commandsToSend.clear();
   }
   
-  ArduinoOTA.handle();
   if (millis() > nextTFTUpdate) {
     nextTFTUpdate = millis() + 1000;
     img.fillSprite(TFT_BLACK);
