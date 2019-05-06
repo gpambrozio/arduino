@@ -107,7 +107,7 @@ void setup()
   Bluefruit.setName("Thermostat");
 
   // Set the connect/disconnect callback handlers
-  Bluefruit.setConnectCallback(connectCallback);
+  Bluefruit.Periph.setConnectCallback(connectCallback);
 
   // Configure and Start the Device Information Service
   DL("Configuring the Device Information Service");
@@ -197,7 +197,7 @@ void setupService(void)
   onoffCharacteristic.setPermission(SECMODE_OPEN, SECMODE_OPEN);
   onoffCharacteristic.setFixedLen(sizeof(onoff));
   onoffCharacteristic.setUserDescriptor("OnOff");
-  onoffCharacteristic.setWriteCallback(onoffWriteCallback);
+  onoffCharacteristic.setWriteCallback(onoffWriteCallback, false);
   onoffCharacteristic.begin();
   changeOnOff(0);
 
@@ -205,7 +205,7 @@ void setupService(void)
   targetCharacteristic.setPermission(SECMODE_OPEN, SECMODE_OPEN);
   targetCharacteristic.setFixedLen(sizeof(targetTemperature));
   targetCharacteristic.setUserDescriptor("TargetTemp");
-  targetCharacteristic.setWriteCallback(targetWriteCallback);
+  targetCharacteristic.setWriteCallback(targetWriteCallback, false);
   targetCharacteristic.begin();
   targetCharacteristic.write16(targetTemperature);
 }
@@ -221,7 +221,7 @@ void changeOnOff(uint8_t v)
   onoffCharacteristic.notify8(onoff);
 }
 
-void onoffWriteCallback(BLECharacteristic& chr, uint8_t* data, uint16_t len, uint16_t offset)
+void onoffWriteCallback(uint16_t conn_hdl, BLECharacteristic* chr, uint8_t* data, uint16_t len)
 {
   D("OnOff changed to ");
   if (len < sizeof(onoff)) {
@@ -233,7 +233,7 @@ void onoffWriteCallback(BLECharacteristic& chr, uint8_t* data, uint16_t len, uin
   changeOnOff(*data);
 }
 
-void targetWriteCallback(BLECharacteristic& chr, uint8_t* data, uint16_t len, uint16_t offset)
+void targetWriteCallback(uint16_t conn_hdl, BLECharacteristic* chr, uint8_t* data, uint16_t len)
 {
   D("Target changed to ");
   if (len < sizeof(targetTemperature)) {
