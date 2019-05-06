@@ -151,6 +151,9 @@ std::vector<String> commandsToSend;
 int light = MAX_LIGHT_POWER;
 bool needTrellisWrite = false;
 
+int8_t keyPressed;
+int8_t keyReleased;
+
 void loop() {
   delay(30); // 30ms delay is required, dont remove me!
 
@@ -174,22 +177,45 @@ void loop() {
 
   needTrellisWrite = false;
 
-  
+  bool hasSwitchChanges = false;
+
+  keyReleased = -1;
+
   // If a button was just pressed or released...
   if (trellis.readSwitches()) {
+    uint8_t presses = 0;
+    uint8_t pressed = 0;
+    for (uint8_t i = 0; i < NUM_KEYS; i++) {
+      if (trellis.justPressed(i)) {
+        presses++;
+        pressed = i;
+      }
+    }
+
+    if (presses == 1 && keyPressed == -1) {
+      keyPressed = pressed;
+      hasSwitchChanges = true;
+    } else if (presses == 0 && keyPressed >= 0 && !trellis.isKeyPressed(keyPressed)) {
+      hasSwitchChanges = true;
+      keyReleased = keyPressed;
+      keyPressed = -1;
+    }
+  }
+
+  if (hasSwitchChanges) {
     byte previousMode = mode;
     
-    if (trellis.justPressed(12)) {
+    if (justPressed(12)) {
       if (mode == 0) mode = NUMBER_OF_MODES - 1;
       else mode--;
     }
-    if (trellis.justPressed(13)) {
+    if (justPressed(13)) {
       if (++mode >= NUMBER_OF_MODES) mode = 0;
     }
-    if (trellis.justPressed(14)) {
+    if (justPressed(14)) {
       light -= LIGHT_CHANGE;
     }
-    if (trellis.justPressed(15)) {
+    if (justPressed(15)) {
       light += LIGHT_CHANGE;
     }
     if (previousMode != mode) {
@@ -259,11 +285,11 @@ void setLED(uint8_t n, bool onOff) {
 }
 
 bool justPressed(uint8_t n) {
-  return trellis.justPressed(n);
+  return keyPressed == n;
 }
 
 bool justReleased(uint8_t n) {
-  return trellis.justReleased(n);
+  return keyReleased == n;
 }
 
 void setKeysBrightness(uint8_t brightness) {
