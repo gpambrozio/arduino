@@ -43,8 +43,8 @@ void setup() {
   Bluefruit.setName("AgnesLights");
 
   // Set the connect/disconnect callback handlers
-  Bluefruit.Central.setConnectCallback(connectCallback);
-  Bluefruit.Central.setDisconnectCallback(disconnectCallback);
+  Bluefruit.Periph.setConnectCallback(connectCallback);
+  Bluefruit.Periph.setDisconnectCallback(disconnectCallback);
 
   DL(F("Configuring the Device Information Service"));
   diService.setManufacturer("VanTomation");
@@ -125,8 +125,12 @@ void startAdv(void) {
 
 void connectCallback(uint16_t conn_handle) {
   D(F("Connected to "));
+  
+  // Get the reference to current connection
+  BLEConnection* connection = Bluefruit.Connection(conn_handle);
+
   char centralName[32] = { 0 };
-  Bluefruit.Connection(conn_handle)->getPeerName(centralName, sizeof(centralName));
+  connection->getPeerName(centralName, sizeof(centralName));
   DL(centralName);
 }
 
