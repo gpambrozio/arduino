@@ -26,7 +26,7 @@ class ModeDrive : public Mode
     }
     virtual void checkKeys() {
       for (uint8_t i = 0; i < MODE_KEYS; i++) {
-        if (trellis.justPressed(i)) {
+        if (justPressed(i)) {
           DP("v%d\n", i);
 
           if (i % 2 == 1) {
@@ -47,13 +47,9 @@ class ModeDrive : public Mode
       }
     }
     virtual void setLEDs(uint8_t keys) {
-      for (uint8_t i = 0; i < keys; i++) {
-        trellis.setLED(i);
-      }
       for (uint8_t i = keys; i < NUM_KEYS; i++) {
-        trellis.clrLED(i);
+        setLED(i, i < keys);
       }
-      trellis.writeDisplay();
     }
     virtual void checkCommand(String command) {
       if (command.startsWith("Ds")) {

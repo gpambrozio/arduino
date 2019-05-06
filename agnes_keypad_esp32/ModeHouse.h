@@ -9,7 +9,7 @@ class Strip
     Strip(int baseKey, String identifier) : baseKey(baseKey), identifier(identifier) {}
     bool checkKeys() {
       bool shouldRefreshLeds = false;
-      if (trellis.justPressed(baseKey)) {
+      if (justPressed(baseKey)) {
         if (brightness < 100) {
           if (brightness == 0) {
             lightMode = lightModes.substring(0, 1);
@@ -19,7 +19,7 @@ class Strip
           shouldRefreshLeds = true;
         }
       }
-      if (trellis.justPressed(baseKey+4)) {
+      if (justPressed(baseKey+4)) {
         if (brightness > 0) {
           brightness -= 10;
           if (brightness < 0) brightness = 0;
@@ -27,7 +27,7 @@ class Strip
           shouldRefreshLeds = true;
         }
       }
-      if (trellis.justPressed(baseKey+8)) {
+      if (justPressed(baseKey+8)) {
         if (brightness == 0) {
           brightness = 100;
           lightMode = lightModes.substring(0, 1);
@@ -57,16 +57,9 @@ class Strip
     }
 
     void refreshLeds() {
-      if (brightness > 0) {
-        trellis.setLED(baseKey);
-        trellis.setLED(baseKey+4);
-        trellis.setLED(baseKey+8);
-      } else {
-        trellis.clrLED(baseKey);
-        trellis.clrLED(baseKey+4);
-        trellis.clrLED(baseKey+8);
-      }
-      trellis.writeDisplay();
+      setLED(baseKey, brightness > 0);
+      setLED(baseKey+4, brightness > 0);
+      setLED(baseKey+8, brightness > 0);
     }
     
     bool isOn() {
@@ -102,25 +95,22 @@ class ModeHouse : public Mode
     virtual String name() { return "House"; }
     virtual void init() {}
     virtual void setup() {
-      trellis.setBrightness(1);
+      setKeysBrightness(1);
       refreshLeds();
-    }
-    virtual void tearDown() {
-      trellis.setBrightness(15);
     }
     virtual void checkKeys() {
       // Thermostat
-      if (trellis.justPressed(0)) {
+      if (justPressed(0)) {
         thermostatTarget += 1.0;
         addCommand("ThermostatTarget:" + String(thermostatTarget, 0));
         scheduleScreenRefresh();
       }
-      if (trellis.justPressed(4)) {
+      if (justPressed(4)) {
         thermostatTarget -= 1.0;
         addCommand("ThermostatTarget:" + String(thermostatTarget, 0));
         scheduleScreenRefresh();
       }
-      if (trellis.justPressed(1)) {
+      if (justPressed(1)) {
         thermostatOn = !thermostatOn;
         addCommand("ThermostatOnOff:" + String(thermostatOn ? "1" : "0"));
         scheduleScreenRefresh();
@@ -128,9 +118,9 @@ class ModeHouse : public Mode
       }
 
       // Lock / unlock
-      if (trellis.justPressed(8)) {
+      if (justPressed(8)) {
         addCommand("Locks:lock");
-      } else if (trellis.justPressed(9)) {
+      } else if (justPressed(9)) {
         addCommand("Locks:unlock");
       }
 
@@ -141,7 +131,7 @@ class ModeHouse : public Mode
       }
 
       // All lights
-      if (trellis.justPressed(5) && (inside.isOn() || outside.isOn())) {
+      if (justPressed(5) && (inside.isOn() || outside.isOn())) {
         inside.turnOff();
         outside.turnOff();
         refreshLeds();
@@ -217,20 +207,10 @@ class ModeHouse : public Mode
     bool  thermostatOn = false;
 
     void refreshLeds() {
-      if (thermostatOn) {
-        trellis.setLED(1);
-      } else {
-        trellis.clrLED(1);
-      }
+      setLED(1, thermostatOn);
       inside.refreshLeds();
       outside.refreshLeds();
-
-      if (inside.isOn() || outside.isOn()) {
-        trellis.setLED(5);
-      } else {
-        trellis.clrLED(5);
-      }
-      trellis.writeDisplay();
+      setLED(5, inside.isOn() || outside.isOn());
     }
 };
 

@@ -14,8 +14,11 @@ class ModeDebug : public Mode
     virtual void tearDown() {}
     virtual void checkKeys() {
       for (uint8_t i = 0; i < MODE_KEYS; i++) {
-        if (trellis.justPressed(i)) {
+        if (justPressed(i)) {
           touches++;
+          setLED(i, true);
+        } else if (justReleased(i)) {
+          setLED(i, false);
         }
       }
     }

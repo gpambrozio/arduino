@@ -149,6 +149,7 @@ std::vector<String> commandsToSend;
 #define MAX_LIGHT (USING_BATTERY ? MAX_LIGHT_BATTERY : MAX_LIGHT_POWER)
 
 int light = MAX_LIGHT_POWER;
+bool needTrellisWrite = false;
 
 void loop() {
   delay(30); // 30ms delay is required, dont remove me!
@@ -171,6 +172,9 @@ void loop() {
   if (light < 0) light = 0;   // min is not defined for some reason...
   sigmaDeltaWrite(TFT_LIGHT_CHANNEL, light);
 
+  needTrellisWrite = false;
+
+  
   // If a button was just pressed or released...
   if (trellis.readSwitches()) {
     byte previousMode = mode;
@@ -190,17 +194,16 @@ void loop() {
     }
     if (previousMode != mode) {
       scheduleScreenRefresh();
+      setKeysBrightness(15);
       modes[previousMode]->tearDown();
       modes[previousMode]->isActive = false;
       for (uint8_t i = 0; i < NUM_KEYS; i++) {
-        trellis.clrLED(i);
+        setLED(i, false);
       }
       modes[mode]->isActive = true;
       modes[mode]->setup();
     }
     modes[mode]->checkKeys();
-    // tell the trellis to set the LEDs we requested
-    trellis.writeDisplay();
   }
 
   if (wifiConnected) {
@@ -229,6 +232,11 @@ void loop() {
     client.stop();
   }
   
+  if (needTrellisWrite) {
+    // tell the trellis to set the LEDs we requested
+    trellis.writeDisplay();
+  }
+
   if (millis() > nextTFTUpdate) {
     nextTFTUpdate = millis() + 1000;
     img.fillSprite(TFT_BLACK);
@@ -239,6 +247,28 @@ void loop() {
     modes[mode]->draw();
     img.pushSprite(0, 0);
   }
+}
+
+void setLED(uint8_t n, bool onOff) {
+  needTrellisWrite = true;
+  if (onOff) {
+    trellis.setLED(n);
+  } else {
+    trellis.clrLED(n);
+  }
+}
+
+bool justPressed(uint8_t n) {
+  return trellis.justPressed(n);
+}
+
+bool justReleased(uint8_t n) {
+  return trellis.justReleased(n);
+}
+
+void setKeysBrightness(uint8_t brightness) {
+  needTrellisWrite = true;
+  trellis.setBrightness(brightness);
 }
 
 inline void scheduleScreenRefresh() {

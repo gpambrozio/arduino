@@ -3,8 +3,6 @@
 #include <Adafruit_Trellis.h>
 #include "VolatileValue.h"
 
-extern Adafruit_TrellisSet trellis;
-
 extern TFT_eSPI tft;
 extern TFT_eSprite img;
 
@@ -13,6 +11,11 @@ extern float power;
 
 void addCommand(String command);
 void scheduleScreenRefresh();
+
+void setLED(uint8_t n, bool onOff);
+bool justPressed(uint8_t n);
+bool justReleased(uint8_t n);
+void setKeysBrightness(uint8_t brightness);
 
 // set to however many you're working with here, up to 8
 #define NUMTRELLIS 1
