@@ -14,7 +14,7 @@ class ModeDrive : public Mode
     virtual String name() { return "Drive"; }
     virtual void setup() {
       // To initialize the DNS as it takes a while the first time.
-      http.begin("agnespanel", 8080, "/text//0");
+      http.begin("agnespanel", 8080, "/ping");
       http.GET();
       http.end();
 
