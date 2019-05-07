@@ -175,10 +175,7 @@ void loop() {
   if (light < 0) light = 0;   // min is not defined for some reason...
   sigmaDeltaWrite(TFT_LIGHT_CHANNEL, light);
 
-  needTrellisWrite = false;
-
   bool hasSwitchChanges = false;
-
   keyReleased = -1;
 
   // If a button was just pressed or released...
@@ -236,6 +233,7 @@ void loop() {
     if (!client.connected()) {
       DL(F("connecting to server."));
       client.stop();
+      MARK;
       if (client.connect(WiFi.gatewayIP(), 5000)) {
         DL(F("connected to server."));
         client.print("Panel\n");
@@ -261,6 +259,7 @@ void loop() {
   if (needTrellisWrite) {
     // tell the trellis to set the LEDs we requested
     trellis.writeDisplay();
+    needTrellisWrite = false;
   }
 
   if (millis() > nextTFTUpdate) {
