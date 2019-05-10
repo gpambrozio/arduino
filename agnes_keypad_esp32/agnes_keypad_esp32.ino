@@ -160,7 +160,6 @@ void loop() {
   bool wifiConnected = wifiMulti.run() == WL_CONNECTED;
   if (!wifiConnected) {
     DL(F("WiFi not connected!"));
-    recreateWifi();
   } else {
     ArduinoOTA.setPort(8266);
     ArduinoOTA.setHostname(NAME);
@@ -233,9 +232,9 @@ void loop() {
     if (!client.connected()) {
       DL(F("connecting to server."));
       client.stop();
-      MARK;
       if (client.connect(WiFi.gatewayIP(), 5000)) {
         DL(F("connected to server."));
+        client.setTimeout(15);
         client.print("Panel\n");
       } else {
         DL(F("failed connecting to server."));

@@ -10,14 +10,15 @@
 class ModeDrive : public Mode
 {
   public:
-    explicit ModeDrive() {}
-    virtual String name() { return "Drive"; }
-    virtual void setup() {
+    explicit ModeDrive() {
       // To initialize the DNS as it takes a while the first time.
+      http.setConnectTimeout(2000);
       http.begin("agnespanel", 8080, "/ping");
       http.GET();
       http.end();
-
+    }
+    virtual String name() { return "Drive"; }
+    virtual void setup() {
       addCommand("ParkingSensor:1");
     }
     virtual void tearDown() {
@@ -28,6 +29,7 @@ class ModeDrive : public Mode
         if (justPressed(i)) {
           DP("v%d\n", i);
 
+          http.setConnectTimeout(2000);
           if (i % 2 == 1) {
             http.begin("agnespanel", 8080, "/text//0");
           } else {
