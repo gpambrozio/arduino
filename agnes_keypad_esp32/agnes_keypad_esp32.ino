@@ -235,7 +235,7 @@ void loop() {
       if (client.connect(WiFi.gatewayIP(), 5000)) {
         DL(F("connected to server."));
         client.setTimeout(15);
-        client.print("Panel\n");
+        client.print("Keypad\n");
       } else {
         DL(F("failed connecting to server."));
       }
