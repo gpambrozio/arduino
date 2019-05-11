@@ -49,6 +49,7 @@ class ModeDrive : public Mode
       }
     }
     virtual void setLEDs(uint8_t keys) {
+      if (!isActive) return;
       for (uint8_t i = keys; i < NUM_KEYS; i++) {
         setLED(i, i < keys);
       }
@@ -58,11 +59,9 @@ class ModeDrive : public Mode
         float value = command.substring(2).toFloat();
         distance.setValue(value);
         scheduleScreenRefresh();
-        if (isActive) {
-          float relative = min(1.0, 1.0 - (value - CLOSE) / (FAR - CLOSE));
-          if (relative < 0.0) relative = 0.0;
-          setLEDs((uint8_t)(relative * NUM_KEYS));
-        }
+        float relative = min(1.0, 1.0 - (value - CLOSE) / (FAR - CLOSE));
+        if (relative < 0.0) relative = 0.0;
+        setLEDs((uint8_t)(relative * NUM_KEYS));
       }
     }
     virtual void draw() {

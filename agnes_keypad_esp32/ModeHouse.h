@@ -208,6 +208,7 @@ class ModeHouse : public Mode
     bool  thermostatOn = false;
 
     void refreshLeds() {
+      if (!isActive) return;
       setLED(1, thermostatOn);
       inside.refreshLeds();
       outside.refreshLeds();
