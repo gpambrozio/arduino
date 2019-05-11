@@ -18,6 +18,7 @@ class ModeDrive : public Mode
       http.end();
     }
     virtual String name() { return "Drive"; }
+    virtual char identifier() { return 'd'; }
     virtual void setup() {
       addCommand("ParkingSensor:1");
     }

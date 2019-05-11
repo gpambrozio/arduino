@@ -9,6 +9,7 @@ class ModeDebug : public Mode
   public:
     explicit ModeDebug() {}
     virtual String name() { return "Debug"; }
+    virtual char identifier() { return 'D'; }
     virtual void init() {}
     virtual void setup() { touches = 0; }
     virtual void tearDown() {}

@@ -9,6 +9,7 @@ class Mode
   public:
     Mode();
     virtual void init();
+    virtual char identifier();
     virtual String name();
     virtual void setup();
     virtual void tearDown();

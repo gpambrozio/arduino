@@ -199,31 +199,19 @@ void loop() {
   }
 
   if (hasSwitchChanges) {
-    byte previousMode = mode;
-    
     if (justPressed(12)) {
-      if (mode == 0) mode = NUMBER_OF_MODES - 1;
-      else mode--;
+      if (mode == 0) changeMode(NUMBER_OF_MODES - 1);
+      else changeMode(mode-1);
     }
     if (justPressed(13)) {
-      if (++mode >= NUMBER_OF_MODES) mode = 0;
+      if (mode >= NUMBER_OF_MODES-1) changeMode(0);
+      else changeMode(mode+1);
     }
     if (justPressed(14)) {
       light -= LIGHT_CHANGE;
     }
     if (justPressed(15)) {
       light += LIGHT_CHANGE;
-    }
-    if (previousMode != mode) {
-      scheduleScreenRefresh();
-      setKeysBrightness(15);
-      modes[previousMode]->tearDown();
-      modes[previousMode]->isActive = false;
-      for (uint8_t i = 0; i < NUM_KEYS; i++) {
-        setLED(i, false);
-      }
-      modes[mode]->isActive = true;
-      modes[mode]->setup();
     }
     modes[mode]->checkKeys();
   }
@@ -241,8 +229,19 @@ void loop() {
       }
     } else if (client.available()) {
       String line = client.readStringUntil('\n');
-      for (uint8_t i=0; i<NUMBER_OF_MODES; i++) {
-        modes[i]->checkCommand(line);
+      if (line.startsWith("M")) {
+        char requiredMode = line.charAt(1);
+        
+        for (uint8_t i=0; i<NUMBER_OF_MODES; i++) {
+          if (requiredMode == modes[i]->identifier()) {
+            changeMode(i);
+            break;
+          }
+        }
+      } else {
+        for (uint8_t i=0; i<NUMBER_OF_MODES; i++) {
+          modes[i]->checkCommand(line);
+        }
       }
     } else if (!commandsToSend.empty()) {
       for (uint8_t i=0; i<commandsToSend.size(); i++) {
@@ -270,6 +269,21 @@ void loop() {
     img.println(" mode");
     modes[mode]->draw();
     img.pushSprite(0, 0);
+  }
+}
+
+void changeMode(byte newMode) {
+  if (mode != newMode) {
+    scheduleScreenRefresh();
+    setKeysBrightness(15);
+    modes[mode]->tearDown();
+    modes[mode]->isActive = false;
+    for (uint8_t i = 0; i < NUM_KEYS; i++) {
+      setLED(i, false);
+    }
+    mode = newMode;
+    modes[mode]->isActive = true;
+    modes[mode]->setup();
   }
 }
 

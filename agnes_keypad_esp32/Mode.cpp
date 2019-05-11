@@ -18,6 +18,10 @@ String Mode::name() {
   return "";
 }
 
+char Mode::identifier() { 
+  return '-';
+}
+
 void  Mode::checkKeys() {
 }
 

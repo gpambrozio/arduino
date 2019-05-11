@@ -93,6 +93,7 @@ class ModeHouse : public Mode
   public:
     explicit ModeHouse() {}
     virtual String name() { return "House"; }
+    virtual char identifier() { return 'h'; }
     virtual void init() {}
     virtual void setup() {
       setKeysBrightness(1);
