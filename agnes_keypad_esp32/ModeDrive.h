@@ -3,6 +3,7 @@
 
 #include "Mode.h"
 #include <WiFi.h>
+#include <vector>
 
 #define FAR   1400.0
 #define CLOSE 400.0
@@ -31,10 +32,11 @@ class ModeDrive : public Mode
           DP("v%d\n", i);
 
           http.setConnectTimeout(2000);
-          if (i % 2 == 1) {
-            http.begin("agnespanel", 8080, "/text//0");
-          } else {
-            http.begin("agnespanel", 8080, "/image/thanks/1");
+          if (i < files.size()) {
+            String file = files[i];
+            file.replace(" ", "+");
+            String command = "/image/" + file + "/1";
+            http.begin("agnespanel", 8080, command);
           }
 
           int httpCode = http.GET();
@@ -62,6 +64,18 @@ class ModeDrive : public Mode
         float relative = min(1.0, 1.0 - (value - CLOSE) / (FAR - CLOSE));
         if (relative < 0.0) relative = 0.0;
         setLEDs((uint8_t)(relative * NUM_KEYS));
+      } else if (command.startsWith("Pf")) {
+        files.clear();
+        int position = 2;
+        while (true) {
+          int comma = command.indexOf(",", position);
+          if (comma == -1) {
+            files.push_back(command.substring(position));
+            break;
+          }
+          files.push_back(command.substring(position, comma));
+          position = comma + 1;
+        }
       }
     }
     virtual void draw() {
@@ -73,9 +87,21 @@ class ModeDrive : public Mode
       } else {
         setLEDs(0);
       }
+      img.setTextFont(2);
+      for (uint8_t i=0; i<files.size(); i++) {
+        img.setTextColor(TFT_WHITE, TFT_BLACK);
+        if (i > 0) img.print(", ");
+        if (i % 2 == 1) {
+          img.setTextColor(TFT_MAGENTA, TFT_BLACK);
+        }
+        img.printf("%d-", i+1);
+        img.print(files[i]);
+      }
+      img.print("\n");
     }
   private:
     VolatileValue<float> distance = VolatileValue<float>(0, 2);
+    std::vector<String> files;
     HTTPClient http;
 };
 
