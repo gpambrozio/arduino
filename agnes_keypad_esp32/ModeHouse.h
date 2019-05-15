@@ -7,7 +7,7 @@ class Strip
 {
   public:
     Strip(int baseKey, String identifier) : baseKey(baseKey), identifier(identifier) {}
-    bool checkKeys() {
+    bool checkKeys(bool isActive) {
       bool shouldRefreshLeds = false;
       if (justPressed(baseKey)) {
         if (brightness < 100) {
@@ -16,7 +16,7 @@ class Strip
           }
           brightness = min(100, brightness + 10);
           sendState();
-          shouldRefreshLeds = true;
+          shouldRefreshLeds = isActive;
         }
       }
       if (justPressed(baseKey+4)) {
@@ -24,7 +24,7 @@ class Strip
           brightness -= 10;
           if (brightness < 0) brightness = 0;
           sendState();
-          shouldRefreshLeds = true;
+          shouldRefreshLeds = isActive;
         }
       }
       if (justPressed(baseKey+8)) {
@@ -32,7 +32,7 @@ class Strip
           brightness = 100;
           lightMode = lightModes.substring(0, 1);
           sendState();
-          shouldRefreshLeds = true;
+          shouldRefreshLeds = isActive;
         } else if (brightness > 0) {
           int currentMode = lightModes.indexOf(lightMode) + 1;
           if (currentMode >= lightModes.length()) {
@@ -41,7 +41,7 @@ class Strip
             lightMode = lightModes.substring(currentMode, currentMode + 1);
             sendState();
           }
-          shouldRefreshLeds = true;
+          shouldRefreshLeds = isActive;
         }
       }
       
@@ -66,11 +66,11 @@ class Strip
       return brightness > 0;
     }
   
-    bool checkCommand(String command) {
+    bool checkCommand(String command, bool isActive) {
       if (command.startsWith("L" + identifier)) {
         lightMode = command.substring(2, 3);
         brightness = command.substring(3).toInt();
-        refreshLeds();
+        if (isActive) refreshLeds();
         return true;
       }
       return false;
@@ -126,8 +126,8 @@ class ModeHouse : public Mode
       }
 
       // Strips
-      if (outside.checkKeys() ||
-          inside.checkKeys()) {
+      if (outside.checkKeys(isActive) ||
+          inside.checkKeys(isActive)) {
         refreshLeds();
       }
 
@@ -156,8 +156,8 @@ class ModeHouse : public Mode
         thermostatTarget = command.substring(2).toFloat();
         scheduleScreenRefresh();
       }
-      if (inside.checkCommand(command) ||
-          outside.checkCommand(command)) {
+      if (inside.checkCommand(command, isActive) ||
+          outside.checkCommand(command, isActive)) {
         refreshLeds();
       }
     }
