@@ -166,12 +166,19 @@ void loop() {
     ArduinoOTA.begin();
   }
 
+  bool wasUsingBattery = USING_BATTERY;
+  bool wasAtMaxLight = light == MAX_LIGHT;
+
   // Formula from http://cuddletech.com/?p=1030
   battery = ((float)(analogRead(BATTERY_PIN)) / 4095) * 2.0 * 3.3 * 1.1;
   power = ((float)(analogRead(POWER_PIN)) / 4095) * 2.0 * 3.3 * 1.1;
 
+  if (!USING_BATTERY && wasUsingBattery && wasAtMaxLight) {
+    light = MAX_LIGHT;
+  }
+
   light = min(light, MAX_LIGHT);
-  if (light < 0) light = 0;   // min is not defined for some reason...
+  if (light < 0) light = 0;   // max is not defined for some reason...
   sigmaDeltaWrite(TFT_LIGHT_CHANNEL, light);
 
   bool hasSwitchChanges = false;
