@@ -70,7 +70,9 @@ class ModeDrive : public Mode
         while (true) {
           int comma = command.indexOf(",", position);
           if (comma == -1) {
-            files.push_back(command.substring(position));
+            if (position < command.length()) {
+              files.push_back(command.substring(position));
+            }
             break;
           }
           files.push_back(command.substring(position, comma));
@@ -92,7 +94,7 @@ class ModeDrive : public Mode
         img.setTextColor(TFT_WHITE, TFT_BLACK);
         if (i > 0) img.print(", ");
         if (i % 2 == 1) {
-          img.setTextColor(TFT_MAGENTA, TFT_BLACK);
+          img.setTextColor(TFT_YELLOW, TFT_BLACK);
         }
         img.printf("%d-", i+1);
         img.print(files[i]);
