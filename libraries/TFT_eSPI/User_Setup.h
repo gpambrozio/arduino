@@ -25,14 +25,15 @@
 //#define ILI9481_DRIVER
 //#define ILI9486_DRIVER
 //#define ILI9488_DRIVER     // WARNING: Do not connect ILI9488 display SDO to MISO if other devices share the SPI bus (TFT SDO does NOT tristate when CS is high)
-//#define ST7789_DRIVER      // Define additional parameters below for this display
+//#define ST7789_DRIVER      // Full configuration option, define additional parameters below for this display
+//#define ST7789_2_DRIVER    // Minimal configuration option, define additional parameters below for this display
 //#define R61581_DRIVER
 
 // Some displays support SPI reads via the MISO pin, other displays have a single
 // bi-directional SDA pin and the library will try to read this via the MOSI line.
 // To use the SDA line for reading data from the TFT uncomment the following line:
 
-// #define TFT_SDA_READ      // This option if for ESP32 ONLY, tested with ST7789 display only
+// #define TFT_SDA_READ      // This option is for ESP32 ONLY, tested with ST7789 display only
 
 // For ST7789 ONLY, define the colour order IF the blue and red are swapped on your display
 // Try ONE option at a time to find the correct colour order for your display
@@ -51,9 +52,9 @@
 // #define TFT_HEIGHT 160
 // #define TFT_HEIGHT 128
 // #define TFT_HEIGHT 240 // ST7789 240 x 240
-// #define TFT_HEIGHT 320 // ST7789 240 x 320
 #define TFT_WIDTH  128
 #define TFT_HEIGHT 128
+// #define TFT_HEIGHT 320 // ST7789 240 x 320
 
 // For ST7735 ONLY, define the type of display, originally this was based on the
 // colour of the tab on the screen protector film but this is not always true, so try
@@ -199,8 +200,8 @@
 #define TFT_DC   32  // Data Command control pin - use a pin in the range 0-31
 #define TFT_RST  15  // Reset pin, toggles on startup
 
-//#define TFT_WR    4  // Write strobe control pin - use a pin in the range 0-31
-//#define TFT_RD    2  // Read strobe control pin  - use a pin in the range 0-31
+//#define TFT_WR    4  // Write strobe control pin - must use a pin in the range 0-31
+//#define TFT_RD    2  // Read strobe control pin
 
 //#define TFT_D0   12  // Must use pins in the range 0-31 for the data bus
 //#define TFT_D1   13  // so a single register write sets/clears all bits.

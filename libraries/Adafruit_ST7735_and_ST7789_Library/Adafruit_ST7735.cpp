@@ -12,7 +12,8 @@
     @param  rst   Reset pin # (optional, pass -1 if unused)
 */
 Adafruit_ST7735::Adafruit_ST7735(int8_t cs, int8_t dc, int8_t mosi,
-  int8_t sclk, int8_t rst) : Adafruit_ST77xx(cs, dc, mosi, sclk, rst) {
+  int8_t sclk, int8_t rst) : Adafruit_ST77xx(ST7735_TFTWIDTH_128,
+  ST7735_TFTHEIGHT_160, cs, dc, mosi, sclk, rst) {
 }
 
 /*!
@@ -22,7 +23,7 @@ Adafruit_ST7735::Adafruit_ST7735(int8_t cs, int8_t dc, int8_t mosi,
     @param  rst  Reset pin # (optional, pass -1 if unused)
 */
 Adafruit_ST7735::Adafruit_ST7735(int8_t cs, int8_t dc, int8_t rst) :
-  Adafruit_ST77xx(cs, dc, rst) {
+  Adafruit_ST77xx(ST7735_TFTWIDTH_128, ST7735_TFTHEIGHT_160, cs, dc, rst) {
 }
 
 #if !defined(ESP8266)
@@ -34,7 +35,8 @@ Adafruit_ST7735::Adafruit_ST7735(int8_t cs, int8_t dc, int8_t rst) :
     @param  rst       Reset pin # (optional, pass -1 if unused)
 */
 Adafruit_ST7735::Adafruit_ST7735(SPIClass *spiClass, int8_t cs, int8_t dc,
-  int8_t rst) : Adafruit_ST77xx(spiClass, cs, dc, rst) {
+  int8_t rst) : Adafruit_ST77xx(ST7735_TFTWIDTH_128, ST7735_TFTHEIGHT_160,
+  spiClass, cs, dc, rst) {
 }
 #endif // end !ESP8266
 
@@ -84,14 +86,14 @@ static const uint8_t PROGMEM
       10,                           //     10 ms delay
     ST7735_PWCTR6,  2,              // 12: Power control, 2 args, no delay:
       0x11, 0x15,
-    ST7735_GMCTRP1,16,              // 13: Gamma settings, I think?
-      0x09, 0x16, 0x09, 0x20,
-      0x21, 0x1B, 0x13, 0x19,
+    ST7735_GMCTRP1,16,              // 13: Gamma Adjustments (pos. polarity), 16 args + delay:
+      0x09, 0x16, 0x09, 0x20,       //     (Not entirely necessary, but provides
+      0x21, 0x1B, 0x13, 0x19,       //      accurate colors)
       0x17, 0x15, 0x1E, 0x2B,
       0x04, 0x05, 0x02, 0x0E,
-    ST7735_GMCTRN1,16+ST_CMD_DELAY, // 14: More gamma settings?
-      0x0B, 0x14, 0x08, 0x1E,
-      0x22, 0x1D, 0x18, 0x1E,
+    ST7735_GMCTRN1,16+ST_CMD_DELAY, // 14: Gamma Adjustments (neg. polarity), 16 args + delay:
+      0x0B, 0x14, 0x08, 0x1E,       //     (Not entirely necessary, but provides
+      0x22, 0x1D, 0x18, 0x1E,       //      accurate colors)
       0x1B, 0x1A, 0x24, 0x2B,
       0x06, 0x06, 0x02, 0x0F,
       10,                           //     10 ms delay
@@ -181,14 +183,14 @@ static const uint8_t PROGMEM
 
   Rcmd3[] = {                       // 7735R init, part 3 (red or green tab)
     4,                              //  4 commands in list:
-    ST7735_GMCTRP1, 16      ,       //  1: Gamma setting, I think?
-      0x02, 0x1c, 0x07, 0x12,
-      0x37, 0x32, 0x29, 0x2d,
+    ST7735_GMCTRP1, 16      ,       //  1: Gamma Adjustments (pos. polarity), 16 args + delay:
+      0x02, 0x1c, 0x07, 0x12,       //     (Not entirely necessary, but provides
+      0x37, 0x32, 0x29, 0x2d,       //      accurate colors)
       0x29, 0x25, 0x2B, 0x39,
       0x00, 0x01, 0x03, 0x10,
-    ST7735_GMCTRN1, 16      ,       //  2: More gamma?
-      0x03, 0x1d, 0x07, 0x06,
-      0x2E, 0x2C, 0x29, 0x2D,
+    ST7735_GMCTRN1, 16      ,       //  2: Gamma Adjustments (neg. polarity), 16 args + delay:
+      0x03, 0x1d, 0x07, 0x06,       //     (Not entirely necessary, but provides
+      0x2E, 0x2C, 0x29, 0x2D,       //      accurate colors)
       0x2E, 0x2E, 0x37, 0x3F,
       0x00, 0x00, 0x02, 0x10,
     ST77XX_NORON,     ST_CMD_DELAY, //  3: Normal display on, no args, w/delay

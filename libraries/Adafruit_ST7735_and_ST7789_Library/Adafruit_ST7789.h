@@ -14,7 +14,7 @@ class Adafruit_ST7789 : public Adafruit_ST77xx {
 #endif // end !ESP8266
 
     void setRotation(uint8_t m);
-    void init(uint16_t width, uint16_t height);
+    void init(uint16_t width, uint16_t height, uint8_t spiMode = SPI_MODE0);
 };
 
 #endif // _ADAFRUIT_ST7789H_

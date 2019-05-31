@@ -35,6 +35,8 @@
 /**************************************************************************/
 /*!
     @brief  Instantiate Adafruit ST77XX driver with software SPI
+    @param  w     Display width in pixels at default rotation setting (0)
+    @param  h     Display height in pixels at default rotation setting (0)
     @param  cs    Chip select pin #
     @param  dc    Data/Command pin #
     @param  mosi  SPI MOSI pin #
@@ -43,36 +45,40 @@
     @param  miso  SPI MISO pin # (optional, pass -1 if unused)
 */
 /**************************************************************************/
-Adafruit_ST77xx::Adafruit_ST77xx(int8_t cs, int8_t dc, int8_t mosi,
-  int8_t sclk, int8_t rst, int8_t miso) : Adafruit_SPITFT(
-  ST7735_TFTWIDTH_128, ST7735_TFTHEIGHT_160, cs, dc, mosi, sclk, rst, miso) {
+Adafruit_ST77xx::Adafruit_ST77xx(uint16_t w, uint16_t h, int8_t cs,
+  int8_t dc, int8_t mosi, int8_t sclk, int8_t rst, int8_t miso) :
+  Adafruit_SPITFT(w, h, cs, dc, mosi, sclk, rst, miso) {
 }
 
 /**************************************************************************/
 /*!
     @brief  Instantiate Adafruit ST77XX driver with hardware SPI
+    @param  w     Display width in pixels at default rotation setting (0)
+    @param  h     Display height in pixels at default rotation setting (0)
     @param  cs    Chip select pin #
     @param  dc    Data/Command pin #
     @param  rst   Reset pin # (optional, pass -1 if unused)
 */
 /**************************************************************************/
-Adafruit_ST77xx::Adafruit_ST77xx(int8_t cs, int8_t dc, int8_t rst) :
-  Adafruit_SPITFT(ST7735_TFTWIDTH_128, ST7735_TFTHEIGHT_160, cs, dc, rst) {
+Adafruit_ST77xx::Adafruit_ST77xx(uint16_t w, uint16_t h, int8_t cs,
+  int8_t dc, int8_t rst) : Adafruit_SPITFT(w, h, cs, dc, rst) {
 }
 
 #if !defined(ESP8266)
 /**************************************************************************/
 /*!
     @brief  Instantiate Adafruit ST77XX driver with selectable hardware SPI
+    @param  w     Display width in pixels at default rotation setting (0)
+    @param  h     Display height in pixels at default rotation setting (0)
     @param  spiClass A pointer to an SPI device to use (e.g. &SPI1)
     @param  cs    Chip select pin #
     @param  dc    Data/Command pin #
     @param  rst   Reset pin # (optional, pass -1 if unused)
 */
 /**************************************************************************/
-Adafruit_ST77xx::Adafruit_ST77xx(SPIClass *spiClass, int8_t cs, int8_t dc,
-  int8_t rst) : Adafruit_SPITFT(ST7735_TFTWIDTH_128, ST7735_TFTHEIGHT_160,
-  spiClass, cs, dc, rst) {
+Adafruit_ST77xx::Adafruit_ST77xx(uint16_t w, uint16_t h, SPIClass *spiClass,
+  int8_t cs, int8_t dc, int8_t rst) : Adafruit_SPITFT(w, h, spiClass, cs,
+  dc, rst) {
 }
 #endif // end !ESP8266
 
@@ -96,7 +102,6 @@ void Adafruit_ST77xx::displayInit(const uint8_t *addr) {
     numArgs &= ~ST_CMD_DELAY;            // Mask out delay bit
     sendCommand(cmd, addr, numArgs);
     addr += numArgs;
-    SPI_CS_HIGH(); SPI_CS_LOW();  // ST7789 needs chip deselect after each
 
     if(ms) {
       ms = pgm_read_byte(addr++); // Read post-command delay time (ms)
@@ -122,7 +127,7 @@ void Adafruit_ST77xx::begin(uint32_t freq) {
   invertOnCommand  = ST77XX_INVON;
   invertOffCommand = ST77XX_INVOFF;
 
-  initSPI(freq);
+  initSPI(freq, spiMode);
 }
 
 /**************************************************************************/
@@ -212,6 +217,18 @@ void Adafruit_ST77xx::setColRowStart(int8_t col, int8_t row) {
   _colstart = col;
   _rowstart = row;
 }
+
+
+/**************************************************************************/
+/*!
+ @brief  Change whether display is on or off
+ @param  enable True if you want the display ON, false OFF
+ */
+/**************************************************************************/
+void Adafruit_ST77xx::enableDisplay(boolean enable) {
+  sendCommand(enable ? ST77XX_DISPON : ST77XX_DISPOFF);
+}
+
 
 ////////// stuff not actively being used, but kept for posterity
 /*
