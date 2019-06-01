@@ -1,11 +1,15 @@
+// Board: Adafruit Feather ESP8266
+
 #include <ESP8266WiFi.h>
 #include <ESP8266mDNS.h>
 #include <ArduinoOTA.h>
 #include <ESP8266WebServer.h>
 #include <Bounce2.h>
 
-#define MOTOR_UP   12
+#define MOTOR_UP   15
 #define MOTOR_DOWN 14
+
+#define LED 0
 
 #define KEY_UP     4
 #define KEY_DOWN   5
@@ -34,10 +38,13 @@ void setup() {
   debouncerUp.attach(KEY_UP);
   debouncerUp.interval(50); // interval in ms
 
-  pinMode(MOTOR_UP, INPUT);
-  pinMode(MOTOR_DOWN, INPUT);
   digitalWrite(MOTOR_UP, LOW);
   digitalWrite(MOTOR_DOWN, LOW);
+  pinMode(MOTOR_UP, OUTPUT);
+  pinMode(MOTOR_DOWN, OUTPUT);
+
+  pinMode(LED, OUTPUT);
+  digitalWrite(LED, LOW);
   
   Serial.begin(115200);
   Serial.println("Starting");
@@ -76,6 +83,7 @@ void setup() {
   Serial.print("Open http://");
   Serial.print(WiFi.localIP());
   Serial.println("/ in your browser to see it working");
+  digitalWrite(LED, HIGH);
 }
 
 bool goingUp = false;
@@ -95,50 +103,54 @@ void loop() {
 
     if (goingUp) {
       digitalWrite(MOTOR_UP, HIGH);
-      pinMode(MOTOR_UP, OUTPUT);
+      digitalWrite(MOTOR_DOWN, LOW);
     } else {
+      digitalWrite(MOTOR_UP, LOW);
       digitalWrite(MOTOR_DOWN, HIGH);
-      pinMode(MOTOR_DOWN, OUTPUT);
     }
     delay(moveTime);
-    pinMode(MOTOR_UP, INPUT);
-    pinMode(MOTOR_DOWN, INPUT);
+    digitalWrite(MOTOR_UP, LOW);
+    digitalWrite(MOTOR_DOWN, LOW);
 
     currentPosition = max(0, goToPosition);
     goToPosition = currentPosition;
   }
   
   bool goUp = debouncerUp.read() == LOW;
-  if (goingUp != goUp) {
-    goingUp = goUp;
-    if (goUp) {
-      startMove = millis();
-      digitalWrite(MOTOR_UP, HIGH);
-      pinMode(MOTOR_UP, OUTPUT);
-    } else {
-      pinMode(MOTOR_UP, INPUT);
-      long moveTime = millis() - startMove;
-      currentPosition = min((long)100, currentPosition + 100 * moveTime / TOTAL_MOVE_TIME);
-      goToPosition = currentPosition;
-    }
-    Serial.println("Going up changed");
-  }
   bool goDown = debouncerDown.read() == LOW;
-  if (goingDown != goDown) {
-    goingDown = goDown;
-    if (goDown) {
-      startMove = millis();
-      digitalWrite(MOTOR_DOWN, HIGH);
-      pinMode(MOTOR_DOWN, OUTPUT);
-    } else {
-      pinMode(MOTOR_DOWN, INPUT);
-      long moveTime = millis() - startMove;
-      currentPosition = max((long)0, currentPosition - 100 * moveTime / TOTAL_MOVE_TIME);
-      goToPosition = currentPosition;
+  if (goUp && goDown) {
+    Serial.println("Can't go both ways...");
+  } else {
+    if (goingUp != goUp) {
+      goingUp = goUp;
+      if (goUp) {
+        startMove = millis();
+        digitalWrite(MOTOR_UP, HIGH);
+        digitalWrite(MOTOR_DOWN, LOW);
+      } else {
+        digitalWrite(MOTOR_UP, LOW);
+        long moveTime = millis() - startMove;
+        currentPosition = min((long)100, currentPosition + 100 * moveTime / TOTAL_MOVE_TIME);
+        goToPosition = currentPosition;
+      }
+      Serial.println("Going up changed");
     }
-    Serial.println("Going down changed");
+    if (goingDown != goDown) {
+      goingDown = goDown;
+      if (goDown) {
+        startMove = millis();
+        digitalWrite(MOTOR_DOWN, HIGH);
+        digitalWrite(MOTOR_UP, LOW);
+      } else {
+        digitalWrite(MOTOR_DOWN, LOW);
+        long moveTime = millis() - startMove;
+        currentPosition = max((long)0, currentPosition - 100 * moveTime / TOTAL_MOVE_TIME);
+        goToPosition = currentPosition;
+      }
+      Serial.println("Going down changed");
+    }
   }
-    
+
   ArduinoOTA.handle();
   server.handleClient();
 }
