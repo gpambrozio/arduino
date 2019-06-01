@@ -19,7 +19,6 @@
 BLEServer *pServer;
 BLEService *pService;
 BLECharacteristic *pCharacteristic;
-BLEAdvertising *pAdvertising;
 
 HardwareSerial SerialTFMini(2);
 
@@ -47,9 +46,12 @@ void setup() {
   BLEAdvertisementData avdData = BLEAdvertisementData();
   avdData.setShortName(NAME);
   avdData.setCompleteServices(pService->getUUID());
-  pAdvertising = pServer->getAdvertising();
-  pAdvertising->setScanResponseData(avdData);
-  pAdvertising->start();
+  BLEAdvertising *pAdvertising = BLEDevice::getAdvertising();
+  pAdvertising->setAdvertisementData(avdData);
+  pAdvertising->setMinPreferred(0x06);  // functions that help with iPhone connections issue
+  pAdvertising->setMinPreferred(0x12);
+  pAdvertising->setScanResponse(false); // No need for scan response. Advertising is enough
+  BLEDevice::startAdvertising();
 
   Serial.println("started");
 }
