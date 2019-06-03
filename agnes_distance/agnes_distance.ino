@@ -33,6 +33,7 @@ void setup() {
   SerialTFMini.begin(115200, SERIAL_8N1, TX2, RX2);
 
   BLEDevice::init(NAME);
+  BLEDevice::setPower(ESP_PWR_LVL_P9);
   pServer = BLEDevice::createServer();
   pService = pServer->createService(SERVICE_UUID);
   pCharacteristic = pService->createCharacteristic(
