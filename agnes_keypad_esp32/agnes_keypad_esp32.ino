@@ -143,12 +143,11 @@ std::vector<String> commandsToSend;
 
 #define USING_BATTERY  (power < 4.0)
 
-#define LIGHT_CHANGE 32
 #define MAX_LIGHT_POWER 255
 #define MAX_LIGHT_BATTERY 96
 #define MAX_LIGHT (USING_BATTERY ? MAX_LIGHT_BATTERY : MAX_LIGHT_POWER)
 
-int light = MAX_LIGHT_POWER;
+bool light = true;
 bool needTrellisWrite = false;
 
 int8_t keyPressed;
@@ -166,20 +165,11 @@ void loop() {
     ArduinoOTA.begin();
   }
 
-  bool wasUsingBattery = USING_BATTERY;
-  bool wasAtMaxLight = light == MAX_LIGHT;
-
   // Formula from http://cuddletech.com/?p=1030
   battery = ((float)(analogRead(BATTERY_PIN)) / 4095) * 2.0 * 3.3 * 1.1;
   power = ((float)(analogRead(POWER_PIN)) / 4095) * 2.0 * 3.3 * 1.1;
 
-  if (!USING_BATTERY && wasUsingBattery && wasAtMaxLight) {
-    light = MAX_LIGHT;
-  }
-
-  light = min(light, MAX_LIGHT);
-  if (light < 0) light = 0;   // max is not defined for some reason...
-  sigmaDeltaWrite(TFT_LIGHT_CHANNEL, light);
+  sigmaDeltaWrite(TFT_LIGHT_CHANNEL, light ? MAX_LIGHT : 0);
 
   bool hasSwitchChanges = false;
   keyReleased = -1;
@@ -214,11 +204,8 @@ void loop() {
       if (mode >= NUMBER_OF_MODES-1) changeMode(0);
       else changeMode(mode+1);
     }
-    if (justPressed(14)) {
-      light -= LIGHT_CHANGE;
-    }
     if (justPressed(15)) {
-      light += LIGHT_CHANGE;
+      light = !light;
     }
     modes[mode]->checkKeys();
   }
