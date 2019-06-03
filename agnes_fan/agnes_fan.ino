@@ -14,7 +14,7 @@
 #define KEY_UP     5
 #define KEY_DOWN   4
 
-#define TOTAL_MOVE_TIME   6000
+#define TOTAL_MOVE_TIME   9000
 
 #define WLAN_AGNES
 
@@ -25,8 +25,8 @@ ESP8266WebServer server(80);
 Bounce debouncerDown = Bounce(); 
 Bounce debouncerUp = Bounce(); 
 
-int goToPosition = 0;
-int currentPosition = 0;
+long goToPosition = 0;
+long currentPosition = 0;
 
 void setup() {
   pinMode(KEY_UP, INPUT_PULLUP);
@@ -65,17 +65,17 @@ void setup() {
   ArduinoOTA.begin();
 
   server.on("/", []() {
-    if (!server.authenticate(WLAN_SSID, WLAN_PASS)) {
-      return server.requestAuthentication();
-    }
-    server.send(200, "text/plain", "Login OK");
+    String toSend = "Pos = " + currentPosition;
+    server.send(200, "text/plain", toSend);
   });
   server.on("/move", []() {
-    if (!server.authenticate(WLAN_SSID, WLAN_PASS)) {
-      return server.requestAuthentication();
+    if (server.hasArg("pos")) {
+      long pos = server.arg("pos").toInt();
+      goToPosition = pos;
+    } else if (server.hasArg("rel")) {
+      long rel = server.arg("rel").toInt();
+      goToPosition = currentPosition + rel;
     }
-    int pos = parseInt(server.arg("pos").c_str());
-    goToPosition = pos;
     server.send(200, "text/plain", "Move OK");
   });
   server.begin();
@@ -94,8 +94,9 @@ void loop() {
   debouncerDown.update();
   debouncerUp.update();
 
+  goToPosition = min(100l, goToPosition);
   if (currentPosition != goToPosition) {
-    long moveTime = (goToPosition < 0 ? 1000 : 0) + TOTAL_MOVE_TIME * abs(currentPosition - max(0, goToPosition)) / 100;
+    long moveTime = goToPosition < 0 ? 1000 : (long)((float)abs(currentPosition - max(0l, goToPosition)) / 100 * TOTAL_MOVE_TIME);
     bool goingUp = goToPosition > currentPosition;
     Serial.print("Moving ");
     Serial.print(goingUp ? "up for " : "down for ");
@@ -112,7 +113,7 @@ void loop() {
     digitalWrite(MOTOR_UP, LOW);
     digitalWrite(MOTOR_DOWN, LOW);
 
-    currentPosition = max(0, goToPosition);
+    currentPosition = max(0l, goToPosition);
     goToPosition = currentPosition;
   }
   
@@ -130,7 +131,7 @@ void loop() {
       } else {
         digitalWrite(MOTOR_UP, LOW);
         long moveTime = millis() - startMove;
-        currentPosition = min((long)100, currentPosition + 100 * moveTime / TOTAL_MOVE_TIME);
+        currentPosition = min(100l, currentPosition + 100 * moveTime / TOTAL_MOVE_TIME);
         goToPosition = currentPosition;
       }
       Serial.println("Going up changed");
@@ -144,7 +145,7 @@ void loop() {
       } else {
         digitalWrite(MOTOR_DOWN, LOW);
         long moveTime = millis() - startMove;
-        currentPosition = max((long)0, currentPosition - 100 * moveTime / TOTAL_MOVE_TIME);
+        currentPosition = max(0l, currentPosition - 100 * moveTime / TOTAL_MOVE_TIME);
         goToPosition = currentPosition;
       }
       Serial.println("Going down changed");
@@ -153,17 +154,4 @@ void loop() {
 
   ArduinoOTA.handle();
   server.handleClient();
-}
-
-int parseInt(const char *buffer) {
-  int ret = 0;
-  bool isNegative = false;
-  if (*buffer == '-') {
-    isNegative = true;
-    buffer++;
-  }
-  while (*buffer >= '0' && *buffer <= '9') {
-    ret = ret * 10 + (*buffer++ - '0');
-  }
-  return isNegative? -ret : ret;
 }
