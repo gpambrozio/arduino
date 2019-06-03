@@ -166,6 +166,9 @@ class ModeHouse : public Mode
       } else if (command.startsWith("Tt")) {
         thermostatTarget = command.substring(2).toFloat();
         scheduleScreenRefresh();
+      } else if (command.startsWith("Fp")) {
+        fanPosition = command.substring(2).toInt();
+        refreshLeds();
       }
       if (inside.checkCommand(command, isActive) /*||
           outside.checkCommand(command, isActive)*/) {
@@ -217,10 +220,14 @@ class ModeHouse : public Mode
     VolatileValue<int> batteryOutside = VolatileValue<int>(0);
     float thermostatTarget = 71.0;
     bool  thermostatOn = false;
+    int fanPosition = 0;
 
     void refreshLeds() {
       if (!isActive) return;
       setLED(1, thermostatOn);
+      setLED(3, fanPosition > 0);
+      setLED(7, fanPosition > 0);
+      setLED(11, fanPosition > 0);
       inside.refreshLeds();
 //      outside.refreshLeds();
       setLED(5, inside.isOn()/* || outside.isOn()*/);
