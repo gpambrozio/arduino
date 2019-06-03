@@ -204,6 +204,9 @@ void loop() {
       if (mode >= NUMBER_OF_MODES-1) changeMode(0);
       else changeMode(mode+1);
     }
+    if (justPressed(14)) {
+      addCommand("Fan:-10");
+    }
     if (justPressed(15)) {
       light = !light;
     }
