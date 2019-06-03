@@ -5,6 +5,7 @@
 #include <ArduinoOTA.h>
 #include <ESP8266WebServer.h>
 #include <Bounce2.h>
+#include <vector>
 
 #define MOTOR_UP   14
 #define MOTOR_DOWN 15
@@ -16,11 +17,31 @@
 
 #define TOTAL_MOVE_TIME   9000
 
+#define DEBUG
+
+#ifdef DEBUG
+
+#define D(d)  Serial.print(d)
+#define DL(d) Serial.println(d)
+#define DP(args...) Serial.printf(args)
+#define MARK  {Serial.print(F("Running line "));Serial.println(__LINE__);}
+
+#else
+
+#define D(d)  {}
+#define DL(d) {}
+#define DP(...) {}
+#define MARK  {}
+
+#endif
+
 #define WLAN_AGNES
 
 #include "Passwords.h"
 
 ESP8266WebServer server(80);
+WiFiClient client;
+std::vector<String> commandsToSend;
 
 Bounce debouncerDown = Bounce(); 
 Bounce debouncerUp = Bounce(); 
@@ -47,17 +68,17 @@ void setup() {
   digitalWrite(LED, LOW);
   
   Serial.begin(115200);
-  Serial.println("Starting");
+  DL(F("Starting"));
   WiFi.mode(WIFI_STA);
   WiFi.begin(WLAN_SSID, WLAN_PASS);
   if (WiFi.waitForConnectResult() != WL_CONNECTED) {
-    Serial.println("WiFi Connect Failed! Rebooting...");
+    DL(F("WiFi Connect Failed! Rebooting..."));
     delay(1000);
     ESP.restart();
   }
 
   if (MDNS.begin("fan")) {
-    Serial.println("MDNS responder started");
+    DL(F("MDNS responder started"));
   }
 
   ArduinoOTA.setPort(8266);
@@ -80,27 +101,72 @@ void setup() {
   });
   server.begin();
 
-  Serial.print("Open http://");
-  Serial.print(WiFi.localIP());
-  Serial.println("/ in your browser to see it working");
+  D(F("Open http://"));
+  D(WiFi.localIP());
+  DL(F("/ in your browser to see it working"));
   digitalWrite(LED, HIGH);
 }
 
 bool goingUp = false;
 bool goingDown = false;
 long startMove;
+long lastReported = -1;
 
 void loop() {
   debouncerDown.update();
   debouncerUp.update();
 
+  bool wifiConnected = WiFi.status() == WL_CONNECTED;
+  if (!wifiConnected) {
+    DL(F("WiFi not connected!"));
+    if (WiFi.waitForConnectResult() == WL_CONNECTED) {
+      wifiConnected = true;
+    } else {
+      DL(F("WiFi Connect Failed! Rebooting..."));
+      delay(1000);
+      ESP.restart();
+    }
+  }
+  
+  if (wifiConnected) {
+    if (!client.connected()) {
+      DL(F("connecting to server."));
+      client.stop();
+      if (client.connect(WiFi.gatewayIP(), 5000)) {
+        lastReported = -1;
+        commandsToSend.clear();
+        DL(F("connected to server."));
+        client.setTimeout(15);
+        client.print("Fan\n");
+      } else {
+        DL(F("failed connecting to server."));
+      }
+    } else if (client.available()) {
+      String line = client.readStringUntil('\n');
+      if (line.startsWith("P")) {
+        goToPosition = line.substring(1).toInt();
+      } else if (line.startsWith("R")) {
+        goToPosition = currentPosition + line.substring(1).toInt();
+      }
+    } else if (!commandsToSend.empty()) {
+      for (uint8_t i=0; i<commandsToSend.size(); i++) {
+        client.print(commandsToSend[i] + "\n");
+      }
+      commandsToSend.clear();
+    }
+    ArduinoOTA.handle();
+    server.handleClient();
+  } else {
+    client.stop();
+  }
+
   goToPosition = min(100l, goToPosition);
   if (currentPosition != goToPosition) {
     long moveTime = goToPosition < 0 ? 1000 : (long)((float)abs(currentPosition - max(0l, goToPosition)) / 100 * TOTAL_MOVE_TIME);
     bool goingUp = goToPosition > currentPosition;
-    Serial.print("Moving ");
-    Serial.print(goingUp ? "up for " : "down for ");
-    Serial.println(moveTime);
+    D(F("Moving "));
+    D(goingUp ? "up for " : "down for ");
+    DL(moveTime);
 
     if (goingUp) {
       digitalWrite(MOTOR_UP, HIGH);
@@ -120,7 +186,7 @@ void loop() {
   bool goUp = debouncerUp.read() == LOW;
   bool goDown = debouncerDown.read() == LOW;
   if (goUp && goDown) {
-    Serial.println("Can't go both ways...");
+    DL(F("Can't go both ways..."));
   } else {
     if (goingUp != goUp) {
       goingUp = goUp;
@@ -134,7 +200,7 @@ void loop() {
         currentPosition = min(100l, currentPosition + 100 * moveTime / TOTAL_MOVE_TIME);
         goToPosition = currentPosition;
       }
-      Serial.println("Going up changed");
+      DL(F("Going up changed"));
     }
     if (goingDown != goDown) {
       goingDown = goDown;
@@ -148,10 +214,16 @@ void loop() {
         currentPosition = max(0l, currentPosition - 100 * moveTime / TOTAL_MOVE_TIME);
         goToPosition = currentPosition;
       }
-      Serial.println("Going down changed");
+      DL(F("Going down changed"));
     }
   }
+  
+  if (lastReported != currentPosition) {
+    addCommand("P" + currentPosition);
+    lastReported = currentPosition;
+  }
+}
 
-  ArduinoOTA.handle();
-  server.handleClient();
+void addCommand(String command) {
+  commandsToSend.push_back(command);
 }
