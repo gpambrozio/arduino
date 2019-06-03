@@ -86,7 +86,7 @@ void setup() {
   ArduinoOTA.begin();
 
   server.on("/", []() {
-    String toSend = "Pos = " + currentPosition;
+    String toSend = "Pos = " + String(currentPosition);
     server.send(200, "text/plain", toSend);
   });
   server.on("/move", []() {
@@ -219,7 +219,7 @@ void loop() {
   }
   
   if (lastReported != currentPosition) {
-    addCommand("P" + currentPosition);
+    addCommand("P:" + String(currentPosition));
     lastReported = currentPosition;
   }
 }
