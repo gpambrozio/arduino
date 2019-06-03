@@ -118,6 +118,17 @@ class ModeHouse : public Mode
         refreshLeds();
       }
 
+      // Fan
+      if (justPressed(3)) {
+        addCommand("Fan:20");
+      }
+      if (justPressed(7)) {
+        addCommand("Fan:-20");
+      }
+      if (justPressed(11)) {
+        addCommand("Fan:C");
+      }
+
       // Lock / unlock
       if (justPressed(8)) {
         addCommand("Locks:lock");
@@ -126,15 +137,15 @@ class ModeHouse : public Mode
       }
 
       // Strips
-      if (outside.checkKeys(isActive) ||
+      if (/*outside.checkKeys(isActive) ||*/
           inside.checkKeys(isActive)) {
         refreshLeds();
       }
 
       // All lights
-      if (justPressed(5) && (inside.isOn() || outside.isOn())) {
+      if (justPressed(5) && (inside.isOn() /*|| outside.isOn()*/)) {
         inside.turnOff();
-        outside.turnOff();
+//        outside.turnOff();
         refreshLeds();
       }
     }
@@ -156,8 +167,8 @@ class ModeHouse : public Mode
         thermostatTarget = command.substring(2).toFloat();
         scheduleScreenRefresh();
       }
-      if (inside.checkCommand(command, isActive) ||
-          outside.checkCommand(command, isActive)) {
+      if (inside.checkCommand(command, isActive) /*||
+          outside.checkCommand(command, isActive)*/) {
         refreshLeds();
       }
     }
@@ -200,7 +211,7 @@ class ModeHouse : public Mode
   
   private:
     Strip inside = Strip(2, "I");
-    Strip outside = Strip(3, "O");
+//    Strip outside = Strip(3, "O");
     VolatileValue<float> temperatureOutside = VolatileValue<float>(0);
     VolatileValue<float> temperatureInside = VolatileValue<float>(0);
     VolatileValue<int> batteryOutside = VolatileValue<int>(0);
@@ -211,8 +222,8 @@ class ModeHouse : public Mode
       if (!isActive) return;
       setLED(1, thermostatOn);
       inside.refreshLeds();
-      outside.refreshLeds();
-      setLED(5, inside.isOn() || outside.isOn());
+//      outside.refreshLeds();
+      setLED(5, inside.isOn()/* || outside.isOn()*/);
     }
 };
 
