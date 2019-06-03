@@ -6,13 +6,13 @@
 #include <ESP8266WebServer.h>
 #include <Bounce2.h>
 
-#define MOTOR_UP   15
-#define MOTOR_DOWN 14
+#define MOTOR_UP   14
+#define MOTOR_DOWN 15
 
 #define LED 0
 
-#define KEY_UP     4
-#define KEY_DOWN   5
+#define KEY_UP     5
+#define KEY_DOWN   4
 
 #define TOTAL_MOVE_TIME   6000
 
