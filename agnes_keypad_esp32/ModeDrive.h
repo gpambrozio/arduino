@@ -5,8 +5,8 @@
 #include <WiFi.h>
 #include <vector>
 
-#define FAR   1400.0
-#define CLOSE 400.0
+#define FAR   3000.0
+#define CLOSE 800.0
 
 class ModeDrive : public Mode
 {
@@ -50,10 +50,11 @@ class ModeDrive : public Mode
         }
       }
     }
-    virtual void setLEDs(uint8_t keys) {
+    virtual void setLEDs(float relative) {
       if (!isActive) return;
-      for (uint8_t i = keys; i < NUM_KEYS; i++) {
-        setLED(i, i < keys);
+      uint8_t keys = (uint8_t)(relative * (NUM_KEYS - 1));
+      for (uint8_t i = 0; i < NUM_KEYS - 1; i++) {
+        setLED(i + 1, i < keys);
       }
     }
     virtual void checkCommand(String command) {
@@ -63,7 +64,7 @@ class ModeDrive : public Mode
         scheduleScreenRefresh();
         float relative = min(1.0, 1.0 - (value - CLOSE) / (FAR - CLOSE));
         if (relative < 0.0) relative = 0.0;
-        setLEDs((uint8_t)(relative * NUM_KEYS));
+        setLEDs(relative);
       } else if (command.startsWith("Pf")) {
         files.clear();
         int position = 2;
@@ -86,7 +87,9 @@ class ModeDrive : public Mode
       if (value > 0) {
         img.setTextFont(2);
         img.printf("Distance: %.1f\n", value);
+        setLED(0, true);
       } else {
+        setLED(0, false);
         setLEDs(0);
       }
       img.setTextFont(2);
