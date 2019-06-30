@@ -285,8 +285,8 @@ void loop()
     nextBlink = millis() + 15000;
   }
 
-  if (lastButtonFall > lastButtonClick && lastButtonFall - lastButtonClick > 500 &&
-      lastButtonRise > lastButtonFall && lastButtonRise - lastButtonFall > 150) {
+  if (lastButtonFall > lastButtonClick && lastButtonFall - lastButtonClick > 2000 &&
+      lastButtonRise > lastButtonFall && lastButtonRise - lastButtonFall > 300) {
     lastButtonClick = millis();
     DL("Button clicked");
     changeOnOff(1 - onoff);
