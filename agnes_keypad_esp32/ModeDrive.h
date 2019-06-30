@@ -5,8 +5,9 @@
 #include <WiFi.h>
 #include <vector>
 
-#define FAR   3000.0
-#define CLOSE 800.0
+// In cm
+#define FAR   300
+#define CLOSE 80
 
 class ModeDrive : public Mode
 {
@@ -59,10 +60,10 @@ class ModeDrive : public Mode
     }
     virtual void checkCommand(String command) {
       if (command.startsWith("Ds")) {
-        float value = command.substring(2).toFloat();
+        int value = command.substring(2).toInt();
         distance.setValue(value);
         scheduleScreenRefresh();
-        float relative = min(1.0, 1.0 - (value - CLOSE) / (FAR - CLOSE));
+        float relative = min(1.0, 1.0 - float(value - CLOSE) / float(FAR - CLOSE));
         if (relative < 0.0) relative = 0.0;
         setLEDs(relative);
       } else if (command.startsWith("Pf")) {
@@ -83,10 +84,10 @@ class ModeDrive : public Mode
     }
     virtual void draw() {
       img.setTextColor(TFT_WHITE);
-      float value = distance.value();
+      int value = distance.value();
       if (value > 0) {
         img.setTextFont(2);
-        img.printf("Distance: %.1f\n", value);
+        img.printf("Distance: %d\n", value);
         setLED(0, true);
       } else {
         setLED(0, false);
@@ -105,7 +106,7 @@ class ModeDrive : public Mode
       img.print("\n");
     }
   private:
-    VolatileValue<float> distance = VolatileValue<float>(0, 2);
+    VolatileValue<int> distance = VolatileValue<int>(0, 2);
     std::vector<String> files;
     HTTPClient http;
 };
