@@ -2,74 +2,117 @@
  * Sparkfun ESP32 Thing
  */
 
-#include <BLEDevice.h>
+#include <WiFiMulti.h>
 
-#define SERVICE_UUID        (BLEUUID((uint16_t) 0x8242))
-#define CHARACTERISTIC_UUID (BLEUUID((uint16_t) 0x4242))
+#include <ArduinoOTA.h>
+#include <ESPmDNS.h>
 
 #define LED     5
 
 #define TX2     25
 #define RX2     26
 
-#define NAME    "Behinds"
+#define WLAN_AGNES
+
+#include <Passwords.h>
+
+#define NAME    "Parking"
+
+#define DEBUG
+
+#ifdef DEBUG
+
+#define D(d)  Serial.print(d)
+#define DL(d) Serial.println(d)
+#define DP(args...) Serial.printf(args)
+#define MARK  {Serial.print(F("Running line "));Serial.println(__LINE__);}
+
+#else
+
+#define D(d)  {}
+#define DL(d) {}
+#define DP(...) {}
+#define MARK  {}
+
+#endif
 
 // defines variables
 
-BLEServer *pServer;
-BLEService *pService;
-BLECharacteristic *pCharacteristic;
+WiFiMulti wifiMulti;
+WiFiClient client;
 
 HardwareSerial SerialTFMini(2);
-
-float distance = 0;
 
 void setup() {
   pinMode(LED, OUTPUT);
   digitalWrite(LED, LOW);
   
   Serial.begin(115200); // Starts the serial communication
-  
+  DL(F(NAME));
+
   SerialTFMini.begin(115200, SERIAL_8N1, TX2, RX2);
 
-  BLEDevice::init(NAME);
-  BLEDevice::setPower(ESP_PWR_LVL_P9);
-  pServer = BLEDevice::createServer();
-  pService = pServer->createService(SERVICE_UUID);
-  pCharacteristic = pService->createCharacteristic(
-                      CHARACTERISTIC_UUID,
-                      BLECharacteristic::PROPERTY_READ
-                    );
+  wifiMulti = WiFiMulti();
+  wifiMulti.addAP(WLAN_SSID, WLAN_PASS);
 
-  pCharacteristic->setValue(distance);
-  pService->start();
+  if (MDNS.begin(NAME)) {
+    DL(F("MDNS responder started"));
+  }
 
-  BLEAdvertisementData avdData = BLEAdvertisementData();
-  avdData.setShortName(NAME);
-  avdData.setCompleteServices(pService->getUUID());
-  BLEAdvertising *pAdvertising = BLEDevice::getAdvertising();
-  pAdvertising->setAdvertisementData(avdData);
-  pAdvertising->setMinPreferred(0x06);  // functions that help with iPhone connections issue
-  pAdvertising->setMinPreferred(0x12);
-  pAdvertising->setScanResponse(false); // No need for scan response. Advertising is enough
-  BLEDevice::startAdvertising();
-
-  Serial.println("started");
+  DL(F("started"));
 }
 
 int distanceCM = 0;
 int lastDistance = 0;
 int strength = 0;
 
+bool sendingDistance = false;
+unsigned long nextSend = 0;
+
 void loop() {
+  bool wifiConnected = wifiMulti.run() == WL_CONNECTED;
+  if (!wifiConnected) {
+    //DL(F("WiFi not connected!"));
+  } else {
+    ArduinoOTA.setPort(8266);
+    ArduinoOTA.setHostname(NAME);
+    ArduinoOTA.begin();
+  }
+
+  if (wifiConnected) {
+    if (!client.connected()) {
+      DL(F("connecting to server."));
+      client.stop();
+      if (client.connect(WiFi.gatewayIP(), 5000)) {
+        DL(F("connected to server."));
+        client.setTimeout(15);
+        client.println(NAME);
+        sendingDistance = false;
+      } else {
+        DL(F("failed connecting to server."));
+      }
+    } else if (client.available()) {
+      String line = client.readStringUntil('\n');
+      sendingDistance = (line[0] == '+');
+      nextSend = 0;
+    } else if (sendingDistance && millis() >= nextSend) {
+      String command = "D" + String(lastDistance) + "\n";
+      client.print(command);
+      client.flush();
+      nextSend = millis() + 500;
+    }
+    ArduinoOTA.handle();
+  } else {
+    client.stop();
+    sendingDistance = false;
+  }
+  
   distanceCM = 0;
   getTFminiData(&distanceCM, &strength);
   
   if (distanceCM && lastDistance != distanceCM) {
     lastDistance = distanceCM;
-    distance = 10.0 * distanceCM;
-    pCharacteristic->setValue(distance);
-    Serial.println(distance);
+    DL(lastDistance);
   }
 }
 
@@ -77,7 +120,7 @@ void loop() {
 void getTFminiData(int* distance, int* strength) {
   static uint8_t i = 0;
   static int rx[9];
-  if (SerialTFMini.available()) {  
+  if (SerialTFMini.available()) {
     rx[i] = SerialTFMini.read();
     if (rx[0] != 0x59) {
       i = 0;
