@@ -327,7 +327,7 @@ void loop()
   }
 
   if (onoff) {
-    uint16_t temperatureLimit = targetTemperature + (isHeating ? 20 : 0);
+    uint16_t temperatureLimit = targetTemperature - (isHeating ? 0 : 20);
     isHeating = (millis() - lastSuccessfullTemperatureRead) < 2 * 60000 && lastTemperature < temperatureLimit;
   } else {
     isHeating = false;    
