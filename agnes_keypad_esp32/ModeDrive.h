@@ -87,7 +87,11 @@ class ModeDrive : public Mode
       int value = distance.value();
       if (value > 0) {
         img.setTextFont(2);
-        img.printf("Distance: %d\n", value);
+        if (value > FAR * 10) {
+          img.printf("Distance: far\n");
+        } else {
+          img.printf("Distance: %d\n", value);
+        }
         setLED(0, true);
       } else {
         setLED(0, false);
