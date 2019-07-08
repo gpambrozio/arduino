@@ -15,7 +15,7 @@
 #define KEY_UP     5
 #define KEY_DOWN   4
 
-#define TOTAL_MOVE_TIME   9000
+#define TOTAL_MOVE_TIME   (4500.0f)
 
 #define DEBUG
 
@@ -162,7 +162,8 @@ void loop() {
 
   goToPosition = min(100l, goToPosition);
   if (currentPosition != goToPosition) {
-    long moveTime = goToPosition < 0 ? 1000 : (long)((float)abs(currentPosition - max(0l, goToPosition)) / 100 * TOTAL_MOVE_TIME);
+    long moveTime = goToPosition < 0 ? 1000 : (long)((float)(abs(currentPosition - max(0l, goToPosition))) / 100.0f * TOTAL_MOVE_TIME);
+    moveTime += goToPosition == 0 ? 1000 : 0;
     bool goingUp = goToPosition > currentPosition;
     D(F("Moving "));
     D(goingUp ? "up for " : "down for ");
@@ -197,7 +198,7 @@ void loop() {
       } else {
         digitalWrite(MOTOR_UP, LOW);
         long moveTime = millis() - startMove;
-        currentPosition = min(100l, currentPosition + 100 * moveTime / TOTAL_MOVE_TIME);
+        currentPosition = min(100l, (long)(currentPosition + 100 * moveTime / TOTAL_MOVE_TIME));
         goToPosition = currentPosition;
       }
       DL(F("Going up changed"));
@@ -211,7 +212,7 @@ void loop() {
       } else {
         digitalWrite(MOTOR_DOWN, LOW);
         long moveTime = millis() - startMove;
-        currentPosition = max(0l, currentPosition - 100 * moveTime / TOTAL_MOVE_TIME);
+        currentPosition = max(0l, (long)(currentPosition - 100 * moveTime / TOTAL_MOVE_TIME));
         goToPosition = currentPosition;
       }
       DL(F("Going down changed"));
