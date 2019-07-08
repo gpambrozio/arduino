@@ -147,6 +147,7 @@ std::vector<String> commandsToSend;
 #define MAX_LIGHT_BATTERY 96
 #define MAX_LIGHT (USING_BATTERY ? MAX_LIGHT_BATTERY : MAX_LIGHT_POWER)
 
+bool leds[NUM_KEYS];
 bool light = true;
 bool needTrellisWrite = false;
 
@@ -209,6 +210,7 @@ void loop() {
     }
     if (justPressed(15)) {
       light = !light;
+      needTrellisWrite = true;
     }
     modes[mode]->checkKeys();
   }
@@ -252,6 +254,13 @@ void loop() {
   }
   
   if (needTrellisWrite) {
+    for (uint8_t i = 0; i < NUM_KEYS - 1; i++) {
+      if (leds[i] && light) {
+        trellis.setLED(i);
+      } else {
+        trellis.clrLED(i);
+      }
+    }
     // tell the trellis to set the LEDs we requested
     trellis.writeDisplay();
     needTrellisWrite = false;
@@ -285,12 +294,9 @@ void changeMode(byte newMode) {
 }
 
 void setLED(uint8_t n, bool onOff) {
+  if (n >= NUM_KEYS) return;
+  leds[n] = onOff;
   needTrellisWrite = true;
-  if (onOff) {
-    trellis.setLED(n);
-  } else {
-    trellis.clrLED(n);
-  }
 }
 
 bool justPressed(uint8_t n) {
