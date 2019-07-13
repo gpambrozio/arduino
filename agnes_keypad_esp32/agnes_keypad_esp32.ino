@@ -254,7 +254,7 @@ void loop() {
   }
   
   if (needTrellisWrite) {
-    for (uint8_t i = 0; i < NUM_KEYS - 1; i++) {
+    for (uint8_t i = 0; i < NUM_KEYS; i++) {
       if (leds[i] && light) {
         trellis.setLED(i);
       } else {
