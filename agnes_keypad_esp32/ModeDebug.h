@@ -36,6 +36,7 @@ class ModeDebug : public Mode
       }
     }
     virtual void draw() {
+      img.println("");
       long runningSeconds = millis() / 1000;
       img.setTextFont(1);
       img.setTextColor(TFT_WHITE);

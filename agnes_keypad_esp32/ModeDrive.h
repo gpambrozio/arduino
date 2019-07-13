@@ -88,13 +88,14 @@ class ModeDrive : public Mode
       int value = distance.value();
       if (value > 0) {
         if (value < FAR * 10) {
-          img.printf("Distance: %d\n", value);
+          img.printf("%d cm", value);
         }
         setLED(0, true);
       } else {
         setLED(0, false);
         setLEDs(0);
       }
+      img.println("");
       for (uint8_t i=0; i<files.size(); i++) {
         img.setTextColor(TFT_WHITE, TFT_BLACK);
         if (i > 0) img.print(", ");

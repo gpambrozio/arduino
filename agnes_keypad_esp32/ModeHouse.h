@@ -176,6 +176,7 @@ class ModeHouse : public Mode
       }
     }
     virtual void draw() {
+      img.println("");
       img.setTextColor(TFT_WHITE);
       float value;
       value = temperatureInside.value();

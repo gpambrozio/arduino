@@ -272,7 +272,7 @@ void loop() {
     img.setCursor(0, 0, 2);
     img.setTextColor(TFT_WHITE);
     img.print(modes[mode]->name());
-    img.println(" mode");
+    img.print(" mode. ");
     modes[mode]->draw();
     img.pushSprite(0, 0);
   }
