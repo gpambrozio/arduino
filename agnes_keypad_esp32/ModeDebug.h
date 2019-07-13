@@ -13,6 +13,7 @@ class ModeDebug : public Mode
     virtual void init() {}
     virtual void setup() { touches = 0; }
     virtual void tearDown() {}
+    
     virtual void checkKeys() {
       for (uint8_t i = 0; i < MODE_KEYS; i++) {
         if (justPressed(i)) {
@@ -23,6 +24,7 @@ class ModeDebug : public Mode
         }
       }
     }
+    
     virtual void checkCommand(String command) {
       if (command.startsWith("Ws")) {
         wifiSsid.setValue(command.substring(2));
@@ -35,6 +37,7 @@ class ModeDebug : public Mode
         scheduleScreenRefresh();
       }
     }
+    
     virtual void draw() {
       img.println("");
       long runningSeconds = millis() / 1000;

@@ -7,6 +7,7 @@ class Strip
 {
   public:
     Strip(int baseKey, String identifier) : baseKey(baseKey), identifier(identifier) {}
+    
     bool checkKeys(bool isActive) {
       bool shouldRefreshLeds = false;
       if (justPressed(baseKey)) {
@@ -99,6 +100,7 @@ class ModeHouse : public Mode
       setKeysBrightness(1);
       refreshLeds();
     }
+    
     virtual void checkKeys() {
       // Thermostat
       if (justPressed(0)) {
@@ -149,6 +151,7 @@ class ModeHouse : public Mode
         refreshLeds();
       }
     }
+    
     virtual void checkCommand(String command) {
       if (command.startsWith("To")) {
         temperatureOutside.setValue(command.substring(2).toFloat() / 10.0);
@@ -175,6 +178,7 @@ class ModeHouse : public Mode
         refreshLeds();
       }
     }
+    
     virtual void draw() {
       img.println("");
       img.setTextColor(TFT_WHITE);

@@ -21,12 +21,15 @@ class ModeDrive : public Mode
     }
     virtual String name() { return "Drive"; }
     virtual char identifier() { return 'd'; }
+    
     virtual void setup() {
       addCommand("ParkingSensor:1");
     }
+    
     virtual void tearDown() {
       addCommand("ParkingSensor:0");
     }
+    
     virtual void checkKeys() {
       for (uint8_t i = 0; i < MODE_KEYS; i++) {
         if (justPressed(i)) {
@@ -51,6 +54,7 @@ class ModeDrive : public Mode
         }
       }
     }
+    
     virtual void setLEDs(float relative) {
       if (!isActive) return;
       uint8_t keys = (uint8_t)(relative * (NUM_KEYS - 1));
@@ -58,6 +62,7 @@ class ModeDrive : public Mode
         setLED(i + 1, i < keys);
       }
     }
+    
     virtual void checkCommand(String command) {
       if (command.startsWith("Ds")) {
         int value = command.substring(2).toInt();
@@ -82,6 +87,7 @@ class ModeDrive : public Mode
         }
       }
     }
+    
     virtual void draw() {
       img.setTextColor(TFT_WHITE);
       img.setTextFont(2);
@@ -107,6 +113,7 @@ class ModeDrive : public Mode
       }
       img.print("\n");
     }
+  
   private:
     VolatileValue<int> distance = VolatileValue<int>(0, 2);
     std::vector<String> files;

@@ -12,6 +12,7 @@ template<typename T> class VolatileValue
       this->lastUpdate = 0;
       this->timeout = timeout * 1000;
     }
+    
     T value() {
       if (millis() > lastUpdate + timeout) {
         return noValue;
@@ -19,6 +20,7 @@ template<typename T> class VolatileValue
         return lastValue;
       }
     }
+    
     void setValue(T value) {
       lastValue = value;
       lastUpdate = millis();
