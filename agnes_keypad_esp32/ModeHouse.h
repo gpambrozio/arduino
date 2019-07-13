@@ -120,10 +120,10 @@ class ModeHouse : public Mode
 
       // Fan
       if (justPressed(3)) {
-        addCommand("Fan:20");
+        addCommand("Fan:U");
       }
       if (justPressed(7)) {
-        addCommand("Fan:-20");
+        addCommand("Fan:D");
       }
       if (justPressed(11)) {
         addCommand("Fan:C");
