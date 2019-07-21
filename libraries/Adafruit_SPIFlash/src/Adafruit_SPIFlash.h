@@ -32,14 +32,15 @@
 #include "flash_devices.h"
 
 // implement SdFat Block Driver
-#include <SdFat.h>
+#include "SdFat.h"
+#include "SdFatConfig.h"
 
 #if ENABLE_EXTENDED_TRANSFER_CLASS == 0
-#error ENABLE_EXTENDED_TRANSFER_CLASS  must be set to 1 in SdFat's SdFatConfig.h
+  #error ENABLE_EXTENDED_TRANSFER_CLASS must be set to 1 in SdFat SdFatConfig.h
 #endif
 
 #if FAT12_SUPPORT == 0
-#error FAT12_SUPPORT must be set to 1 in SdFat'sSdFatConfig.h
+  #error FAT12_SUPPORT must be set to 1 in SdFat SdFatConfig.h
 #endif
 
 enum
@@ -92,6 +93,7 @@ public:
 
 	uint8_t readStatus(void);
 	uint8_t readStatus2(void);
+	void waitUntilReady(void);
 	bool writeEnable(void);
 
 	uint32_t getJEDECID (void);
@@ -121,11 +123,7 @@ private:
 
 	Adafruit_FlashCache _cache;
 
-	void _wait_for_flash_ready(void)
-	{
-	  // both WIP and WREN bit should be clear
-	  while ( readStatus() & 0x03 ) {}
-	}
+
 };
 
 #endif /* ADAFRUIT_SPIFLASH_H_ */
