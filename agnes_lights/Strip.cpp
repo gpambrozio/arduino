@@ -71,6 +71,7 @@ void Strip::writeCallback(uint8_t* data, uint16_t len) {
     return;
   }
   memcpy(&charactericticData, data, sizeof(CharactericticData));
+  characteristic.write(&charactericticData, sizeof(CharactericticData));
   D(F("Got data ")); D(len); D(F(" Mode ")); DL(charactericticData.mode);
   targetBrightness = charactericticData.targetBrightness * maxBrightness / 100;
   blink();
