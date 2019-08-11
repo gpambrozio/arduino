@@ -5,14 +5,14 @@
 #define PIN_UP   12
 #define PIN_DN   13
 
-#define SWITCH_UP  14
-#define SWITCH_DN  15
+#define SWITCH_UP  17
+#define SWITCH_DN  16
 
-#define TOTAL_MOVE_TIME   (4500.0f)
+#define TOTAL_MOVE_TIME   (9500.0f)
 
 #define LED     5
 
-#include <WiFiMulti.h>
+#include <WiFi.h>
 
 #include <ArduinoOTA.h>
 #include <ESPmDNS.h>
@@ -43,7 +43,6 @@
 
 #endif
 
-WiFiMulti wifiMulti;
 WiFiClient client;
 
 long goToPosition = 0;
@@ -75,8 +74,15 @@ void setup() {
   Serial.begin(115200); // Starts the serial communication
   DL(F(NAME));
 
-  wifiMulti = WiFiMulti();
-  wifiMulti.addAP(WLAN_SSID, WLAN_PASS);
+  WiFi.begin(WLAN_SSID, WLAN_PASS);
+  int failCount = 0;
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.print(".");
+    if (++failCount > 10) {
+      ESP.restart();
+    }
+  }
 
   if (MDNS.begin(NAME)) {
     DL(F("MDNS responder started"));
@@ -94,9 +100,10 @@ void loop() {
   debouncerDn.update();
   debouncerUp.update();
 
-  bool wifiConnected = wifiMulti.run() == WL_CONNECTED;
+  bool wifiConnected = WiFi.status() == WL_CONNECTED;
   if (!wifiConnected) {
     DL(F("WiFi not connected!"));
+    ESP.restart();
   } else {
     ArduinoOTA.setPort(8266);
     ArduinoOTA.setHostname(NAME);
