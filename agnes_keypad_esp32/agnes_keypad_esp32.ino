@@ -4,7 +4,7 @@
 
 #include <Arduino.h>
 
-#include <WiFiMulti.h>
+#include <WiFi.h>
 
 #include <ArduinoOTA.h>
 #include <ESPmDNS.h>
@@ -37,8 +37,6 @@
 #define TFT_LIGHT  27
 #define TFT_LIGHT_CHANNEL 0
 
-WiFiMulti wifiMulti;
-
 Adafruit_Trellis matrix0 = Adafruit_Trellis();
 
 // Just one
@@ -56,11 +54,6 @@ Mode *modes[] = {
 
 #define NUMBER_OF_MODES  (sizeof(modes) / sizeof(Mode *))
 byte mode = 1;
-
-void recreateWifi() {
-  wifiMulti = WiFiMulti();
-  wifiMulti.addAP(WLAN_SSID, WLAN_PASS);
-}
 
 void setup() {
 
@@ -95,7 +88,15 @@ void setup() {
   img.printf("Starting...");
   img.pushSprite(0, 0);
 
-  recreateWifi();
+  WiFi.begin(WLAN_SSID, WLAN_PASS);
+  int failCount = 0;
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.print(".");
+    if (++failCount > 10) {
+      ESP.restart();
+    }
+  }
 
   if (MDNS.begin(NAME)) {
     DL(F("MDNS responder started"));
@@ -157,9 +158,10 @@ int8_t keyReleased;
 void loop() {
   delay(30); // 30ms delay is required, dont remove me!
 
-  bool wifiConnected = wifiMulti.run() == WL_CONNECTED;
+  bool wifiConnected = WiFi.status() == WL_CONNECTED;
   if (!wifiConnected) {
     DL(F("WiFi not connected!"));
+    ESP.restart();
   } else {
     ArduinoOTA.setPort(8266);
     ArduinoOTA.setHostname(NAME);
