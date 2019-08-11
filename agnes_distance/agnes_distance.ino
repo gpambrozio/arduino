@@ -72,7 +72,7 @@ unsigned long nextSend = 0;
 void loop() {
   bool wifiConnected = wifiMulti.run() == WL_CONNECTED;
   if (!wifiConnected) {
-    //DL(F("WiFi not connected!"));
+    DL(F("WiFi not connected!"));
   } else {
     ArduinoOTA.setPort(8266);
     ArduinoOTA.setHostname(NAME);
@@ -87,6 +87,7 @@ void loop() {
         DL(F("connected to server."));
         client.setTimeout(15);
         client.println(NAME);
+        client.flush();
         sendingDistance = false;
       } else {
         DL(F("failed connecting to server."));
