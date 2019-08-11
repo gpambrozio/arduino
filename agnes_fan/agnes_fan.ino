@@ -17,6 +17,8 @@
 
 #define TOTAL_MOVE_TIME   (4500.0f)
 
+#define NAME   "Fan"
+
 #define DEBUG
 
 #ifdef DEBUG
@@ -77,7 +79,7 @@ void setup() {
     ESP.restart();
   }
 
-  if (MDNS.begin("fan")) {
+  if (MDNS.begin(NAME)) {
     DL(F("MDNS responder started"));
   }
 
@@ -137,7 +139,8 @@ void loop() {
         commandsToSend.clear();
         DL(F("connected to server."));
         client.setTimeout(15);
-        client.print("Fan\n");
+        client.println(NAME);
+        client.flush();
       } else {
         DL(F("failed connecting to server."));
       }
