@@ -1,9 +1,11 @@
-// ST7789 240 x 240 display with no chip select line
+// ST7789 135 x 240 display with no chip select line
 
 #define ST7789_DRIVER     // Configure all registers
 
-#define TFT_WIDTH  240
+#define TFT_WIDTH  135
 #define TFT_HEIGHT 240
+
+#define CGRAM_OFFSET      // Library will add offsets required
 
 //#define TFT_RGB_ORDER TFT_RGB  // Colour order Red-Green-Blue
 //#define TFT_RGB_ORDER TFT_BGR  // Colour order Blue-Green-Red
@@ -28,8 +30,8 @@
 // For NodeMCU - use pin numbers in the form PIN_Dx where Dx is the NodeMCU pin designation
 #define TFT_CS   -1      // Define as not used
 #define TFT_DC   PIN_D1  // Data Command control pin
-#define TFT_RST  PIN_D4  // TFT reset pin (could connect to NodeMCU RST, see next line)
-//#define TFT_RST  -1    // TFT reset pin connect to NodeMCU RST, must also then add 10K pull down to TFT SCK
+//#define TFT_RST  PIN_D4  // TFT reset pin (could connect to NodeMCU RST, see next line)
+#define TFT_RST  -1      // TFT reset pin connect to NodeMCU RST, must also then add 10K pull down to TFT SCK
 
 
 #define LOAD_GLCD   // Font 1. Original Adafruit 8 pixel font needs ~1820 bytes in FLASH

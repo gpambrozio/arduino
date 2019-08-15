@@ -1,14 +1,14 @@
-// Adafruit_ImageReader test for Adafruit ST7735 TFT Breakout for Arduino.
-// Demonstrates loading images from SD card or flash memory to the screen,
-// to RAM, and how to query image file dimensions.
+// Adafruit_ImageReader test for Adafruit ST7789 320x240 TFT Breakout for Arduino.
+// Demonstrates loading images to the screen, to RAM, and how to query
+// image file dimensions.
 // Requires three BMP files in root directory of SD card:
-// rgbwheel.bmp, miniwoof.bmp and wales.bmp.
+// parrot.bmp, miniwoof.bmp and wales.bmp.
 // As written, this uses the microcontroller's SPI interface for the screen
 // (not 'bitbang') and must be wired to specific pins (e.g. for Arduino Uno,
 // MOSI = pin 11, MISO = 12, SCK = 13). Other pins are configurable below.
 
 #include <Adafruit_GFX.h>         // Core graphics library
-#include <Adafruit_ST7735.h>      // Hardware-specific library
+#include <Adafruit_ST7789.h> // Hardware-specific library for ST7789
 #include <SdFat.h>                // SD card & FAT filesystem library
 #include <Adafruit_SPIFlash.h>    // SPI / QSPI flash library
 #include <Adafruit_ImageReader.h> // Image-reading functions
@@ -44,7 +44,7 @@
   Adafruit_ImageReader reader(filesys); // Image-reader, pass in flash filesys
 #endif
 
-Adafruit_ST7735      tft    = Adafruit_ST7735(TFT_CS, TFT_DC, TFT_RST);
+Adafruit_ST7789      tft    = Adafruit_ST7789(TFT_CS, TFT_DC, TFT_RST);
 Adafruit_Image       img;        // An image loaded into RAM
 int32_t              width  = 0, // BMP image dimensions
                      height = 0;
@@ -58,7 +58,7 @@ void setup(void) {
   while(!Serial);       // Wait for Serial Monitor before continuing
 #endif
 
-  tft.initR(INITR_144GREENTAB); // Initialize screen
+  tft.init(240, 320);           // Init ST7789 320x240
 
   // The Adafruit_ImageReader constructor call (above, before setup())
   // accepts an uninitialized SdFat or FatFileSystem object. This MUST
@@ -86,12 +86,12 @@ void setup(void) {
 
   // Fill screen blue. Not a required step, this just shows that we're
   // successfully communicating with the screen.
-  tft.fillScreen(ST7735_BLUE);
+  tft.fillScreen(ST77XX_BLUE);
 
-  // Load full-screen BMP file 'rgbwheel.bmp' at position (0,0) (top left).
+  // Load full-screen BMP file 'purple.bmp' at position (0,0) (top left).
   // Notice the 'reader' object performs this, with 'tft' as an argument.
-  Serial.print(F("Loading rgbwheel.bmp to screen..."));
-  stat = reader.drawBMP("/rgbwheel.bmp", tft, 0, 0);
+  Serial.print(F("Loading purple.bmp to screen..."));
+  stat = reader.drawBMP("/purple.bmp", tft, 0, 0);
   reader.printStatus(stat);   // How'd we do?
 
   // Query the dimensions of image 'miniwoof.bmp' WITHOUT loading to screen:
