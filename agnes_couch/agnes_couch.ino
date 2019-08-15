@@ -54,6 +54,9 @@ Bounce debouncerUp = Bounce();
 std::vector<String> commandsToSend;
 
 void setup() {
+  pinMode(LED, OUTPUT);
+  digitalWrite(LED, HIGH);
+
   pinMode(SWITCH_UP, INPUT_PULLUP);
   pinMode(SWITCH_DN, INPUT_PULLUP);
   
@@ -68,25 +71,31 @@ void setup() {
   digitalWrite(PIN_UP, HIGH);
   digitalWrite(PIN_DN, HIGH);
   
-  pinMode(LED, OUTPUT);
-  digitalWrite(LED, LOW);
-  
   Serial.begin(115200); // Starts the serial communication
   DL(F(NAME));
-
+  
+  D(F("Connecting"));
   WiFi.begin(WLAN_SSID, WLAN_PASS);
   int failCount = 0;
   while (WiFi.status() != WL_CONNECTED) {
     delay(500);
-    Serial.print(".");
-    if (++failCount > 10) {
+    D(F("."));
+    if (++failCount > 20) {
+      DL(F("WiFi not connected!"));
       ESP.restart();
     }
+    digitalWrite(LED, failCount % 2 == 0 ? HIGH : LOW);
   }
+  digitalWrite(LED, LOW);
+  DL(F("Connected!"));
 
   if (MDNS.begin(NAME)) {
     DL(F("MDNS responder started"));
   }
+
+  ArduinoOTA.setPort(8266);
+  ArduinoOTA.setHostname(NAME);
+  ArduinoOTA.begin();
 
   DL(F("started"));
 }
@@ -100,46 +109,37 @@ void loop() {
   debouncerDn.update();
   debouncerUp.update();
 
-  bool wifiConnected = WiFi.status() == WL_CONNECTED;
-  if (!wifiConnected) {
+  if (WiFi.status() != WL_CONNECTED) {
     DL(F("WiFi not connected!"));
     ESP.restart();
-  } else {
-    ArduinoOTA.setPort(8266);
-    ArduinoOTA.setHostname(NAME);
-    ArduinoOTA.begin();
   }
 
-  if (wifiConnected) {
-    if (!client.connected()) {
-      DL(F("connecting to server."));
-      client.stop();
-      if (client.connect(WiFi.gatewayIP(), 5000)) {
-        DL(F("connected to server."));
-        commandsToSend.clear();
-        client.setTimeout(15);
-        client.println(NAME);
-        client.flush();
-      } else {
-        DL(F("failed connecting to server."));
-      }
-    } else if (client.available()) {
-      String line = client.readStringUntil('\n');
-      if (line.startsWith("P")) {
-        goToPosition = line.substring(1).toInt();
-      } else if (line.startsWith("R")) {
-        goToPosition = currentPosition + line.substring(1).toInt();
-      }
-    } else if (!commandsToSend.empty()) {
-      for (uint8_t i=0; i<commandsToSend.size(); i++) {
-        client.print(commandsToSend[i] + "\n");
-      }
-      commandsToSend.clear();
-    }
-    ArduinoOTA.handle();
-  } else {
+  if (!client.connected()) {
+    DL(F("connecting to server."));
     client.stop();
+    if (client.connect(WiFi.gatewayIP(), 5000)) {
+      DL(F("connected to server."));
+      commandsToSend.clear();
+      client.setTimeout(15);
+      client.println(NAME);
+      client.flush();
+    } else {
+      DL(F("failed connecting to server."));
+    }
+  } else if (client.available()) {
+    String line = client.readStringUntil('\n');
+    if (line.startsWith("P")) {
+      goToPosition = line.substring(1).toInt();
+    } else if (line.startsWith("R")) {
+      goToPosition = currentPosition + line.substring(1).toInt();
+    }
+  } else if (!commandsToSend.empty()) {
+    for (uint8_t i=0; i<commandsToSend.size(); i++) {
+      client.print(commandsToSend[i] + "\n");
+    }
+    commandsToSend.clear();
   }
+  ArduinoOTA.handle();
   
   goToPosition = min(100l, goToPosition);
   if (currentPosition != goToPosition) {
@@ -201,6 +201,8 @@ void loop() {
   }
   
   if (lastReported != currentPosition) {
+    D(F("Current position: "));
+    DL(currentPosition);
     addCommand("P:" + String(currentPosition));
     lastReported = currentPosition;
   }
