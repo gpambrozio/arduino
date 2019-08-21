@@ -8,7 +8,8 @@
 #define SWITCH_UP  17
 #define SWITCH_DN  16
 
-#define TOTAL_MOVE_TIME   (9500.0f)
+#define TOTAL_MOVE_TIME_UP   (11500.0f)
+#define TOTAL_MOVE_TIME_DN    (9000.0f)
 
 #define LED     5
 
@@ -155,9 +156,9 @@ void loop() {
   
   goToPosition = min(100l, goToPosition);
   if (currentPosition != goToPosition) {
-    long moveTime = goToPosition < 0 ? 1000 : (long)((float)(abs(currentPosition - max(0l, goToPosition))) / 100.0f * TOTAL_MOVE_TIME);
-    moveTime += (goToPosition == 0 || goToPosition == 100) ? 1000 : 0;
     bool goingUp = goToPosition > currentPosition;
+    long moveTime = goToPosition < 0 ? 1000 : (long)((float)(abs(currentPosition - max(0l, goToPosition))) / 100.0f * (goingUp ? TOTAL_MOVE_TIME_UP : TOTAL_MOVE_TIME_DN));
+    moveTime += (goToPosition == 0 || goToPosition == 100) ? 1000 : 0;
     D(F("Moving "));
     D(goingUp ? "up for " : "down for ");
     DL(moveTime);
@@ -191,7 +192,7 @@ void loop() {
       } else {
         digitalWrite(PIN_UP, HIGH);
         long moveTime = millis() - startMove;
-        currentPosition = min(100l, (long)(currentPosition + 100 * moveTime / TOTAL_MOVE_TIME));
+        currentPosition = min(100l, (long)(currentPosition + 100 * moveTime / TOTAL_MOVE_TIME_UP));
         goToPosition = currentPosition;
       }
       DL(F("Going up changed"));
@@ -205,7 +206,7 @@ void loop() {
       } else {
         digitalWrite(PIN_DN, HIGH);
         long moveTime = millis() - startMove;
-        currentPosition = max(0l, (long)(currentPosition - 100 * moveTime / TOTAL_MOVE_TIME));
+        currentPosition = max(0l, (long)(currentPosition - 100 * moveTime / TOTAL_MOVE_TIME_DN));
         goToPosition = currentPosition;
       }
       DL(F("Going down changed"));
