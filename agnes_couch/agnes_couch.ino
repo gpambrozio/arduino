@@ -17,7 +17,11 @@
 #include <ArduinoOTA.h>
 #include <ESPmDNS.h>
 #include <Bounce2.h>
+#include <EEPROM.h>
 #include <vector>
+
+#define EEPROM_SIZE 64
+#define EEPROM_POSITION 0
 
 #define WLAN_AGNES
 
@@ -97,6 +101,13 @@ void setup() {
   ArduinoOTA.setHostname(NAME);
   ArduinoOTA.begin();
 
+  if (!EEPROM.begin(EEPROM_SIZE)) {
+    DL(F("failed to initialise EEPROM"));
+  }
+  currentPosition = min(100l, (long)EEPROM.read(EEPROM_POSITION));
+  goToPosition = currentPosition;
+  D(F("Initial position: ")); DL(currentPosition);
+
   DL(F("started"));
 }
 
@@ -133,6 +144,7 @@ void loop() {
     } else if (line.startsWith("R")) {
       goToPosition = currentPosition + line.substring(1).toInt();
     }
+    D(F("Will go to ")); DL(goToPosition);
   } else if (!commandsToSend.empty()) {
     for (uint8_t i=0; i<commandsToSend.size(); i++) {
       client.print(commandsToSend[i] + "\n");
@@ -201,10 +213,11 @@ void loop() {
   }
   
   if (lastReported != currentPosition) {
-    D(F("Current position: "));
-    DL(currentPosition);
+    D(F("Current position: ")); DL(currentPosition);
     addCommand("P:" + String(currentPosition));
     lastReported = currentPosition;
+    EEPROM.write(EEPROM_POSITION, (byte)currentPosition);
+    EEPROM.commit();
   }
 }
 
