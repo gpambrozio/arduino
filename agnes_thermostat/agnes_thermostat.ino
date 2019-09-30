@@ -13,6 +13,8 @@
 *********************************************************************/
 #include <bluefruit.h>
 #include <Adafruit_NeoPixel.h>
+#include <Bounce2.h>
+
 #include "DHT.h"
 
 #define DEBUG
@@ -34,6 +36,8 @@
 // Just to adjust the scale for the color coding
 #define MIN_TEMP_C 10.0
 #define MAX_TEMP_C 35.0
+
+#define THERMOSTAT_FORCE_OFF   (2 * 60000)
 
 
 #define DHTPIN A1     // what digital pin we're connected to
@@ -70,6 +74,8 @@ BLECharacteristic onoffCharacteristic = BLECharacteristic(0x1237);
 BLECharacteristic targetCharacteristic = BLECharacteristic(0x1238);
 
 BLEDis diService;    // DIS (Device Information Service) helper class instance
+
+Bounce debouncer = Bounce(); 
 
 void setup()
 {
@@ -124,8 +130,9 @@ void setup()
   DL("Setting up the advertising payload(s)");
   startAdv();
 
-  // Pin interrupts have to be after all BT stuff
-  attachInterrupt(digitalPinToInterrupt(BUTTON), buttonHandler, CHANGE);
+  debouncer.attach(BUTTON);
+  debouncer.interval(50); // interval in ms
+
   DL("\nAdvertising");
 
   strip.setPixelColor(0, 0);
@@ -219,6 +226,7 @@ void changeOnOff(uint8_t v)
 {
   onoff = v;
   onoffCharacteristic.notify8(onoff);
+  onoffCharacteristic.write8(onoff);
 }
 
 void onoffWriteCallback(uint16_t conn_hdl, BLECharacteristic* chr, uint8_t* data, uint16_t len)
@@ -251,28 +259,25 @@ unsigned long lastSuccessfullTemperatureRead = 0;
 unsigned long nextBlink = 0;
 unsigned long lastButtonClick = 0;
 
-volatile unsigned long lastButtonFall = 0;
-volatile unsigned long lastButtonRise = 0;
-volatile unsigned long lastButtonChange = 0;
-volatile bool isDown = false;
+unsigned long lastButtonFall = 0;
+unsigned long lastButtonRise = 0;
+bool isDown = false;
+
 void buttonHandler() {
+  debouncer.update();
+  bool state = debouncer.read() == LOW;
   unsigned long now = millis();
-  if (now - lastButtonChange > 1000) {
-    isDown = false;
-  }
-  if (now - lastButtonChange > 100) {
-    lastButtonChange = now;
+  if (state != isDown) {
+    isDown = state;
     if (isDown) {
-      lastButtonRise = now;
-    } else {
       lastButtonFall = now;
+    } else {
+      lastButtonRise = now;
     }
-    isDown = !isDown;
   }
 }
 
-void loop()
-{
+void loop() {
   if (millis() >= nextBlink) {
     digitalWrite(LED_RED, HIGH);
     strip.setPixelColor(0, 0x00FF00);
@@ -285,6 +290,7 @@ void loop()
     nextBlink = millis() + 15000;
   }
 
+  buttonHandler();
   if (lastButtonFall > lastButtonClick && lastButtonFall - lastButtonClick > 2000 &&
       lastButtonRise > lastButtonFall && lastButtonRise - lastButtonFall > 300) {
     lastButtonClick = millis();
@@ -297,12 +303,14 @@ void loop()
     // Sensor readings may also be up to 2 seconds 'old' (its a very slow sensor)
     float h = dht.readHumidity();
     float t = dht.readTemperature();
-  
+
     // Check if any reads failed
-    if (isnan(h) || isnan(t)) {
+    // Somehow isnan is not working so using workaround
+    // isnormal also returns false for 0.0 but that's acceptable here
+    if (!isnormal(h) || !isnormal(t)) {
       DL("NaN");
-      nextTemperatureRead = millis() + 3000;
-      if (millis() - lastSuccessfullTemperatureRead > 2 * 60000) {
+      nextTemperatureRead = millis() + 5000;
+      if (millis() - lastSuccessfullTemperatureRead > THERMOSTAT_FORCE_OFF) {
         strip.setPixelColor(1, 0);
         strip.show();
       }
@@ -315,20 +323,20 @@ void loop()
       lastTemperature = 320 + (uint16_t)(90.0 * t / 5.0);
       lastHuminity = (uint16_t)(h * 10);
   
-      D("Temperature: "); D(lastTemperature); D(" *F\n");
+      D("Temperature: "); D(t); D(" *C\n");
       D("Humidity: "); D(h); DL(" %");
 
       // Note: We use .notify instead of .write!
       // The characteristic's value is still updated although notification is not sent
       temperatureCharacteristic.notify16(lastTemperature);
       humidityCharacteristic.notify16(lastHuminity);
-      nextTemperatureRead = millis() + 15000;
+      nextTemperatureRead = millis() + 10000;
     }
   }
 
   if (onoff) {
     uint16_t temperatureLimit = targetTemperature - (isHeating ? 0 : 20);
-    isHeating = (millis() - lastSuccessfullTemperatureRead) < 2 * 60000 && lastTemperature < temperatureLimit;
+    isHeating = (millis() - lastSuccessfullTemperatureRead) <= THERMOSTAT_FORCE_OFF && lastTemperature < temperatureLimit;
   } else {
     isHeating = false;    
   }
