@@ -66,6 +66,7 @@ void thingsSetup() {
   for (uint8_t i = 0; i < NUM_KEYS; i++) {
     String sensor = "Button " + String(i + 1);
     buttons[i] = new ThingProperty(sensor.c_str(), sensor.c_str(), BOOLEAN, "PushedProperty");
+    buttons[i]->title = sensor;
     panel.addProperty(buttons[i]);
   }
   
