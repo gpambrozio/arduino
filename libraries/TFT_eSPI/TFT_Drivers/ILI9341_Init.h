@@ -115,9 +115,9 @@
 
   writecommand(ILI9341_SLPOUT);    //Exit Sleep
  
-  end_tft_write();
+  spi_end();
   delay(120);
-  begin_tft_write();
+  spi_begin();
   
   writecommand(ILI9341_DISPON);    //Display on
 

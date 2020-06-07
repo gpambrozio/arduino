@@ -101,23 +101,19 @@
 // #define TFT_INVERSION_ON
 // #define TFT_INVERSION_OFF
 
-
-// ##################################################################################
-//
-// Section 2. Define the pins that are used to interface with the display here
-//
-// ##################################################################################
-
 // If a backlight control signal is available then define the TFT_BL pin in Section 2
 // below. The backlight will be turned ON when tft.begin() is called, but the library
 // needs to know if the LEDs are ON with the pin HIGH or LOW. If the LEDs are to be
 // driven with a PWM signal or turned OFF/ON then this must be handled by the user
 // sketch. e.g. with digitalWrite(TFT_BL, LOW);
 
-// #define TFT_BL   32            // LED back-light control pin
-// #define TFT_BACKLIGHT_ON HIGH  // Level to turn ON back-light (HIGH or LOW)
+// #define TFT_BACKLIGHT_ON HIGH  // HIGH or LOW are options
 
-
+// ##################################################################################
+//
+// Section 2. Define the pins that are used to interface with the display here
+//
+// ##################################################################################
 
 // We must use hardware SPI, a minimum of 3 GPIO pins is needed.
 // Typical setup for ESP8266 NodeMCU ESP-12 is :
@@ -167,12 +163,10 @@
 // ######  FOR ESP8266 OVERLAP MODE EDIT THE PIN NUMBERS IN THE FOLLOWING LINES  ######
 
 // Overlap mode shares the ESP8266 FLASH SPI bus with the TFT so has a performance impact
-// but saves pins for other functions. It is best not to connect MISO as some displays
-// do not tristate that line wjen chip select is high!
-// On NodeMCU 1.0 SD0=MISO, SD1=MOSI, CLK=SCLK to connect to TFT in overlap mode
-// On NodeMCU V3  S0 =MISO, S1 =MOSI, S2 =SCLK
-// In ESP8266 overlap mode the following must be defined
+// but saves pins for other functions.
+// Use NodeMCU SD0=MISO, SD1=MOSI, CLK=SCLK to connect to TFT in overlap mode
 
+// In ESP8266 overlap mode the following must be defined
 //#define TFT_SPI_OVERLAP
 
 // In ESP8266 overlap mode the TFT chip select MUST connect to pin D3
@@ -195,6 +189,8 @@
 //#define TFT_RST   4  // Reset pin (could connect to RST pin)
 //#define TFT_RST  -1  // Set TFT_RST to -1 if display RESET is connected to ESP32 board RST
 
+//#define TFT_BL   32  // LED back-light (only for ST7789 with backlight control pin)
+
 //#define TOUCH_CS 21     // Chip select pin (T_CS) of touch screen
 
 //#define TFT_WR 22    // Write strobe for modified Raspberry Pi TFT only
@@ -215,11 +211,10 @@
 // Wemos D32 boards need to be modified, see diagram in Tools folder.
 // Only ILI9481 and ILI9341 based displays have been tested!
 
-// Parallel bus is only supported for the STM32 and ESP32
-// Example below is for ESP32 Parallel interface with UNO displays
+// Parallel bus is only supported on ESP32
+// Uncomment line below to use ESP32 Parallel interface instead of SPI
 
-// Tell the library to use 8 bit parallel mode (otherwise SPI is assumed)
-//#define TFT_PARALLEL_8_BIT
+//#define ESP32_PARALLEL
 
 // The ESP32 and TFT the pins used for testing are:
 // For agnes panel:
@@ -276,13 +271,14 @@
 // With an ILI9341 display 40MHz works OK, 80MHz sometimes fails
 // With a ST7735 display more than 27MHz may not work (spurious pixels and lines)
 // With an ILI9163 display 27 MHz works OK.
+// The RPi typically only works at 20MHz maximum.
 
 // #define SPI_FREQUENCY   1000000
 // #define SPI_FREQUENCY   5000000
 // #define SPI_FREQUENCY  10000000
 // #define SPI_FREQUENCY  20000000
 #define SPI_FREQUENCY  27000000 // Actually sets it to 26.67MHz = 80/3
-// #define SPI_FREQUENCY  40000000
+// #define SPI_FREQUENCY  40000000 // Maximum to use SPIFFS
 // #define SPI_FREQUENCY  80000000
 
 // Optional reduced SPI frequency for reading TFT
