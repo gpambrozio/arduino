@@ -26,7 +26,7 @@
 
 #include <Passwords.h>
 
-#define NAME  "keypad"
+#define NAME  "panel"
 
 // The built in LED
 #define LED 13
@@ -56,7 +56,6 @@ ThingDevice panel(NAME, "Control Panel", panelTypes);
 ThingProperty ledOn("on", "", BOOLEAN, "OnOffProperty");
 
 ThingProperty *buttons[NUM_KEYS];
-ThingEvent *buttonPressed[NUM_KEYS];
 
 void thingsSetup() {
   adapter = new WebThingAdapter(NAME, WiFi.localIP());
@@ -65,20 +64,16 @@ void thingsSetup() {
   panel.addProperty(&ledOn);
 
   for (uint8_t i = 0; i < NUM_KEYS; i++) {
-    String name = "Button " + (i + 1);
-    buttons[i] = new ThingProperty(name.c_str(), "", BOOLEAN, "PushedProperty");
-    buttonPressed[i] = new ThingEvent(name.c_str(),
-                                      "A button was pressed",
-                                      NO_STATE, "PressedEvent");
+    String sensor = "Button " + String(i + 1);
+    buttons[i] = new ThingProperty(sensor.c_str(), sensor.c_str(), BOOLEAN, "PushedProperty");
     panel.addProperty(buttons[i]);
-    panel.addEvent(buttonPressed[i]);
   }
   
   adapter->addDevice(&panel);
   adapter->begin();
 
   // set initial values
-  ThingPropertyValue initialOn = {.boolean = false};
+  ThingPropertyValue initialOn = {.boolean = true};
   ledOn.setValue(initialOn);
 }
 
@@ -118,7 +113,7 @@ void setup() {
   int failCount = 0;
   while (WiFi.status() != WL_CONNECTED) {
     delay(500);
-    Serial.print(".");
+    D(F("."));
     if (++failCount > 10) {
       ESP.restart();
     }
@@ -216,10 +211,6 @@ void loop() {
       if (justPressed(i)) {
         ThingPropertyValue value = {.boolean = true};
         buttons[i]->setValue(value);
-
-        ThingDataValue eventValue = {.boolean = false};
-        ThingEventObject *ev = new ThingEventObject(buttonPressed[i]->id.c_str(), NO_STATE, eventValue);
-        panel.queueEventObject(ev);
       } else if (justReleased(i)) {
         ThingPropertyValue value = {.boolean = false};
         buttons[i]->setValue(value);
