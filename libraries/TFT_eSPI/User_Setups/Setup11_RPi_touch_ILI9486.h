@@ -1,7 +1,6 @@
 // See SetupX_Template.h for all options available
-
-#define RPI_ILI9486_DRIVER // 20MHz maximum SPI
-
+#define RPI_DISPLAY_TYPE
+#define ILI9486_DRIVER // 20MHz maximum SPI
 
 #define TFT_MISO 19
 #define TFT_MOSI 23

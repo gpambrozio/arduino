@@ -1,5 +1,5 @@
-#include "Adafruit_ST77xx.h"
 #include "Adafruit_ST7789.h"
+#include "Adafruit_ST77xx.h"
 
 // CONSTRUCTORS ************************************************************
 
@@ -11,10 +11,9 @@
     @param  sclk  SPI Clock pin #
     @param  rst   Reset pin # (optional, pass -1 if unused)
 */
-Adafruit_ST7789::Adafruit_ST7789(int8_t cs, int8_t dc, int8_t mosi,
-  int8_t sclk, int8_t rst) : Adafruit_ST77xx(320, 240, cs, dc, mosi, sclk,
-  rst) {
-}
+Adafruit_ST7789::Adafruit_ST7789(int8_t cs, int8_t dc, int8_t mosi, int8_t sclk,
+                                 int8_t rst)
+    : Adafruit_ST77xx(240, 320, cs, dc, mosi, sclk, rst) {}
 
 /*!
     @brief  Instantiate Adafruit ST7789 driver with hardware SPI
@@ -22,9 +21,8 @@ Adafruit_ST7789::Adafruit_ST7789(int8_t cs, int8_t dc, int8_t mosi,
     @param  dc   Data/Command pin #
     @param  rst  Reset pin # (optional, pass -1 if unused)
 */
-Adafruit_ST7789::Adafruit_ST7789(int8_t cs, int8_t dc, int8_t rst) :
-  Adafruit_ST77xx(320, 240, cs, dc, rst) {
-}
+Adafruit_ST7789::Adafruit_ST7789(int8_t cs, int8_t dc, int8_t rst)
+    : Adafruit_ST77xx(240, 320, cs, dc, rst) {}
 
 #if !defined(ESP8266)
 /*!
@@ -35,8 +33,8 @@ Adafruit_ST7789::Adafruit_ST7789(int8_t cs, int8_t dc, int8_t rst) :
     @param  rst       Reset pin # (optional, pass -1 if unused)
 */
 Adafruit_ST7789::Adafruit_ST7789(SPIClass *spiClass, int8_t cs, int8_t dc,
-  int8_t rst) : Adafruit_ST77xx(320, 240, spiClass, cs, dc, rst) {
-}
+                                 int8_t rst)
+    : Adafruit_ST77xx(240, 320, spiClass, cs, dc, rst) {}
 #endif // end !ESP8266
 
 // SCREEN INITIALIZATION ***************************************************
@@ -46,6 +44,8 @@ Adafruit_ST7789::Adafruit_ST7789(SPIClass *spiClass, int8_t cs, int8_t dc,
 // stored in PROGMEM.  The table may look bulky, but that's mostly the
 // formatting -- storage-wise this is hundreds of bytes more compact
 // than the equivalent code.  Companion function follows.
+
+// clang-format off
 
 static const uint8_t PROGMEM
   generic_st7789[] =  {                // Init commands for 7789 screens
@@ -76,6 +76,8 @@ static const uint8_t PROGMEM
     ST77XX_DISPON ,   ST_CMD_DELAY, //  9: Main screen turn on, no args, delay
       10 };                          //    10 ms delay
 
+// clang-format on
+
 /**************************************************************************/
 /*!
     @brief  Initialization code common to all ST7789 displays
@@ -104,22 +106,21 @@ void Adafruit_ST7789::init(uint16_t width, uint16_t height, uint8_t mode) {
   if ((width == 240) && (height == 240)) { // 1.3" and 1.54" displays
     _colstart = 0;
     _rowstart = 80;
-  } else if ((width == 135) && (height == 240)) { //1.13" display
+  } else if ((width == 135) && (height == 240)) { // 1.13" display
     _colstart = 53;
     _rowstart = 40;
   } else {
     _colstart = 0;
     _rowstart = 0;
   }
-  WIDTH = width;
-  HEIGHT = height;
-  _width    = width;
-  _height   = height;
+
+  windowWidth = width;
+  windowHeight = height;
 
   displayInit(generic_st7789);
 
-  if ((width == 135) && (height == 240)) { 
-    setRotation(3);
+  if ((width == 135) && (height == 240)) {
+    setRotation(0);
   } else {
     setRotation(0);
   }
@@ -137,34 +138,44 @@ void Adafruit_ST7789::setRotation(uint8_t m) {
   rotation = m & 3; // can't be higher than 3
 
   switch (rotation) {
-   case 0:
-     madctl  = ST77XX_MADCTL_MX | ST77XX_MADCTL_MY | ST77XX_MADCTL_RGB;
-     _xstart = _colstart;
-     _ystart = _rowstart;
-     _width = WIDTH;
-     _height = HEIGHT;
-     break;
-   case 1:
-     madctl  = ST77XX_MADCTL_MY | ST77XX_MADCTL_MV | ST77XX_MADCTL_RGB;
-     _xstart = _rowstart;
-     _ystart = _colstart;
-     _height = WIDTH;
-     _width = HEIGHT;
-     break;
+  case 0:
+    madctl = ST77XX_MADCTL_MX | ST77XX_MADCTL_MY | ST77XX_MADCTL_RGB;
+    _xstart = _colstart;
+    _ystart = _rowstart;
+    _width = windowWidth;
+    _height = windowHeight;
+    break;
+  case 1:
+    madctl = ST77XX_MADCTL_MY | ST77XX_MADCTL_MV | ST77XX_MADCTL_RGB;
+    _xstart = _rowstart;
+    _ystart = _colstart;
+    _height = windowWidth;
+    _width = windowHeight;
+    break;
   case 2:
-     madctl  = ST77XX_MADCTL_RGB;
-     _xstart = 0;
-     _ystart = 0;
-     _width = WIDTH;
-     _height = HEIGHT;
-     break;
-   case 3:
-     madctl  = ST77XX_MADCTL_MX | ST77XX_MADCTL_MV | ST77XX_MADCTL_RGB;
-     _xstart = 0;
-     _ystart = 0;
-     _height = WIDTH;
-     _width = HEIGHT;
-     break;
+    madctl = ST77XX_MADCTL_RGB;
+    if ((windowWidth == 135) && (windowHeight == 240)) {
+      _xstart = _colstart - 1;
+      _ystart = _rowstart;
+    } else {
+      _xstart = 0;
+      _ystart = 0;
+    }
+    _width = windowWidth;
+    _height = windowHeight;
+    break;
+  case 3:
+    madctl = ST77XX_MADCTL_MX | ST77XX_MADCTL_MV | ST77XX_MADCTL_RGB;
+    if ((windowWidth == 135) && (windowHeight == 240)) {
+      _xstart = _rowstart;
+      _ystart = _colstart;
+    } else {
+      _xstart = 0;
+      _ystart = 0;
+    }
+    _height = windowWidth;
+    _width = windowHeight;
+    break;
   }
 
   sendCommand(ST77XX_MADCTL, &madctl, 1);

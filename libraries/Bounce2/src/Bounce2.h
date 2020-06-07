@@ -26,6 +26,12 @@
   Previous contributions by Eric Lowry, Jim Schimpf and Tom Harkaway
   * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
+/**
+ * @todo Make Bounce2 more abstract. Split it from the hardware layer.
+ * @body Remove deboucing code from Bounce2 and make a new Debounce class from that code. Bounce2 should extend Debounce. 
+ */
+
+
 #ifndef Bounce2_h
 #define Bounce2_h
 
@@ -63,6 +69,10 @@
      Example of two instances of the Bounce class that switches the debug LED when either one of the two buttons is pressed.
  */
 
+static const uint8_t DEBOUNCED_STATE = 0b00000001;
+static const uint8_t UNSTABLE_STATE  = 0b00000010;
+static const uint8_t CHANGED_STATE   = 0b00000100;
+
 /**
      The Bounce class.
      */
@@ -90,7 +100,6 @@ class Bounce
               The pin that is to be debounced.
     @param    mode
               A valid Arduino pin mode (INPUT, INPUT_PULLUP or OUTPUT).
-    @return True if the event read was successful, otherwise false.
 */
     void attach(int pin, int mode);
 
@@ -164,8 +173,14 @@ class Bounce
 
     unsigned long duration();
 
+  /**
+     @brief Returns the duration in milliseconds of the previous state. 
 
-    // WIP HELD : unsigned long held();     // Returns the duration the previous state was held
+     Takes the values of duration() once the pin changes state.
+    
+      @return The duration in milliseconds (unsigned long) of the previous state. 
+     */
+    unsigned long previousDuration();     
 
  protected:
     unsigned long previous_millis;
@@ -173,10 +188,10 @@ class Bounce
     uint8_t state;
     uint8_t pin;
     unsigned long stateChangeLastTime;
-    // WIP HELD : unsigned long durationOfPreviousState;
+    unsigned long durationOfPreviousState;
     virtual bool readCurrentState() { return digitalRead(pin); }
     virtual void setPinMode(int pin, int mode) {
-#if defined(ARDUINO_STM_NUCLEO_F103RB) || defined(ARDUINO_GENERIC_STM32F103C)
+#if defined(ARDUINO_ARCH_STM32F1)
         pinMode(pin, (WiringPinMode)mode);
 #else
         pinMode(pin, mode);
@@ -189,6 +204,10 @@ class Bounce
     inline void unsetStateFlag(const uint8_t flag)  {state &= ~flag;}
     inline void toggleStateFlag(const uint8_t flag) {state ^= flag;}
     inline bool getStateFlag(const uint8_t flag)    {return((state & flag) != 0);}
+ 
+  public:
+    bool changed( ) { return getStateFlag(CHANGED_STATE); }
+
 };
 
 #endif
