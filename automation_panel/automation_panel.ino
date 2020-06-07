@@ -2,7 +2,8 @@
  *  Agnes' keypad using adafruit's feather ESP32
  ****************************************************/
 
-#include "debug.h"
+#define DEBUG
+#include <DebugMacros.h>
 
 #include <WiFi.h>
 
@@ -24,7 +25,6 @@
 #include "globals.h"
 
 #define WLAN_WAIKIKI
-
 #include <Passwords.h>
 
 #define NAME  "panel"

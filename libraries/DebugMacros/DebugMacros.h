@@ -1,4 +1,5 @@
-#define DEBUG
+#ifndef Debug_h
+#define Debug_h
 
 #ifdef DEBUG
 
@@ -13,5 +14,7 @@
 #define DL(d) {}
 #define DP(...) {}
 #define MARK  {}
+
+#endif
 
 #endif
