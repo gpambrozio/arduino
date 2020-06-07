@@ -7,7 +7,12 @@
 #include <WiFi.h>
 
 #include <ArduinoOTA.h>
-#include <ESPmDNS.h>
+
+#define LARGE_JSON_BUFFERS 1
+#define ARDUINOJSON_USE_LONG_LONG 1
+
+#include <Thing.h>
+#include <WebThingAdapter.h>
 
 // IMPORTANT: Check if libraries/TFT_eSPI/User_Setup.h didn't change in latest library update
 
@@ -40,6 +45,36 @@ Adafruit_TrellisSet trellis =  Adafruit_TrellisSet(&matrix0);
 // For 1.44" and 1.8" TFT with ST7735 use
 TFT_eSPI tft = TFT_eSPI();
 TFT_eSprite img = TFT_eSprite(&tft);
+
+// WebThings things
+
+WebThingAdapter *adapter;
+
+const char *panelTypes[] = {"OnOffSwitch", "Light", nullptr};
+
+ThingDevice panel(NAME, "Control Panel", panelTypes);
+ThingProperty ledOn("on", "", BOOLEAN, "OnOffProperty");
+
+ThingEvent buttonPressed("button",
+                         "A button was pressed",
+                         INTEGER, "ButonPressedEvent");
+
+void thingsSetup() {
+  adapter = new WebThingAdapter(NAME, WiFi.localIP());
+
+  panel.description = "A web connected control panel";
+
+  panel.addProperty(&ledOn);
+  panel.addEvent(&buttonPressed);
+
+  adapter->addDevice(&panel);
+  adapter->begin();
+
+  // set initial values
+  ThingPropertyValue initialOn = {.boolean = false};
+  ledOn.setValue(initialOn);
+  (void)ledOn.changedValueOrNull();
+}
 
 void setup() {
   Serial.begin(115200);
@@ -83,10 +118,6 @@ void setup() {
     }
   }
 
-  if (MDNS.begin(NAME)) {
-    DL(F("MDNS responder started"));
-  }
-
   pinMode(TFT_LIGHT, OUTPUT);
 
   //setup channel 0 with frequency 312500 Hz
@@ -108,6 +139,7 @@ void setup() {
     trellis.writeDisplay();
     delay(30);
   }
+  thingsSetup();
 
   DL(F("setup done"));
 }
@@ -174,17 +206,27 @@ void loop() {
   }
 
   if (hasSwitchChanges) {
+    for (uint8_t i = 0; i < NUM_KEYS; i++) {
+      if (justPressed(i)) {
+        ThingDataValue val;
+        val.number = i;
+        ThingEventObject *ev = new ThingEventObject(buttonPressed.id.c_str(), INTEGER, val);
+        panel.queueEventObject(ev);
+      }
+    }
     if (justPressed(15)) {
-      light = !light;
-      needTrellisWrite = true;
+      switchLight();
     }
   }
 
-  if (wifiConnected) {
+  adapter->update();
+  ArduinoOTA.handle();
 
-
-    ArduinoOTA.handle();
+  bool on = ledOn.getValue().boolean;
+  if (on != light) {
+    switchLight();
   }
+
   
   if (needTrellisWrite) {
     for (uint8_t i = 0; i < NUM_KEYS; i++) {
@@ -207,6 +249,14 @@ void loop() {
     draw();
     img.pushSprite(0, 0);
   }
+}
+
+void switchLight() {
+  light = !light;
+  needTrellisWrite = true;
+
+  ThingPropertyValue value = {.boolean = light};
+  ledOn.setValue(value);
 }
 
 void draw() {
