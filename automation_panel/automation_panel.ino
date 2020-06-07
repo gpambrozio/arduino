@@ -9,6 +9,7 @@
 #include <ArduinoOTA.h>
 
 #define LARGE_JSON_BUFFERS 1
+#define LARGE_JSON_DOCUMENT_SIZE (10*1024)
 #define ARDUINOJSON_USE_LONG_LONG 1
 
 #include <Thing.h>
@@ -50,27 +51,49 @@ TFT_eSprite img = TFT_eSprite(&tft);
 
 WebThingAdapter *adapter;
 
-const char *panelTypes[] = {"OnOffSwitch", "Light", "PushButton", nullptr};
-
-ThingDevice panel(NAME, "Control Panel", panelTypes);
+const char *panelTypes[] = {"OnOffSwitch", "Light", "EnergyMonitor", nullptr};
+ThingDevice panel("panelControl", "Control Panel", panelTypes);
 ThingProperty ledOn("on", "", BOOLEAN, "OnOffProperty");
+ThingProperty batteryLevel("battery", "", NUMBER, "EnergyMonitor");
+ThingProperty powerLevel("power", "", NUMBER, "EnergyMonitor");
+long nextBatteryUpdate = 0;
 
+const char *buttonTypes[] = {"PushButton", nullptr};
+ThingDevice buttonDevice("panelButtons", "Panel Buttons", buttonTypes);
 ThingProperty *buttons[NUM_KEYS];
+
+const char *ledTypes[] = {"OnOffSwitch", "Light", nullptr};
+ThingDevice ledDevice("panelLeds", "Panel LEDs", ledTypes);
+ThingProperty *buttonLeds[NUM_KEYS];
 
 void thingsSetup() {
   adapter = new WebThingAdapter(NAME, WiFi.localIP());
 
-  panel.description = "A web connected control panel";
+  ledOn.title = "Backlight";
   panel.addProperty(&ledOn);
+  batteryLevel.title = "Battery";
+  batteryLevel.unit = "volt";
+  powerLevel.title = "Power";
+  powerLevel.unit = "volt";
+  panel.addProperty(&batteryLevel);
+  panel.addProperty(&powerLevel);
 
   for (uint8_t i = 0; i < NUM_KEYS; i++) {
     String sensor = "Button " + String(i + 1);
     buttons[i] = new ThingProperty(sensor.c_str(), sensor.c_str(), BOOLEAN, "PushedProperty");
     buttons[i]->title = sensor;
-    panel.addProperty(buttons[i]);
+    buttonDevice.addProperty(buttons[i]);
+
+    String led = "LED " + String(i + 1);
+    buttonLeds[i] = new ThingProperty(led.c_str(), led.c_str(), BOOLEAN, "OnOffProperty");
+    buttonLeds[i]->title = led;
+    ledDevice.addProperty(buttonLeds[i]);
   }
   
+  panel.description = "A web connected control panel";
   adapter->addDevice(&panel);
+  adapter->addDevice(&buttonDevice);
+  adapter->addDevice(&ledDevice);
   adapter->begin();
 
   // set initial values
@@ -181,6 +204,12 @@ void loop() {
   battery = ((float)(analogRead(BATTERY_PIN)) / 4095) * 2.0 * 3.3 * 1.1;
   power = ((float)(analogRead(POWER_PIN)) / 4095) * 2.0 * 3.3 * 1.1;
 
+  if (millis() > nextBatteryUpdate) {
+    nextBatteryUpdate = millis() + 5000;
+    batteryLevel.setValue({.number = battery});
+    powerLevel.setValue({.number = power});
+  }
+
   sigmaDeltaWrite(TFT_LIGHT_CHANNEL, light ? MAX_LIGHT : 0);
 
   bool hasSwitchChanges = false;
@@ -225,6 +254,10 @@ void loop() {
   adapter->update();
   ArduinoOTA.handle();
 
+  for (uint8_t i = 0; i < NUM_KEYS; i++) {
+    setLED(i, buttonLeds[i]->getValue().boolean);
+  }
+  
   bool on = ledOn.getValue().boolean;
   if (on != light) {
     switchLight();
@@ -291,8 +324,10 @@ void draw() {
 
 void setLED(uint8_t n, bool onOff) {
   if (n >= NUM_KEYS) return;
-  leds[n] = onOff;
-  needTrellisWrite = true;
+  if (leds[n] != onOff) {
+    leds[n] = onOff;
+    needTrellisWrite = true;
+  }
 }
 
 bool justPressed(uint8_t n) {
