@@ -50,30 +50,36 @@ TFT_eSprite img = TFT_eSprite(&tft);
 
 WebThingAdapter *adapter;
 
-const char *panelTypes[] = {"OnOffSwitch", "Light", nullptr};
+const char *panelTypes[] = {"OnOffSwitch", "Light", "PushButton", nullptr};
 
 ThingDevice panel(NAME, "Control Panel", panelTypes);
 ThingProperty ledOn("on", "", BOOLEAN, "OnOffProperty");
 
-ThingEvent buttonPressed("button",
-                         "A button was pressed",
-                         INTEGER, "ButonPressedEvent");
+ThingProperty *buttons[NUM_KEYS];
+ThingEvent *buttonPressed[NUM_KEYS];
 
 void thingsSetup() {
   adapter = new WebThingAdapter(NAME, WiFi.localIP());
 
   panel.description = "A web connected control panel";
-
   panel.addProperty(&ledOn);
-  panel.addEvent(&buttonPressed);
 
+  for (uint8_t i = 0; i < NUM_KEYS; i++) {
+    String name = "Button " + (i + 1);
+    buttons[i] = new ThingProperty(name.c_str(), "", BOOLEAN, "PushedProperty");
+    buttonPressed[i] = new ThingEvent(name.c_str(),
+                                      "A button was pressed",
+                                      NO_STATE, "PressedEvent");
+    panel.addProperty(buttons[i]);
+    panel.addEvent(buttonPressed[i]);
+  }
+  
   adapter->addDevice(&panel);
   adapter->begin();
 
   // set initial values
   ThingPropertyValue initialOn = {.boolean = false};
   ledOn.setValue(initialOn);
-  (void)ledOn.changedValueOrNull();
 }
 
 void setup() {
@@ -208,10 +214,15 @@ void loop() {
   if (hasSwitchChanges) {
     for (uint8_t i = 0; i < NUM_KEYS; i++) {
       if (justPressed(i)) {
-        ThingDataValue val;
-        val.number = i;
-        ThingEventObject *ev = new ThingEventObject(buttonPressed.id.c_str(), INTEGER, val);
+        ThingPropertyValue value = {.boolean = true};
+        buttons[i]->setValue(value);
+
+        ThingDataValue eventValue = {.boolean = false};
+        ThingEventObject *ev = new ThingEventObject(buttonPressed[i]->id.c_str(), NO_STATE, eventValue);
         panel.queueEventObject(ev);
+      } else if (justReleased(i)) {
+        ThingPropertyValue value = {.boolean = false};
+        buttons[i]->setValue(value);
       }
     }
     if (justPressed(15)) {
