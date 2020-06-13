@@ -42,8 +42,7 @@ TFT_eSprite img = TFT_eSprite(&tft);
 
 #include <PubSubClient.h>
 
-const char *ID = "Example_Switch";  // Name of our device, must be unique
-const char *TOPIC = "panel/keys";  // Topic to subcribe to
+const char *TOPIC_KEYS = "panel/keys";  // Topic to subcribe to
 const char *LIGHT_TOPIC = "panel/light";  // Topic to subcribe to
 const char *LIGHT_TOPIC_STATE = "panel/light/state";  // Topic to subcribe to
 
@@ -56,7 +55,7 @@ void reconnect() {
   if (!client.connected()) {
     D(F("Attempting MQTT connection..."));
     // Attempt to connect
-    if (client.connect(ID, HA_USER, HA_PASS)) {
+    if (client.connect(NAME, HA_USER, HA_PASS)) {
       client.subscribe(LIGHT_TOPIC);
       DL(F("connected"));
     } else {
@@ -227,9 +226,9 @@ void loop() {
   if (hasSwitchChanges) {
     for (uint8_t i = 0; i < NUM_KEYS; i++) {
       if (justPressed(i)) {
-        client.publish(TOPIC, "on");
+        client.publish(TOPIC_KEYS, "on");
       } else if (justReleased(i)) {
-        client.publish(TOPIC, "off");
+        client.publish(TOPIC_KEYS, "off");
       }
     }
     if (justPressed(15)) {
