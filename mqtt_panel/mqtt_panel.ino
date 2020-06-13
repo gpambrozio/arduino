@@ -20,7 +20,7 @@
 #define WLAN_WAIKIKI
 #include <Passwords.h>
 
-#define NAME  "panel"
+#define NAME  "controller"
 
 // The built in LED
 #define LED 13
@@ -42,21 +42,55 @@ TFT_eSprite img = TFT_eSprite(&tft);
 
 #include <PubSubClient.h>
 
-const char *TOPIC_KEYS = "panel/keys";  // Topic to subcribe to
-const char *LIGHT_TOPIC = "panel/light";  // Topic to subcribe to
-const char *LIGHT_TOPIC_STATE = "panel/light/state";  // Topic to subcribe to
+String statusTopic("homeassistant/status");
+
+String discoveryPrefix("homeassistant/");
+
+String componentButtons("binary_sensor/");
+String buttonsPrefix = discoveryPrefix + componentButtons + NAME + "/button";
+
+String componentLights("light/");
+String lightsPrefix = discoveryPrefix + componentLights + NAME + "/light";
 
 WiFiClient wclient;
 PubSubClient client(wclient); // Setup MQTT client
+
+void sendButttonsConfiguration() {
+  for (uint8_t i = 0; i < NUM_KEYS; i++) {
+    String topic = buttonsPrefix + String(i+1);
+    String json = "{\"~\":\"" + topic + "\",\"stat_t\":\"~/state\",\"name\":\"Controller Button " + String(i+1) + "\"}";
+    client.publish((topic + "/config").c_str(), json.c_str());
+  }
+}
+
+void sendLightsConfiguration() {
+  String topic = lightsPrefix + "0";
+  String json = "{\"~\":\"" + topic + "\",\"cmd_t\":\"~/set\",\"stat_t\":\"~/state\",\"name\":\"Controller Backlight\"}";
+  client.publish((topic + "/config").c_str(), json.c_str());
+  client.subscribe((topic + "/set").c_str());
+
+  for (uint8_t i = 0; i < NUM_KEYS; i++) {
+    String topic = lightsPrefix + String(i+1);
+    String json = "{\"~\":\"" + topic + "\",\"cmd_t\":\"~/set\",\"stat_t\":\"~/state\",\"name\":\"Controller LED " + String(i+1) + "\"}";
+    client.publish((topic + "/config").c_str(), json.c_str());
+    client.subscribe((topic + "/set").c_str());
+  }
+}
+
+void sendConfiguration() {
+  sendButttonsConfiguration();
+  sendLightsConfiguration();
+}
 
 // Reconnect to client
 void reconnect() {
   // Loop until we're reconnected
   if (!client.connected()) {
-    D(F("Attempting MQTT connection..."));
+    D(F("Attempting MQTT connection... "));
     // Attempt to connect
     if (client.connect(NAME, HA_USER, HA_PASS)) {
-      client.subscribe(LIGHT_TOPIC);
+      client.subscribe(statusTopic.c_str());
+      sendConfiguration();
       DL(F("connected"));
     } else {
       DL(F(" failed. Will try again soon"));
@@ -65,20 +99,31 @@ void reconnect() {
 }
 
 // Handle incomming messages from the broker
-void callback(char* topic, byte* payload, unsigned int length) {
-  String response;
+void callback(char* t, byte* p, unsigned int length) {
+  String payload;
+  String topic(t);
 
   for (int i = 0; i < length; i++) {
-    response += (char)payload[i];
+    payload += (char)p[i];
   }
+  
   D(F("Message arrived ["));
   D(topic);
   D(F("] "));
-  DL(response);
-  if (response == "on")  { // Turn the light on
-    switchLight(true);
-  } else if (response == "off") {  // Turn the light off
-    switchLight(false);
+  DL(payload);
+
+  if (topic.startsWith(lightsPrefix)) {
+    long led = topic.substring(lightsPrefix.length()).toInt();
+    D(F("LED ")); DL(led);
+    if (led == 0) {
+      switchLight(payload == "ON");
+    } else if (led >= 1 && led <= NUM_KEYS) {
+      setLED(led - 1, (payload == "ON"));
+    }
+    String stateTopic = lightsPrefix + String(led) + "/state";
+    client.publish(stateTopic.c_str(), payload.c_str());
+  } else if (topic == statusTopic && payload == "online") {
+    sendConfiguration();
   }
 }
 
@@ -225,23 +270,16 @@ void loop() {
 
   if (hasSwitchChanges) {
     for (uint8_t i = 0; i < NUM_KEYS; i++) {
-      if (justPressed(i)) {
-        client.publish(TOPIC_KEYS, "on");
-      } else if (justReleased(i)) {
-        client.publish(TOPIC_KEYS, "off");
+      if (justPressed(i) || justReleased(i)) {
+        String topic = buttonsPrefix + String(i+1) + "/state";
+        client.publish(topic.c_str(), justPressed(i) ? "ON" : "OFF");
+        D(F("Published to ")); DL(topic);
       }
-    }
-    if (justPressed(15)) {
-      switchLight();
     }
   }
 
   ArduinoOTA.handle();
 
-//  for (uint8_t i = 0; i < NUM_KEYS; i++) {
-//    setLED(i, buttonLeds[i]->getValue().boolean);
-//  }
-  
 //  bool on = ledOn.getValue().boolean;
 //  if (on != light) {
 //    switchLight();
@@ -278,7 +316,6 @@ void switchLight() {
 void switchLight(bool turnOn) {
   light = turnOn;
   needTrellisWrite = true;
-  client.publish(LIGHT_TOPIC_STATE, turnOn ? "on" : "off");
 }
 
 void draw() {
