@@ -79,7 +79,7 @@ void loop()
   // 6.6/1023 = Volts per bit = 0.006451612903226
 
   float batteryV = sensorValue * 0.06451612903226;
-  float batteryPcnt = constrain(map(batteryV, 33, 37, 0, 1000), 0, 1000) / 10;
+  float batteryPcnt = constrain(map(batteryV, 33, 40, 0, 1000), 0, 1000) / 10;
 
   if (oldBatteryPcnt != batteryPcnt) {
     // Power up radio after sleep
