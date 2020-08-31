@@ -41,7 +41,7 @@
 #define   BATTERY_SENSE_PIN  A0
 #define   MOISTURE_PIN       A1
 
-const uint32_t SLEEP_TIME = 5 * 60000;  // sleep time between reads (seconds * 1000 milliseconds)
+const uint32_t SLEEP_TIME = 15 * 60000;  // sleep time between reads (seconds * 1000 milliseconds)
 
 #define CHILD_ID 0
 MyMessage msgMoisture(CHILD_ID, V_LEVEL);
@@ -104,5 +104,5 @@ void loop()
 #endif
   send(msgMoisture.set((int32_t)ceil(soilMoisturePercent)));
   send(msgVoltage.set((float)batteryV/10.0, 2));
-	sleep(SLEEP_TIME);
+	smartSleep(SLEEP_TIME);
 }
