@@ -27,7 +27,8 @@ void setup() {
   Serial2.begin(9600);
 }
 
-char formatted[50];
+#define BUF_SIZE   50
+char buffer[BUF_SIZE];
 
 void readFrom(Stream *s1, Stream *s2, int n) {
   while (!s2->available()) ;
@@ -39,14 +40,27 @@ void readFrom(Stream *s1, Stream *s2, int n) {
     Serial.print(",");
     Serial.print(len);
     for (uint8_t i = 0; i< len; i++) {
-      sprintf(formatted, ",0x%02x", sbuf[i]);
-      Serial.print(formatted);
+      sprintf(buffer, ",0x%02x", sbuf[i]);
+      Serial.print(buffer);
     }
     Serial.println("");
   }
 }
 
+void relay(Stream *s1, Stream *s2) {
+  int available;
+  while (available = s1->available()) {
+    available = min(BUF_SIZE, available);
+    s1->readBytes(buffer, available);
+    s2->write(buffer, available);
+    s2->flush();
+  }
+}
+
 void loop() {
-  readFrom(&Serial1, &Serial2, 1);
-  readFrom(&Serial2, &Serial1, 2);
+//  readFrom(&Serial1, &Serial2, 1);
+//  readFrom(&Serial2, &Serial1, 2);
+
+  relay(&Serial, &Serial2);
+  relay(&Serial2, &Serial);
 }
