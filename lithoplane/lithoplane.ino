@@ -24,23 +24,13 @@ ESP8266WebServer httpServer(LISTEN_PORT);
 
 #define TIME_URL     F("http://trans-anchor-110020.appspot.com/t")
 
-#define BART_URL_GUSTAVO     F("http://trans-anchor-110020.appspot.com/b?w=g")
-#define WEATHER_URL_GUSTAVO  F("http://trans-anchor-110020.appspot.com/w?w=g")
-
-#define BART_URL_SONY     F("http://trans-anchor-110020.appspot.com/b?w=s")
-#define WEATHER_URL_SONY  F("http://trans-anchor-110020.appspot.com/w?w=s")
+#define WLAN_GUSTAVO 1
 
 #include "Passwords.h"
-
-#define BART_CHECK_PERIOD   (30 * 1000)
-#define BART_MAX_CHECK      (10 * 60000)
-#define WEATHER_MAX_CHECK   (1 * 60000)
 
 #define SLEEP_TIME          (8 * 60000)
 #define WAKE_SECONDS        (10 * 60)
 #define HOLD_TIME           1500
-
-#define WEATHER_COLORS_CYCLE_TIME  1000
 
 uint8_t const sin_table[] PROGMEM={
   128,131,134,137,140,143,146,149,152,155,158,162,165,167,170,173,
@@ -72,10 +62,6 @@ int number_of_taps_triggered;
 #define BOUNCE_TIME       30
 #define SINGLE_TAP_TIME   200
 
-uint32_t next_bart_check;
-uint32_t max_bart_check;
-uint8_t next_bart_time;
-
 long sleep_start;
 
 long wake_second;
@@ -85,17 +71,10 @@ long wake_second;
 
 uint16_t rainbow_index;
 
-uint32_t weather_color_min;
-uint32_t weather_color_max;
-long weather_color_cycle;
-long weather_color_end;
-
 uint32_t last_color;
 uint16_t last_brightness;
 bool should_rainbow;
 bool should_off;
-
-bool is_gustavo;
 
 #define EEPROM_COLOR         0
 #define EEPROM_BRIGHTNESS    (EEPROM_COLOR + sizeof(last_color))
@@ -130,49 +109,10 @@ void setup(void)
   strip.begin();
   strip.setBrightness(10);
   colorWipe(strip.Color(255, 0, 0));
-
-  while (true) {
-    // WiFi.scanNetworks will return the number of networks found
-    int n = WiFi.scanNetworks();
-    Serial.println("scan done");
-    if (n == 0) {
-      Serial.println("no networks found");
-      delay(100);
-    } else {
-      bool found = false;
-      Serial.print(n);
-      Serial.println(" networks found");
-      for (int i = 0; i < n; ++i)
-      {
-        // Print SSID and RSSI for each network found
-        Serial.print(WiFi.SSID(i));
-        Serial.println((WiFi.encryptionType(i) == ENC_TYPE_NONE)?" ":"*");
-        if (WiFi.SSID(i).equals(WLAN_SSID_GUSTAVO)) {
-          Serial.println("Found Gustavo");
-          is_gustavo = true;
-          found = true;
-          break;
-        } else if (WiFi.SSID(i).equals(String(WLAN_SSID_SONY))) {
-          Serial.println("Found Sony");
-          is_gustavo = false;
-          found = true;
-          break;
-        }
-        delay(10);
-      }
-      if (found) {
-        break;
-      }
-    }
-  }
   
   // Initialise the module
   Serial.println(F("Init"));
-  if (is_gustavo) {
-    WiFi.begin(WLAN_SSID_GUSTAVO, WLAN_PASS_GUSTAVO);
-  } else {
-    WiFi.begin(WLAN_SSID_SONY, WLAN_PASS_SONY);
-  }
+  WiFi.begin(WLAN_SSID, WLAN_PASS);
 
   while (WiFi.status() != WL_CONNECTED) {
     delay(500);
@@ -298,30 +238,16 @@ void loop(void)
       should_off = false;
       updateEeprom();
     } else {
-      if (is_gustavo && number_of_taps_triggered == 1 || !is_gustavo && number_of_taps_triggered == 4) {
-        startBartCheck();
-      } else if (number_of_taps_triggered == 2) {
-        getWeather();
-      } else if (is_gustavo && number_of_taps_triggered == 3 || !is_gustavo && number_of_taps_triggered == 1) {
+      if (number_of_taps_triggered == 1) {
         should_rainbow = !should_rainbow;
         updateEeprom();
-      } else if (is_gustavo && number_of_taps_triggered == 4 || !is_gustavo && number_of_taps_triggered == 3) {
+      } else if (number_of_taps_triggered == 2) {
         sleep_start = millis();
       }
     }
     number_of_taps_triggered = 0;
   }
 
-  if (max_bart_check > 0 && millis() >= next_bart_check) {
-    if (millis() >= max_bart_check) {
-      max_bart_check = 0;
-      next_bart_time = 0;
-    } else {
-      next_bart_check = millis() + BART_CHECK_PERIOD;
-      grabBartTimes();
-    }
-  }
-  
   if (should_off) {
     uint8_t brightness = 0;
     if (wake_second >= 0) {
@@ -356,31 +282,6 @@ void loop(void)
       strip.setBrightness(brightness);
       colorWipe(last_color);
     }
-  } else if (next_bart_time > 0) {
-    long next_bart_time_millis = 1000 * next_bart_time;
-    long cycle_position = sizeof(sin_table) * (millis() % next_bart_time_millis) / next_bart_time_millis;
-    uint8_t brightness = pgm_read_byte(&sin_table[cycle_position]);
-    strip.setBrightness(brightness);
-    colorWipe(last_color);
-  } else if (weather_color_end > 0) {
-    strip.setBrightness(last_brightness);
-    uint8_t min_color_r = (weather_color_min >> 16) & 0xff;
-    uint8_t max_color_r = (weather_color_max >> 16) & 0xff;
-    uint8_t min_color_b = weather_color_min & 0xff;
-    uint8_t max_color_b = weather_color_max & 0xff;
-    long cycle_position = (millis() - weather_color_cycle) % (WEATHER_COLORS_CYCLE_TIME * 2);
-    if (cycle_position < WEATHER_COLORS_CYCLE_TIME) {
-      min_color_r = map(cycle_position, 0, WEATHER_COLORS_CYCLE_TIME, min_color_r, max_color_r);
-      min_color_b = map(cycle_position, 0, WEATHER_COLORS_CYCLE_TIME, min_color_b, max_color_b);
-    } else {
-      min_color_r = map(cycle_position, WEATHER_COLORS_CYCLE_TIME, 2 * WEATHER_COLORS_CYCLE_TIME, max_color_r, min_color_r);
-      min_color_b = map(cycle_position, WEATHER_COLORS_CYCLE_TIME, 2 * WEATHER_COLORS_CYCLE_TIME, max_color_b, min_color_b);
-    }
-    
-    colorWipe(strip.Color(min_color_r, 0, min_color_b));
-    if (millis() > weather_color_end) {
-      weather_color_end = 0;
-    }
   } else if (should_rainbow) {
     strip.setBrightness(last_brightness);
     rainbowCycle(rainbow_index);
@@ -405,46 +306,7 @@ void updateEeprom() {
 }
 
 void resetModes() {
-  weather_color_end = 0;
-  next_bart_time = 0;
-  max_bart_check = 0;
   sleep_start = 0;
-}
-
-void startBartCheck() {
-  next_bart_check = millis();
-  max_bart_check = next_bart_check + BART_MAX_CHECK;
-}
-
-void grabBartTimes() {
-  String payload;
-  if (is_gustavo) {
-    payload = grabWebPage(BART_URL_GUSTAVO);
-  } else {
-    payload = grabWebPage(BART_URL_SONY);
-  }
-  if (payload) {
-    next_bart_time = payload.toInt();
-  }
-}
-
-void getWeather() {
-  String payload;
-  if (is_gustavo) {
-    payload = grabWebPage(WEATHER_URL_GUSTAVO);
-  } else {
-    payload = grabWebPage(WEATHER_URL_SONY);
-  }
-
-  if (payload) {
-    const char *buffer = payload.c_str();
-    char *color = strtok((char*)buffer, ",");
-    weather_color_min = parseInt(color);
-    color = strtok(NULL, ",");
-    weather_color_max = parseInt(color);
-    weather_color_end = millis() + WEATHER_MAX_CHECK;
-    weather_color_cycle = millis();
-  }
 }
 
 String grabWebPage(const __FlashStringHelper *url) {
@@ -514,4 +376,3 @@ uint32_t Wheel(byte WheelPos) {
    return strip.Color(WheelPos * 3, 255 - WheelPos * 3, 0);
   }
 }
-
