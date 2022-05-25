@@ -1,5 +1,6 @@
 /*******************************
  * Sparkfun ESP32 Thing
+ * For some weird reson needs to be compiled with "Core Debug Level: ERROR"
  *******************************/
 
 #define PIN_UP   12
@@ -80,6 +81,7 @@ void setup() {
   DL(F(NAME));
   
   DL(F("Starting WiFi"));
+  WiFi.disconnect(true);
   WiFi.mode(WIFI_STA);
   WiFi.begin(WLAN_SSID, WLAN_PASS);
 
@@ -151,8 +153,28 @@ void loop() {
       commandsToSend.clear();
     }
     ArduinoOTA.handle();
-  } else if (millis() - wifiLastConnectionStatus > 5000) {
+  } else if (millis() - wifiLastConnectionStatus > 10000) {
     DL(F("not connected to wifi!!!"));
+
+//    int n = WiFi.scanNetworks();
+//    DL(F("scan done"));
+//    if (n == 0) {
+//        DL(F("no networks found"));
+//    } else {
+//        D(n);
+//        DL(F(" networks found"));
+//        for (int i = 0; i < n; ++i) {
+//            // Print SSID and RSSI for each network found
+//            D(i + 1);
+//            D(F(": "));
+//            D(WiFi.SSID(i));
+//            D(F(" ("));
+//            D(WiFi.RSSI(i));
+//            D(F(")"));
+//            DL((WiFi.encryptionType(i) == WIFI_AUTH_OPEN)?" ":"*");
+//        }
+//    }
+//    DL(F(""));
     wifiLastConnectionStatus = millis();
   }
 
