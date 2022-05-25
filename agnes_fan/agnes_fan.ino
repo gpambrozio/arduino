@@ -71,21 +71,9 @@ void setup() {
   
   Serial.begin(115200);
   DL(F("Starting"));
+  
   WiFi.mode(WIFI_STA);
   WiFi.begin(WLAN_SSID, WLAN_PASS);
-  if (WiFi.waitForConnectResult() != WL_CONNECTED) {
-    DL(F("WiFi Connect Failed! Rebooting..."));
-    delay(1000);
-    ESP.restart();
-  }
-
-  if (MDNS.begin(NAME)) {
-    DL(F("MDNS responder started"));
-  }
-
-  ArduinoOTA.setPort(8266);
-  ArduinoOTA.setHostname("fan");
-  ArduinoOTA.begin();
 
   server.on("/", []() {
     String toSend = "Pos = " + String(currentPosition);
@@ -102,11 +90,6 @@ void setup() {
     server.send(200, "text/plain", "Move OK");
   });
   server.begin();
-
-  D(F("Open http://"));
-  D(WiFi.localIP());
-  DL(F("/ in your browser to see it working"));
-  digitalWrite(LED, HIGH);
 }
 
 bool goingUp = false;
@@ -114,19 +97,31 @@ bool goingDown = false;
 long startMove;
 long lastReported = -1;
 
+bool wifiConnected = false;
+long wifiLastConnectionStatus = 0;
+
 void loop() {
   debouncerDown.update();
   debouncerUp.update();
 
-  bool wifiConnected = WiFi.status() == WL_CONNECTED;
-  if (!wifiConnected) {
-    DL(F("WiFi not connected!"));
-    if (WiFi.waitForConnectResult() == WL_CONNECTED) {
-      wifiConnected = true;
+  bool wifi = WiFi.status() == WL_CONNECTED;
+  if (wifiConnected != wifi) {
+    wifiConnected = wifi;
+    digitalWrite(LED, wifiConnected ? HIGH : LOW);
+    if (wifiConnected) {
+      if (MDNS.begin(NAME)) {
+        DL(F("MDNS responder started"));
+      }
+
+      ArduinoOTA.setPort(8266);
+      ArduinoOTA.setHostname("fan");
+      ArduinoOTA.begin();
+
+      D(F("Open http://"));
+      D(WiFi.localIP());
+      DL(F("/ in your browser to see it working"));
     } else {
-      DL(F("WiFi Connect Failed! Rebooting..."));
-      delay(1000);
-      ESP.restart();
+      DL(F("WiFi not connected!"));
     }
   }
   
