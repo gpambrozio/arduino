@@ -1,5 +1,5 @@
-// ArduinoJson - arduinojson.org
-// Copyright Benoit Blanchon 2014-2020
+// ArduinoJson - https://arduinojson.org
+// Copyright Benoit Blanchon 2014-2021
 // MIT License
 
 #define ARDUINOJSON_ENABLE_COMMENTS 1
@@ -61,6 +61,15 @@ TEST_CASE("Filtering") {
       DeserializationError::Ok,
       "null",
       0
+    },
+    {
+      // Member is a string, but filter wants an array
+      "{\"example\":\"example\"}",
+      "{\"example\":[true]}",
+      10,
+      DeserializationError::Ok,
+      "{\"example\":null}",
+      JSON_OBJECT_SIZE(1) + 8
     },
     {
       // Input is an array, but filter wants an object
@@ -215,6 +224,24 @@ TEST_CASE("Filtering") {
       2 * JSON_OBJECT_SIZE(1) + 16
     },
     {
+      // wildcard
+      "{\"example\":{\"type\":\"int\",\"outcome\":42}}",
+      "{\"*\":{\"outcome\":true}}",
+      10,
+      DeserializationError::Ok,
+      "{\"example\":{\"outcome\":42}}",
+      2 * JSON_OBJECT_SIZE(1) + 16
+    },
+    {
+      // exclusion filter (issue #1628)
+      "{\"example\":1,\"ignored\":2}",
+      "{\"*\":true,\"ignored\":false}",
+      10,
+      DeserializationError::Ok,
+      "{\"example\":1}",
+      JSON_OBJECT_SIZE(1) + 8
+    },
+    {
       // only the first element of array counts
       "[1,2,3]",
       "[true, false]",
@@ -239,7 +266,7 @@ TEST_CASE("Filtering") {
       10,
       DeserializationError::Ok,
       "[{\"example\":1},{\"example\":3}]",
-      JSON_ARRAY_SIZE(2) + 2 * JSON_OBJECT_SIZE(1) + 16
+      JSON_ARRAY_SIZE(2) + 2 * JSON_OBJECT_SIZE(1) + 8
     },
     {
       "[',2,3]",
@@ -525,7 +552,7 @@ TEST_CASE("Filtering") {
       10,
       DeserializationError::InvalidInput,
       "{}", 
-      JSON_OBJECT_SIZE(0) + 8
+      JSON_OBJECT_SIZE(0)
     },
     {
       // incomplete comment after key
@@ -534,7 +561,7 @@ TEST_CASE("Filtering") {
       10,
       DeserializationError::IncompleteInput,
       "{}", 
-      JSON_OBJECT_SIZE(0) + 8
+      JSON_OBJECT_SIZE(0)
     },
     {
       // invalid comment after colon
@@ -729,21 +756,4 @@ TEST_CASE("Overloads") {
     deserializeJson(doc, vla, NestingLimit(5), Filter(filter));
   }
 #endif
-}
-
-TEST_CASE("StringMover::reclaim()") {
-  StaticJsonDocument<200> filter;
-  filter["a"] = true;
-  filter["c"] = true;
-  char input[] = "{\"a\":1,\"b\":2,\"c\":1}";
-
-  StaticJsonDocument<200> doc;
-  deserializeJson(doc, input, DeserializationOption::Filter(filter));
-
-  REQUIRE(doc.as<std::string>() == "{\"a\":1,\"c\":1}");
-
-  CHECK(input[0] == 'a');
-  CHECK(input[1] == 0);
-  CHECK(input[2] == 'c');
-  CHECK(input[3] == 0);
 }

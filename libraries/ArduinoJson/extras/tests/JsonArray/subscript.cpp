@@ -1,5 +1,5 @@
-// ArduinoJson - arduinojson.org
-// Copyright Benoit Blanchon 2014-2020
+// ArduinoJson - https://arduinojson.org
+// Copyright Benoit Blanchon 2014-2021
 // MIT License
 
 #include <ArduinoJson.h>
@@ -60,7 +60,6 @@ TEST_CASE("JsonArray::operator[]") {
 
     array[0] = str;
     REQUIRE(str == array[0].as<const char*>());
-    REQUIRE(str == array[0].as<char*>());  // <- short hand
     REQUIRE(true == array[0].is<const char*>());
     REQUIRE(false == array[0].is<int>());
   }
@@ -119,13 +118,13 @@ TEST_CASE("JsonArray::operator[]") {
 
   SECTION("should duplicate char*") {
     array[0] = const_cast<char*>("world");
-    const size_t expectedSize = JSON_ARRAY_SIZE(1) + JSON_STRING_SIZE(6);
+    const size_t expectedSize = JSON_ARRAY_SIZE(1) + JSON_STRING_SIZE(5);
     REQUIRE(expectedSize == doc.memoryUsage());
   }
 
   SECTION("should duplicate std::string") {
     array[0] = std::string("world");
-    const size_t expectedSize = JSON_ARRAY_SIZE(1) + JSON_STRING_SIZE(6);
+    const size_t expectedSize = JSON_ARRAY_SIZE(1) + JSON_STRING_SIZE(5);
     REQUIRE(expectedSize == doc.memoryUsage());
   }
 

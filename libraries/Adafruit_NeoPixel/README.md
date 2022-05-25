@@ -1,4 +1,4 @@
-# Adafruit NeoPixel Library [![Build Status](https://travis-ci.com/adafruit/Adafruit_NeoPixel.svg?branch=master)](https://travis-ci.com/adafruit/Adafruit_NeoPixel)
+# Adafruit NeoPixel Library [![Build Status](https://github.com/adafruit/Adafruit_NeoPixel/workflows/Arduino%20Library%20CI/badge.svg)](https://github.com/adafruit/Adafruit_NeoPixel/actions)[![Documentation](https://github.com/adafruit/ci-arduino/blob/master/assets/doxygen_badge.svg)](http://adafruit.github.io/Adafruit_NeoPixel/html/index.html)
 
 Arduino library for controlling single-wire-based LED pixels and strip such as the [Adafruit 60 LED/meter Digital LED strip][strip], the [Adafruit FLORA RGB Smart Pixel][flora], the [Adafruit Breadboard-friendly RGB Smart Pixel][pixel], the [Adafruit NeoPixel Stick][stick], and the [Adafruit NeoPixel Shield][shield].
 
@@ -56,6 +56,10 @@ Compatibility notes: Port A is not supported on any AVR processors at this time
   - ESP8266 any speed
   - ESP32 any speed
   - Nordic nRF52 (Adafruit Feather nRF52), nRF51 (micro:bit)
+  - Infineon XMC1100 BootKit @ 32 MHz
+  - Infineon XMC1100 2Go @ 32 MHz
+  - Infineon XMC1300 BootKit  @ 32 MHz
+  - Infineon XMC4700 RelaxKit, XMC4800 RelaxKit, XMC4800 IoT Amazon FreeRTOS Kit @ 144 MHz
 
   Check forks for other architectures not listed here!
 

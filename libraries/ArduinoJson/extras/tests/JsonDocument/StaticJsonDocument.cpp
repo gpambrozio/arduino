@@ -1,5 +1,5 @@
-// ArduinoJson - arduinojson.org
-// Copyright Benoit Blanchon 2014-2020
+// ArduinoJson - https://arduinojson.org
+// Copyright Benoit Blanchon 2014-2021
 // MIT License
 
 #include <ArduinoJson.h>
@@ -212,7 +212,7 @@ TEST_CASE("StaticJsonDocument") {
 
   SECTION("garbageCollect()") {
     StaticJsonDocument<256> doc;
-    doc[std::string("example")] = std::string("example");
+    doc[std::string("example")] = std::string("jukebox");
     doc.remove("example");
     REQUIRE(doc.memoryUsage() == JSON_OBJECT_SIZE(1) + 16);
 

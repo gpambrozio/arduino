@@ -13,6 +13,8 @@
   ----> https://www.adafruit.com/product/4313
   The 1.54" TFT breakout
     ----> https://www.adafruit.com/product/3787
+  The 1.69" TFT breakout
+    ----> https://www.adafruit.com/product/5206
   The 2.0" TFT breakout
     ----> https://www.adafruit.com/product/4311
   as well as Adafruit raw 1.8" TFT display
@@ -61,7 +63,7 @@
 // For 1.44" and 1.8" TFT with ST7735 use:
 Adafruit_ST7735 tft = Adafruit_ST7735(TFT_CS, TFT_DC, TFT_RST);
 
-// For 1.14", 1.3", 1.54", and 2.0" TFT with ST7789:
+// For 1.14", 1.3", 1.54", 1.69", and 2.0" TFT with ST7789:
 //Adafruit_ST7789 tft = Adafruit_ST7789(TFT_CS, TFT_DC, TFT_RST);
 
 
@@ -98,12 +100,18 @@ void setup(void) {
   // OR use this initializer (uncomment) if using a 1.3" or 1.54" 240x240 TFT:
   //tft.init(240, 240);           // Init ST7789 240x240
 
+  // OR use this initializer (uncomment) if using a 1.69" 280x240 TFT:
+  //tft.init(240, 280);           // Init ST7789 280x240
+
   // OR use this initializer (uncomment) if using a 2.0" 320x240 TFT:
   //tft.init(240, 320);           // Init ST7789 320x240
 
   // OR use this initializer (uncomment) if using a 1.14" 240x135 TFT:
   //tft.init(135, 240);           // Init ST7789 240x135
   
+  // OR use this initializer (uncomment) if using a 1.47" 174x320 TFT:
+  //tft.init(174, 320);           // Init ST7789 174x320
+
   // SPI speed defaults to SPI_DEFAULT_FREQ defined in the library, you can override it here
   // Note that speed allowable depends on chip and quality of wiring, if you go too fast, you
   // may end up with a black screen some times, or all the time.

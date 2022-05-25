@@ -43,8 +43,10 @@
 
 class WebThingAdapter {
 public:
-  WebThingAdapter(String _name, IPAddress _ip, uint16_t _port = 80)
-      : server(_port), name(_name), ip(_ip.toString()), port(_port) {}
+  WebThingAdapter(String _name, IPAddress _ip, uint16_t _port = 80,
+                  bool _disableHostValidation = false)
+      : server(_port), name(_name), ip(_ip.toString()), port(_port),
+        disableHostValidation(_disableHostValidation) {}
 
   void begin() {
     name.toLowerCase();
@@ -197,12 +199,17 @@ private:
   String name;
   String ip;
   uint16_t port;
+  bool disableHostValidation;
   ThingDevice *firstDevice = nullptr;
   ThingDevice *lastDevice = nullptr;
   char body_data[ESP_MAX_PUT_BODY_SIZE];
   bool b_has_body_data = false;
 
   bool verifyHost(AsyncWebServerRequest *request) {
+    if (disableHostValidation) {
+      return true;
+    }
+
     AsyncWebHeader *header = request->getHeader("Host");
     if (header == nullptr) {
       request->send(403);
@@ -213,7 +220,8 @@ private:
     if (colonIndex >= 0) {
       value.remove(colonIndex);
     }
-    if (value == name + ".local" || value == ip || value == "localhost") {
+    if (value.equalsIgnoreCase(name + ".local") || value == ip ||
+        value == "localhost") {
       return true;
     }
     request->send(403);

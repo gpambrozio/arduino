@@ -1,5 +1,7 @@
 var searchData=
 [
-  ['bounce',['Bounce',['../class_bounce.html',1,'Bounce'],['../class_bounce.html#aa62a2e2b5ad0ee6913a95f2f2a0e7606',1,'Bounce::Bounce()'],['../class_bounce.html#ab34517094faf21d4f38b36da2915132b',1,'Bounce::Bounce(uint8_t pin, unsigned long interval_millis)']]],
-  ['bounce_202',['BOUNCE 2',['../index.html',1,'']]]
+  ['bounce_1',['Bounce',['../class_bounce.html',1,'Bounce'],['../class_bounce.html#aa62a2e2b5ad0ee6913a95f2f2a0e7606',1,'Bounce::Bounce()']]],
+  ['bounce2_2',['Bounce2',['../namespace_bounce2.html',1,'']]],
+  ['button_3',['Button',['../class_bounce2_1_1_button.html',1,'Bounce2::Button'],['../class_bounce2_1_1_button.html#a18710b645862d2b8f058a73aabbaf7ad',1,'Bounce2::Button::Button()']]],
+  ['bounce_202_4',['BOUNCE 2',['../index.html',1,'']]]
 ];

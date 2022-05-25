@@ -1,4 +1,4 @@
-/* 
+/*
  * The MIT License (MIT)
  *
  * Copyright (c) 2019 hathach for Adafruit Industries
@@ -22,136 +22,160 @@
  * THE SOFTWARE.
  */
 
+#include "Adafruit_FlashTransport.h"
 
-#include "Adafruit_SPIFlash.h"
-
-Adafruit_FlashTransport_SPI::Adafruit_FlashTransport_SPI(uint8_t ss, SPIClass *spiinterface)
-{
+Adafruit_FlashTransport_SPI::Adafruit_FlashTransport_SPI(
+    uint8_t ss, SPIClass *spiinterface) {
+  _cmd_read = SFLASH_CMD_READ;
+  _addr_len = 3; // work with most device if not set
   _ss = ss;
   _spi = spiinterface;
-  _setting = SPISettings();
+  _clock_wr = _clock_rd = 4000000;
 }
 
-void Adafruit_FlashTransport_SPI::begin(void)
-{
+Adafruit_FlashTransport_SPI::Adafruit_FlashTransport_SPI(uint8_t ss,
+                                                         SPIClass &spiinterface)
+    : Adafruit_FlashTransport_SPI(ss, &spiinterface) {}
+
+void Adafruit_FlashTransport_SPI::begin(void) {
   pinMode(_ss, OUTPUT);
   digitalWrite(_ss, HIGH);
 
   _spi->begin();
 }
 
-void Adafruit_FlashTransport_SPI::setClockSpeed(uint32_t clock_hz)
-{
-  _setting = SPISettings(clock_hz, MSBFIRST, SPI_MODE0);
+void Adafruit_FlashTransport_SPI::end(void) {
+  _spi->end();
+
+  pinMode(_ss, INPUT);
 }
 
-bool Adafruit_FlashTransport_SPI::runCommand(uint8_t command)
-{
-  digitalWrite(_ss, LOW);
-  _spi->beginTransaction(_setting);
+void Adafruit_FlashTransport_SPI::setClockSpeed(uint32_t write_hz,
+                                                uint32_t read_hz) {
+  _clock_wr = write_hz;
+  _clock_rd = read_hz;
+}
+
+bool Adafruit_FlashTransport_SPI::runCommand(uint8_t command) {
+  beginTransaction(_clock_wr);
 
   _spi->transfer(command);
 
-  _spi->endTransaction();
-  digitalWrite(_ss, HIGH);
+  endTransaction();
 
   return true;
 }
 
-bool Adafruit_FlashTransport_SPI::readCommand(uint8_t command, uint8_t* response, uint32_t len)
-{
-  digitalWrite(_ss, LOW);
-  _spi->beginTransaction(_setting);
+bool Adafruit_FlashTransport_SPI::readCommand(uint8_t command,
+                                              uint8_t *response, uint32_t len) {
+  beginTransaction(_clock_rd);
 
   _spi->transfer(command);
-  while(len--)
-  {
+  while (len--) {
     *response++ = _spi->transfer(0xFF);
   }
 
-  _spi->endTransaction();
-  digitalWrite(_ss, HIGH);
+  endTransaction();
 
   return true;
 }
 
-bool Adafruit_FlashTransport_SPI::writeCommand(uint8_t command, uint8_t const* data, uint32_t len)
-{
-  digitalWrite(_ss, LOW);
-  _spi->beginTransaction(_setting);
+bool Adafruit_FlashTransport_SPI::writeCommand(uint8_t command,
+                                               uint8_t const *data,
+                                               uint32_t len) {
+  beginTransaction(_clock_wr);
 
   _spi->transfer(command);
-  while(len--)
-  {
-    (void) _spi->transfer(*data++);
+  while (len--) {
+    (void)_spi->transfer(*data++);
   }
 
-  _spi->endTransaction();
-  digitalWrite(_ss, HIGH);
+  endTransaction();
 
   return true;
 }
 
-bool Adafruit_FlashTransport_SPI::eraseCommand(uint8_t command, uint32_t address)
-{
-  digitalWrite(_ss, LOW);
-  _spi->beginTransaction(_setting);
+bool Adafruit_FlashTransport_SPI::eraseCommand(uint8_t command, uint32_t addr) {
+  beginTransaction(_clock_wr);
 
-  _spi->transfer(command);
+  uint8_t cmd_with_addr[5] = {command};
+  fillAddress(cmd_with_addr + 1, addr);
 
-  // 24-bit address MSB first
-  _spi->transfer((address >> 16) & 0xFF);
-  _spi->transfer((address >> 8) & 0xFF);
-  _spi->transfer(address & 0xFF);
+  _spi->transfer(cmd_with_addr, 1 + _addr_len);
 
-  _spi->endTransaction();
-  digitalWrite(_ss, HIGH);
+  endTransaction();
 
   return true;
 }
 
-bool Adafruit_FlashTransport_SPI::readMemory(uint32_t addr, uint8_t *data, uint32_t len)
-{
-  digitalWrite(_ss, LOW);
-  _spi->beginTransaction(_setting);
+void Adafruit_FlashTransport_SPI::fillAddress(uint8_t *buf, uint32_t addr) {
+  switch (_addr_len) {
+  case 4:
+    *buf++ = (addr >> 24) & 0xFF;
+    //__attribute__((fallthrough)); ESP32 doesn't support this attribute yet
+    // fall through
 
-  _spi->transfer(SFLASH_CMD_READ);
+  case 3:
+    *buf++ = (addr >> 16) & 0xFF;
+    //__attribute__((fallthrough)); ESP32 doesn't support this attribute yet
+    // fall through
 
-  // 24-bit address MSB first
-  _spi->transfer((addr >> 16) & 0xFF);
-  _spi->transfer((addr >> 8) & 0xFF);
-  _spi->transfer(addr & 0xFF);
-
-  while(len--)
-  {
-    *data++ = _spi->transfer(0xFF);
+  case 2:
+  default:
+    *buf++ = (addr >> 8) & 0xFF;
+    *buf++ = addr & 0xFF;
   }
+}
 
-  _spi->endTransaction();
-  digitalWrite(_ss, HIGH);
+bool Adafruit_FlashTransport_SPI::readMemory(uint32_t addr, uint8_t *data,
+                                             uint32_t len) {
+  beginTransaction(_clock_rd);
+
+  uint8_t cmd_with_addr[6] = {_cmd_read};
+  fillAddress(cmd_with_addr + 1, addr);
+
+  // Fast Read has 1 extra dummy byte
+  uint8_t const cmd_len =
+      1 + _addr_len + (SFLASH_CMD_FAST_READ == _cmd_read ? 1 : 0);
+
+  _spi->transfer(cmd_with_addr, cmd_len);
+
+  // Use SPI DMA if available for best performance
+#if defined(ARDUINO_NRF52_ADAFRUIT) && defined(NRF52840_XXAA)
+  _spi->transfer(NULL, data, len);
+#elif defined(ARDUINO_ARCH_SAMD) && defined(_ADAFRUIT_ZERODMA_H_)
+  _spi->transfer(NULL, data, len, true);
+#else
+  _spi->transfer(data, len);
+#endif
+
+  endTransaction();
 
   return true;
 }
 
-bool Adafruit_FlashTransport_SPI::writeMemory(uint32_t addr, uint8_t const *data, uint32_t len)
-{
-  digitalWrite(_ss, LOW);
-  _spi->beginTransaction(_setting);
+bool Adafruit_FlashTransport_SPI::writeMemory(uint32_t addr,
+                                              uint8_t const *data,
+                                              uint32_t len) {
+  beginTransaction(_clock_wr);
 
-  _spi->transfer(SFLASH_CMD_PAGE_PROGRAM);
+  uint8_t cmd_with_addr[5] = {SFLASH_CMD_PAGE_PROGRAM};
+  fillAddress(cmd_with_addr + 1, addr);
 
-  // 24-bit address MSB first
-  _spi->transfer((addr >> 16) & 0xFF);
-  _spi->transfer((addr >> 8) & 0xFF);
-  _spi->transfer(addr & 0xFF);
+  _spi->transfer(cmd_with_addr, 1 + _addr_len);
 
-  while(len--)
-  {
+  // Use SPI DMA if available for best performance
+#if defined(ARDUINO_NRF52_ADAFRUIT) && defined(NRF52840_XXAA)
+  _spi->transfer(data, NULL, len);
+#elif defined(ARDUINO_ARCH_SAMD) && defined(_ADAFRUIT_ZERODMA_H_)
+  _spi->transfer(data, NULL, len, true);
+#else
+  while (len--) {
     _spi->transfer(*data++);
   }
+#endif
 
-  _spi->endTransaction();
-  digitalWrite(_ss, HIGH);
+  endTransaction();
 
   return true;
 }

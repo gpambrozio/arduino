@@ -16,10 +16,20 @@
 
 #include "Adafruit_TinyUSB.h"
 
+//--------------------------------------------------------------------+
+// MSC RAM Disk Config
+//--------------------------------------------------------------------+
+
 // 8KB is the smallest size that windows allow to mount
 #define DISK_BLOCK_NUM  16
 #define DISK_BLOCK_SIZE 512
 #include "ramdisk.h"
+
+Adafruit_USBD_MSC usb_msc;
+
+//--------------------------------------------------------------------+
+// HID Config
+//--------------------------------------------------------------------+
 
 // HID report descriptor using TinyUSB's template
 // Single Report (no ID) descriptor
@@ -28,15 +38,22 @@ uint8_t const desc_hid_report[] =
   TUD_HID_REPORT_DESC_MOUSE()
 };
 
-Adafruit_USBD_HID usb_hid;
-Adafruit_USBD_MSC usb_msc;
+// USB HID object. For ESP32 these values cannot be changed after this declaration
+// desc report, desc len, protocol, interval, use out endpoint
+Adafruit_USBD_HID usb_hid(desc_hid_report, sizeof(desc_hid_report), HID_ITF_PROTOCOL_NONE, 2, false);
 
-#if defined ARDUINO_SAMD_CIRCUITPLAYGROUND_EXPRESS
+#if defined(ARDUINO_SAMD_CIRCUITPLAYGROUND_EXPRESS) || defined(ARDUINO_NRF52840_CIRCUITPLAY)
   const int pin = 4; // Left Button
   bool activeState = true;
-#elif defined ARDUINO_NRF52840_FEATHER
-  const int pin = 7; // UserSw
+
+#elif defined(ARDUINO_FUNHOUSE_ESP32S2)
+  const int pin = BUTTON_DOWN;
+  bool activeState = true;
+
+#elif defined PIN_BUTTON1
+  const int pin = PIN_BUTTON1;
   bool activeState = false;
+
 #else
   const int pin = 12;
   bool activeState = false;
@@ -45,6 +62,11 @@ Adafruit_USBD_MSC usb_msc;
 // the setup function runs once when you press reset or power the board
 void setup()
 {
+#if defined(ARDUINO_ARCH_MBED) && defined(ARDUINO_ARCH_RP2040)
+  // Manual begin() is required on core without built-in support for TinyUSB such as mbed rp2040
+  TinyUSB_Device_Init(0);
+#endif
+
   // Set disk vendor id, product id and revision with string up to 8, 16, 4 characters respectively
   usb_msc.setID("Adafruit", "Mass Storage", "1.0");
   
@@ -62,11 +84,13 @@ void setup()
   // Set up button
   pinMode(pin, activeState ? INPUT_PULLDOWN : INPUT_PULLUP);
 
-  usb_hid.setReportDescriptor(desc_hid_report, sizeof(desc_hid_report));
+  // Notes: following commented-out functions has no affect on ESP32
+  // usb_hid.setReportDescriptor(desc_hid_report, sizeof(desc_hid_report));
+
   usb_hid.begin();
 
   Serial.begin(115200);
-  while( !USBDevice.mounted() ) delay(1);   // wait for native usb
+  while( !TinyUSBDevice.mounted() ) delay(1);   // wait for native usb
 
   Serial.println("Adafruit TinyUSB Mouse + Mass Storage (ramdisk) example");
 }
@@ -80,7 +104,7 @@ void loop()
   uint32_t const btn = (digitalRead(pin) == activeState);
 
   // Remote wakeup
-  if ( USBDevice.suspended() && btn )
+  if ( TinyUSBDevice.suspended() && btn )
   {
     // Wake up host if we are in suspend mode
     // and REMOTE_WAKEUP feature is enabled by host

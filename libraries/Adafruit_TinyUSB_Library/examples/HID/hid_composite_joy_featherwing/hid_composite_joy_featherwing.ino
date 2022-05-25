@@ -46,16 +46,18 @@ uint8_t const desc_hid_report[] =
   TUD_HID_REPORT_DESC_MOUSE   ( HID_REPORT_ID(RID_MOUSE) )
 };
 
-// USB HID object
-Adafruit_USBD_HID usb_hid;
+// USB HID object. For ESP32 these values cannot be changed after this declaration
+// desc report, desc len, protocol, interval, use out endpoint
+Adafruit_USBD_HID usb_hid(desc_hid_report, sizeof(desc_hid_report), HID_ITF_PROTOCOL_NONE, 2, false);
 
 int last_x, last_y;
 
 // the setup function runs once when you press reset or power the board
 void setup()
 {
-  usb_hid.setPollInterval(2);
-  usb_hid.setReportDescriptor(desc_hid_report, sizeof(desc_hid_report));
+  // Notes: following commented-out functions has no affect on ESP32
+  // usb_hid.setPollInterval(2);
+  // usb_hid.setReportDescriptor(desc_hid_report, sizeof(desc_hid_report));
 
   usb_hid.begin();
 
@@ -77,7 +79,7 @@ void setup()
   last_x = ss.analogRead(3);
 
   // wait until device mounted
-  while( !USBDevice.mounted() ) delay(1);
+  while( !TinyUSBDevice.mounted() ) delay(1);
 }
 
 void loop()
@@ -145,10 +147,10 @@ void loop()
 
   /*------------- Remote Wakeup -------------*/
   // Remote wakeup if PC is suspended and we has user interaction with joy feather wing
-  if ( has_action && USBDevice.suspended() )
+  if ( has_action && TinyUSBDevice.suspended() )
   {
     // Wake up only works if REMOTE_WAKEUP feature is enable by host
     // Usually this is the case with Mouse/Keyboard device
-    USBDevice.remoteWakeup();
+    TinyUSBDevice.remoteWakeup();
   }
 }

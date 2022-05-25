@@ -20,23 +20,29 @@ Adafruit_USBD_MSC usb_msc;
 
 // the setup function runs once when you press reset or power the board
 void setup()
-{
+{ 
+#if defined(ARDUINO_ARCH_MBED) && defined(ARDUINO_ARCH_RP2040)
+  // Manual begin() is required on core without built-in support for TinyUSB such as
+  // - mbed rp2040
+  TinyUSB_Device_Init(0);
+#endif
+
   // Set disk vendor id, product id and revision with string up to 8, 16, 4 characters respectively
   usb_msc.setID("Adafruit", "Mass Storage", "1.0");
-  
+
   // Set disk size
   usb_msc.setCapacity(DISK_BLOCK_NUM, DISK_BLOCK_SIZE);
 
   // Set callback
-  usb_msc.setReadWriteCallback(msc_read_cb, msc_write_cb, msc_flush_cb);
+  usb_msc.setReadWriteCallback(msc_read_callback, msc_write_callback, msc_flush_callback);
 
   // Set Lun ready (RAM disk is always ready)
   usb_msc.setUnitReady(true);
-  
+
   usb_msc.begin();
 
   Serial.begin(115200);
-  while ( !Serial ) delay(10);   // wait for native usb
+  //while ( !Serial ) delay(10);   // wait for native usb
 
   Serial.println("Adafruit TinyUSB Mass Storage RAM Disk example");
 }
@@ -44,12 +50,14 @@ void setup()
 void loop()
 {
   // nothing to do
+  Serial.println("Adafruit TinyUSB Mass Storage RAM Disk example");
+  delay(1000);
 }
 
 // Callback invoked when received READ10 command.
-// Copy disk's data to buffer (up to bufsize) and 
-// return number of copied bytes (must be multiple of block size) 
-int32_t msc_read_cb (uint32_t lba, void* buffer, uint32_t bufsize)
+// Copy disk's data to buffer (up to bufsize) and
+// return number of copied bytes (must be multiple of block size)
+int32_t msc_read_callback (uint32_t lba, void* buffer, uint32_t bufsize)
 {
   uint8_t const* addr = msc_disk[lba];
   memcpy(buffer, addr, bufsize);
@@ -58,9 +66,9 @@ int32_t msc_read_cb (uint32_t lba, void* buffer, uint32_t bufsize)
 }
 
 // Callback invoked when received WRITE10 command.
-// Process data in buffer to disk's storage and 
+// Process data in buffer to disk's storage and
 // return number of written bytes (must be multiple of block size)
-int32_t msc_write_cb (uint32_t lba, uint8_t* buffer, uint32_t bufsize)
+int32_t msc_write_callback (uint32_t lba, uint8_t* buffer, uint32_t bufsize)
 {
   uint8_t* addr = msc_disk[lba];
   memcpy(addr, buffer, bufsize);
@@ -70,7 +78,7 @@ int32_t msc_write_cb (uint32_t lba, uint8_t* buffer, uint32_t bufsize)
 
 // Callback invoked when WRITE10 command is completed (status received and accepted by host).
 // used to flush any pending cache.
-void msc_flush_cb (void)
+void msc_flush_callback (void)
 {
   // nothing to do
 }

@@ -78,7 +78,7 @@ The HalloWing M4 Express
 #endif
 
 // Option 1 (recommended): must use the hardware SPI pins
-// (for UNO thats sclk = 13 and sid = 11) and pin 10 must be
+// (for UNO that's sclk = 13 and sid = 11) and pin 10 must be
 // an output. This is much faster - also required if you want
 // to use the microSD card (see the image drawing example)
 #if defined(ADAFRUIT_HALLOWING_M4_EXPRESS)
@@ -143,6 +143,9 @@ void setup(void) {
       // OR use this initializer (uncomment) if using a 1.14" 240x135 TFT:
       //tft.init(135, 240);           // Init ST7789 240x135
   
+      // OR use this initializer (uncomment) if using a 1.47" 174x320 TFT:
+      //tft.init(174, 320);           // Init ST7789 174x320
+
        // SPI speed defaults to SPI_DEFAULT_FREQ defined in the library, you can override it here
       // Note that speed allowable depends on chip and quality of wiring, if you go too fast, you
       // may end up with a black screen some times, or all the time.

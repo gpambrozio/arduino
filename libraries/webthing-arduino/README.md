@@ -1,13 +1,15 @@
+[![Gitpod ready-to-code](https://img.shields.io/badge/Gitpod-ready--to--code-blue?logo=gitpod)](https://gitpod.io/#https://github.com/WebThingsIO/webthing-arduino)
+
 webthing-arduino
 ================
 
 A simple server for the ESP8266, the ESP32, boards with Ethernet, or any
 WiFi101-compatible board that implements Mozilla's proposed Web of Things API.
 The [LED
-example](https://github.com/mozilla-iot/webthing-arduino/blob/master/examples/LED)
+example](https://github.com/WebThingsIO/webthing-arduino/blob/master/examples/LED)
 exposes an OnOffSwitch named "Built-in LED" which controls the board's built-in
 LED. The [LED Lamp
-example](https://github.com/mozilla-iot/webthing-arduino/blob/master/examples/LEDLamp)
+example](https://github.com/WebThingsIO/webthing-arduino/blob/master/examples/LEDLamp)
 ups the ante by introducing a `level` property to expose a dimmable Light.
 
 ## Arduino
@@ -35,16 +37,16 @@ it in your sketchbook's libraries folder.
 Make sure to install the current release of the ArduinoJson library (6) if you
 don't have it installed already.
 
-![ArduinoJson install process](https://github.com/mozilla-iot/webthing-arduino/raw/master/docs/arduinojson.png)
+![ArduinoJson install process](https://github.com/WebThingsIO/webthing-arduino/raw/master/docs/arduinojson.png)
 
 Next, download this library from the same library manager by searching for
 `webthing`.
 
-![add zip library and LED example](https://github.com/mozilla-iot/webthing-arduino/raw/master/docs/add-library-open-example.png)
+![add zip library and LED example](https://github.com/WebThingsIO/webthing-arduino/raw/master/docs/add-library-open-example.png)
 
 You should be able to upload the example sketch onto your board and use it as a
 simple Web Thing. This Web Thing can be talked to using the WoT API or added to
-the Mozilla WebThings Gateway using the "Add Thing by URL" feature. Note that
+the WebThings Gateway using the "Add Thing by URL" feature. Note that
 right now, WiFi101-based Things must be manually added by typing the full URL
 to the Web Thing, e.g. `http://192.168.0.103/things/led`.
 
@@ -56,8 +58,10 @@ proposed API.
 ## PlatformIO
 
 Add the `webthing-arduino` library through PlatformIO's package management
-interface. You may also need to manually add the ArduinoJson and other
-libraries to your project.
+interface. Ensure that you get the latest release by examining the entries
+in the version number dropdown list. It may be sorted counter-intuitively.
+You may also need to manually add the ArduinoJson and other libraries to 
+your project.
 
 ## Example
 
@@ -157,3 +161,7 @@ void loop(void) {
     #include <Thing.h>
     #include <WebThingAdapter.h>
     ```
+
+# Adding to Gateway
+
+To add your web thing to the WebThings Gateway, install the "Web Thing" add-on and follow the instructions [here](https://github.com/WebThingsIO/thing-url-adapter#readme).

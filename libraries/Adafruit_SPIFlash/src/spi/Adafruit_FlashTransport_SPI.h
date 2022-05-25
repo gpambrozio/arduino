@@ -1,4 +1,4 @@
-/* 
+/*
  * The MIT License (MIT)
  *
  * Copyright (c) 2019 hathach for Adafruit Industries
@@ -25,31 +25,49 @@
 #ifndef ADAFRUIT_FLASHTRANSPORT_SPI_H_
 #define ADAFRUIT_FLASHTRANSPORT_SPI_H_
 
+#include "Arduino.h"
 #include "SPI.h"
 
-class Adafruit_FlashTransport_SPI : public Adafruit_FlashTransport
-{
-  private:
-    SPIClass* _spi;
-    uint8_t _ss;
-    SPISettings _setting;
+class Adafruit_FlashTransport_SPI : public Adafruit_FlashTransport {
+private:
+  SPIClass *_spi;
+  uint8_t _ss;
 
-  public:
-    Adafruit_FlashTransport_SPI(uint8_t ss, SPIClass *spiinterface);
+  // SAMD21 M0 can write up to 24 Mhz, but can only read reliably with 12 MHz
+  uint32_t _clock_wr;
+  uint32_t _clock_rd;
 
-    virtual void begin(void);
+public:
+  Adafruit_FlashTransport_SPI(uint8_t ss, SPIClass *spiinterface);
+  Adafruit_FlashTransport_SPI(uint8_t ss, SPIClass &spiinterface);
 
-    virtual bool supportQuadMode(void) { return false; }
+  virtual void begin(void);
+  virtual void end(void);
 
-    virtual void setClockSpeed(uint32_t clock_hz);
+  virtual bool supportQuadMode(void) { return false; }
 
-    virtual bool runCommand(uint8_t command);
-    virtual bool readCommand(uint8_t command, uint8_t* response, uint32_t len);
-    virtual bool writeCommand(uint8_t command, uint8_t const* data, uint32_t len);
+  virtual void setClockSpeed(uint32_t write_hz, uint32_t read_hz);
 
-    virtual bool eraseCommand(uint8_t command, uint32_t address);
-    virtual bool readMemory(uint32_t addr, uint8_t *data, uint32_t len);
-    virtual bool writeMemory(uint32_t addr, uint8_t const *data, uint32_t len);
+  virtual bool runCommand(uint8_t command);
+  virtual bool readCommand(uint8_t command, uint8_t *response, uint32_t len);
+  virtual bool writeCommand(uint8_t command, uint8_t const *data, uint32_t len);
+  virtual bool eraseCommand(uint8_t command, uint32_t addr);
+
+  virtual bool readMemory(uint32_t addr, uint8_t *data, uint32_t len);
+  virtual bool writeMemory(uint32_t addr, uint8_t const *data, uint32_t len);
+
+private:
+  void fillAddress(uint8_t *buf, uint32_t addr);
+
+  void beginTransaction(uint32_t clock_hz) {
+    _spi->beginTransaction(SPISettings(clock_hz, MSBFIRST, SPI_MODE0));
+    digitalWrite(_ss, LOW);
+  }
+
+  void endTransaction(void) {
+    digitalWrite(_ss, HIGH);
+    _spi->endTransaction();
+  }
 };
 
 #endif /* ADAFRUIT_FLASHTRANSPORT_SPI_H_ */

@@ -474,8 +474,15 @@ create:
 
   // set timestamps
   if (m_dateTime) {
+    // use temp date/time to fix warning -Waddress-of-packed-member
+    uint16_t tmp_date = dir->creationDate;
+    uint16_t tmp_time = dir->creationTime;
+
     // call user date/time function
-    m_dateTime(&dir->creationDate, &dir->creationTime);
+    m_dateTime(&tmp_date, &tmp_time);
+
+    dir->creationDate = tmp_date;
+    dir->creationTime = tmp_time;
   } else {
     // use default date/time
     dir->creationDate = FAT_DEFAULT_DATE;

@@ -309,6 +309,10 @@
  */
 #define LIS3DH_REG_TIMEWINDOW 0x3D
 
+#define LIS3DH_LSB16_TO_KILO_LSB10                                             \
+  64000 ///< Scalar to convert from 16-bit lsb to 10-bit and divide by 1k to
+        ///< convert from milli-gs to gs
+
 /** A structure to represent scales **/
 typedef enum {
   LIS3DH_RANGE_16_G = 0b11, // +/- 16g
@@ -353,6 +357,7 @@ public:
 
   uint8_t getDeviceID(void);
   bool haveNewData(void);
+  bool enableDRDY(bool enable_drdy = true, uint8_t int_pin = 1);
 
   void read(void);
   int16_t readADC(uint8_t a);
@@ -376,14 +381,14 @@ public:
 
   float x_g; /**< x_g axis value (calculated by selected range) */
   float y_g; /**< y_g axis value (calculated by selected range) */
-  float z_g; /**< z_g axis value (calculated by selected scale) */
+  float z_g; /**< z_g axis value (calculated by selected range) */
 
 private:
   TwoWire *I2Cinterface;
   SPIClass *SPIinterface;
 
   Adafruit_I2CDevice *i2c_dev = NULL; ///< Pointer to I2C bus interface
-  Adafruit_SPIDevice *spi_dev = NULL; ///< Pointer to I2C bus interface
+  Adafruit_SPIDevice *spi_dev = NULL; ///< Pointer to SPI bus interface
 
   uint8_t _wai;
 

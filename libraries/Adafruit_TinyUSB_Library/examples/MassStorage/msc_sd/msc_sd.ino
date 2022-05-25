@@ -38,7 +38,7 @@ void setup()
   usb_msc.begin();
 
   Serial.begin(115200);
-  while ( !Serial ) delay(10);   // wait for native usb
+  //while ( !Serial ) delay(10);   // wait for native usb
 
   Serial.println("Adafruit TinyUSB Mass Storage SD Card example");
 
@@ -90,6 +90,7 @@ int32_t msc_read_cb (uint32_t lba, void* buffer, uint32_t bufsize)
 // return number of written bytes (must be multiple of block size)
 int32_t msc_write_cb (uint32_t lba, uint8_t* buffer, uint32_t bufsize)
 {
+  (void) bufsize;
   return card.writeBlock(lba, buffer) ? 512 : -1;
 }
 

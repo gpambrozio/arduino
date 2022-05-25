@@ -31,6 +31,11 @@
 #if defined(FRAM_CS) && defined(FRAM_SPI)
   Adafruit_FlashTransport_SPI flashTransport(FRAM_CS, FRAM_SPI);
 
+#elif defined(ARDUINO_ARCH_ESP32)
+  // ESP32 use same flash device that store code.
+  // Therefore there is no need to specify the SPI and SS
+  Adafruit_FlashTransport_ESP32 flashTransport;
+
 #else
   // On-board external flash (QSPI or SPI) macros should already
   // defined in your board variant if supported
@@ -59,7 +64,7 @@ FatFile file;
 Adafruit_USBD_MSC usb_msc;
 
 // Set to true when PC write to flash
-bool changed;
+bool fs_changed;
 
 // the setup function runs once when you press reset or power the board
 void setup()
@@ -75,7 +80,7 @@ void setup()
   usb_msc.setReadWriteCallback(msc_read_cb, msc_write_cb, msc_flush_cb);
 
   // Set disk size, block size should be 512 regardless of spi flash page size
-  usb_msc.setCapacity(flash.pageSize()*flash.numPages()/512, 512);
+  usb_msc.setCapacity(flash.size()/512, 512);
 
   // MSC is ready for read/write
   usb_msc.setUnitReady(true);
@@ -89,17 +94,17 @@ void setup()
   //while ( !Serial ) delay(10);   // wait for native usb
 
   Serial.println("Adafruit TinyUSB Mass Storage External Flash example");
-  Serial.print("JEDEC ID: "); Serial.println(flash.getJEDECID(), HEX);
-  Serial.print("Flash size: "); Serial.println(flash.size());
+  Serial.print("JEDEC ID: 0x"); Serial.println(flash.getJEDECID(), HEX);
+  Serial.print("Flash size: "); Serial.print(flash.size() / 1024); Serial.println(" KB");
 
-  changed = true; // to print contents initially
+  fs_changed = true; // to print contents initially
 }
 
 void loop()
 {
-  if ( changed )
+  if ( fs_changed )
   {
-    changed = false;
+    fs_changed = false;
     
     if ( !root.open("/") )
     {
@@ -165,7 +170,7 @@ void msc_flush_cb (void)
   // clear file system's cache to force refresh
   fatfs.cacheClear();
 
-  changed = true;
+  fs_changed = true;
 
   digitalWrite(LED_BUILTIN, LOW);
 }

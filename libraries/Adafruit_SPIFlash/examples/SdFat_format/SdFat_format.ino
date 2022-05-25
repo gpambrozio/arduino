@@ -27,13 +27,34 @@
 #include "ff.h"
 #include "diskio.h"
 
-#if defined(__SAMD51__) || defined(NRF52840_XXAA)
-  Adafruit_FlashTransport_QSPI flashTransport(PIN_QSPI_SCK, PIN_QSPI_CS, PIN_QSPI_IO0, PIN_QSPI_IO1, PIN_QSPI_IO2, PIN_QSPI_IO3);
+// up to 11 characters
+#define DISK_LABEL    "EXT FLASH"
+
+// Uncomment to run example with custom SPI and SS e.g with FRAM breakout
+// #define CUSTOM_CS   A5
+// #define CUSTOM_SPI  SPI
+
+#if defined(CUSTOM_CS) && defined(CUSTOM_SPI)
+  Adafruit_FlashTransport_SPI flashTransport(CUSTOM_CS, CUSTOM_SPI);
+
+#elif defined(ARDUINO_ARCH_ESP32)
+  // ESP32 use same flash device that store code.
+  // Therefore there is no need to specify the SPI and SS
+  Adafruit_FlashTransport_ESP32 flashTransport;
+
 #else
-  #if (SPI_INTERFACES_COUNT == 1)
-    Adafruit_FlashTransport_SPI flashTransport(SS, &SPI);
+  // On-board external flash (QSPI or SPI) macros should already
+  // defined in your board variant if supported
+  // - EXTERNAL_FLASH_USE_QSPI
+  // - EXTERNAL_FLASH_USE_CS/EXTERNAL_FLASH_USE_SPI
+  #if defined(EXTERNAL_FLASH_USE_QSPI)
+    Adafruit_FlashTransport_QSPI flashTransport;
+  
+  #elif defined(EXTERNAL_FLASH_USE_SPI)
+    Adafruit_FlashTransport_SPI flashTransport(EXTERNAL_FLASH_USE_CS, EXTERNAL_FLASH_USE_SPI);
+  
   #else
-    Adafruit_FlashTransport_SPI flashTransport(SS1, &SPI1);
+    #error No QSPI/SPI flash are defined on your board variant.h !
   #endif
 #endif
 
@@ -42,21 +63,26 @@ Adafruit_SPIFlash flash(&flashTransport);
 // file system object from SdFat
 FatFileSystem fatfs;
 
-
+// Elm Cham's fatfs objects
+FATFS elmchamFatfs;
+uint8_t workbuf[4096]; // Working buffer for f_fdisk function.
+  
 void setup() {
   // Initialize serial port and wait for it to open before continuing.
   Serial.begin(115200);
-  while (!Serial) {
-    delay(100);
-  }
+  while (!Serial) delay(100);
+  
   Serial.println("Adafruit SPI Flash FatFs Format Example");
 
   // Initialize flash library and check its chip ID.
   if (!flash.begin()) {
     Serial.println("Error, failed to initialize flash chip!");
-    while(1);
+    while(1) yield();
   }
   Serial.print("Flash chip JEDEC ID: 0x"); Serial.println(flash.getJEDECID(), HEX);
+
+  // Uncomment to flash LED while writing to flash
+  // flash.setIndicator(LED_BUILTIN, true);
 
   // Wait for user to send OK to continue.
   Serial.setTimeout(30000);  // Increase timeout to print message less frequently.
@@ -65,19 +91,35 @@ void setup() {
     Serial.println("This sketch will ERASE ALL DATA on the flash chip and format it with a new filesystem!");
     Serial.println("Type OK (all caps) and press enter to continue.");
     Serial.println("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
-  }
-  while ( !Serial.find("OK"));
+  } while ( !Serial.find("OK"));
 
   // Call fatfs begin and passed flash object to initialize file system
   Serial.println("Creating and formatting FAT filesystem (this takes ~60 seconds)...");
 
   // Make filesystem.
-  uint8_t buf[512] = {0};          // Working buffer for f_fdisk function.    
-  FRESULT r = f_mkfs("", FM_FAT | FM_SFD, 0, buf, sizeof(buf));
+  FRESULT r = f_mkfs("", FM_FAT | FM_SFD, 0, workbuf, sizeof(workbuf));
   if (r != FR_OK) {
     Serial.print("Error, f_mkfs failed with error code: "); Serial.println(r, DEC);
-    while(1);
+    while(1) yield();
   }
+
+  // mount to set disk label
+  r = f_mount(&elmchamFatfs, "0:", 1);
+  if (r != FR_OK) {
+    Serial.print("Error, f_mount failed with error code: "); Serial.println(r, DEC);
+    while(1) yield();
+  }
+
+  // Setting label
+  Serial.println("Setting disk label to: " DISK_LABEL);
+  r = f_setlabel(DISK_LABEL);
+  if (r != FR_OK) {
+    Serial.print("Error, f_setlabel failed with error code: "); Serial.println(r, DEC);
+    while(1) yield();
+  }
+
+  // unmount
+  f_unmount("0:");
 
   // sync to make sure all data is written to flash
   flash.syncBlocks();

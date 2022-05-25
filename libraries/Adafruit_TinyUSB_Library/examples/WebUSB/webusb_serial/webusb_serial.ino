@@ -31,24 +31,30 @@
 Adafruit_USBD_WebUSB usb_web;
 
 // Landing Page: scheme (0: http, 1: https), url
-WEBUSB_URL_DEF(landingPage, 1 /*https*/, "adafruit.github.io/Adafruit_TinyUSB_Arduino/examples/webusb-serial");
+WEBUSB_URL_DEF(landingPage, 1 /*https*/, "adafruit.github.io/Adafruit_TinyUSB_Arduino/examples/webusb-serial/index.html");
 
 int led_pin = LED_BUILTIN;
 
 // the setup function runs once when you press reset or power the board
 void setup()
 {
+#if defined(ARDUINO_ARCH_MBED) && defined(ARDUINO_ARCH_RP2040)
+  // Manual begin() is required on core without built-in support for TinyUSB such as mbed rp2040
+  TinyUSB_Device_Init(0);
+#endif
+
   pinMode(led_pin, OUTPUT);
   digitalWrite(led_pin, LOW);
   
-  usb_web.begin();
   usb_web.setLandingPage(&landingPage);
   usb_web.setLineStateCallback(line_state_callback);
+  //usb_web.setStringDescriptor("TinyUSB WebUSB");
+  usb_web.begin();
 
   Serial.begin(115200);
 
   // wait until device mounted
-  while( !USBDevice.mounted() ) delay(1);
+  while( !TinyUSBDevice.mounted() ) delay(1);
 
   Serial.println("TinyUSB WebUSB Serial example");
 }

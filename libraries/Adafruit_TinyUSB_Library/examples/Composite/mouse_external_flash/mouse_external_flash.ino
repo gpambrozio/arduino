@@ -19,19 +19,45 @@
 #include "Adafruit_SPIFlash.h"
 #include "Adafruit_TinyUSB.h"
 
-#if defined(__SAMD51__) || defined(NRF52840_XXAA)
-  Adafruit_FlashTransport_QSPI flashTransport(PIN_QSPI_SCK, PIN_QSPI_CS, PIN_QSPI_IO0, PIN_QSPI_IO1, PIN_QSPI_IO2, PIN_QSPI_IO3);
+//--------------------------------------------------------------------+
+// MSC External Flash Config
+//--------------------------------------------------------------------+
+
+// Uncomment to run example with FRAM
+// #define FRAM_CS   A5
+// #define FRAM_SPI  SPI
+
+#if defined(FRAM_CS) && defined(FRAM_SPI)
+  Adafruit_FlashTransport_SPI flashTransport(FRAM_CS, FRAM_SPI);
+
+#elif defined(ARDUINO_ARCH_ESP32)
+  // ESP32 use same flash device that store code.
+  // Therefore there is no need to specify the SPI and SS
+  Adafruit_FlashTransport_ESP32 flashTransport;
+
 #else
-  #if (SPI_INTERFACES_COUNT == 1)
-    Adafruit_FlashTransport_SPI flashTransport(SS, &SPI);
+  // On-board external flash (QSPI or SPI) macros should already
+  // defined in your board variant if supported
+  // - EXTERNAL_FLASH_USE_QSPI
+  // - EXTERNAL_FLASH_USE_CS/EXTERNAL_FLASH_USE_SPI
+  #if defined(EXTERNAL_FLASH_USE_QSPI)
+    Adafruit_FlashTransport_QSPI flashTransport;
+
+  #elif defined(EXTERNAL_FLASH_USE_SPI)
+    Adafruit_FlashTransport_SPI flashTransport(EXTERNAL_FLASH_USE_CS, EXTERNAL_FLASH_USE_SPI);
+
   #else
-    Adafruit_FlashTransport_SPI flashTransport(SS1, &SPI1);
+    #error No QSPI/SPI flash are defined on your board variant.h !
   #endif
 #endif
 
 Adafruit_SPIFlash flash(&flashTransport);
 
 Adafruit_USBD_MSC usb_msc;
+
+//--------------------------------------------------------------------+
+// HID Config
+//--------------------------------------------------------------------+
 
 // HID report descriptor using TinyUSB's template
 // Single Report (no ID) descriptor
@@ -40,18 +66,27 @@ uint8_t const desc_hid_report[] =
   TUD_HID_REPORT_DESC_MOUSE()
 };
 
-Adafruit_USBD_HID usb_hid;
+// USB HID object. For ESP32 these values cannot be changed after this declaration
+// desc report, desc len, protocol, interval, use out endpoint
+Adafruit_USBD_HID usb_hid(desc_hid_report, sizeof(desc_hid_report), HID_ITF_PROTOCOL_NONE, 2, false);
 
-#if defined ARDUINO_SAMD_CIRCUITPLAYGROUND_EXPRESS
+#if defined(ARDUINO_SAMD_CIRCUITPLAYGROUND_EXPRESS) || defined(ARDUINO_NRF52840_CIRCUITPLAY)
   const int pin = 4; // Left Button
   bool activeState = true;
-#elif defined ARDUINO_NRF52840_FEATHER
-  const int pin = 7; // UserSw
+
+#elif defined(ARDUINO_FUNHOUSE_ESP32S2)
+  const int pin = BUTTON_DOWN;
+  bool activeState = true;
+
+#elif defined PIN_BUTTON1
+  const int pin = PIN_BUTTON1;
   bool activeState = false;
+
 #else
   const int pin = 12;
   bool activeState = false;
 #endif
+
 
 // the setup function runs once when you press reset or power the board
 void setup()
@@ -67,22 +102,23 @@ void setup()
   usb_msc.setReadWriteCallback(msc_read_cb, msc_write_cb, msc_flush_cb);
 
   // Set disk size, block size should be 512 regardless of spi flash page size
-  usb_msc.setCapacity(flash.pageSize()*flash.numPages()/512, 512);
+  usb_msc.setCapacity(flash.size()/512, 512);
 
   // MSC is ready for read/write
   usb_msc.setUnitReady(true);
   
   usb_msc.begin();
 
-
   // Set up button
   pinMode(pin, activeState ? INPUT_PULLDOWN : INPUT_PULLUP);
 
-  usb_hid.setReportDescriptor(desc_hid_report, sizeof(desc_hid_report));
+  // Notes: following commented-out functions has no affect on ESP32
+  // usb_hid.setReportDescriptor(desc_hid_report, sizeof(desc_hid_report));
+
   usb_hid.begin();
 
   Serial.begin(115200);
-  while ( !Serial ) delay(10);   // wait for native usb
+  //while ( !Serial ) delay(10);   // wait for native usb
 
   Serial.println("Adafruit TinyUSB Mouse + Mass Storage (external flash) example");
 }
@@ -96,7 +132,7 @@ void loop()
   uint32_t const btn = (digitalRead(pin) == activeState);
 
   // Remote wakeup
-  if ( USBDevice.suspended() && btn )
+  if ( TinyUSBDevice.suspended() && btn )
   {
     // Wake up host if we are in suspend mode
     // and REMOTE_WAKEUP feature is enabled by host

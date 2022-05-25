@@ -137,9 +137,7 @@ bool Adafruit_LIS3DH::begin(uint8_t i2caddr, uint8_t nWAI) {
       i2c_dev, spi_dev, ADDRBIT8_HIGH_TOREAD, LIS3DH_REG_CTRL4, 1);
   _ctrl4.write(0x88); // High res & BDU enabled
 
-  Adafruit_BusIO_Register _ctrl3 = Adafruit_BusIO_Register(
-      i2c_dev, spi_dev, ADDRBIT8_HIGH_TOREAD, LIS3DH_REG_CTRL3, 1);
-  _ctrl3.write(0x10); // DRDY on INT1
+  enableDRDY(true, 1);
 
   // Turn on orientation config
 
@@ -199,19 +197,29 @@ void Adafruit_LIS3DH::read(void) {
   z |= ((uint16_t)buffer[5]) << 8;
 
   uint8_t range = getRange();
-  uint16_t divider = 1;
-  if (range == LIS3DH_RANGE_16_G)
-    divider = 1365; // different sensitivity at 16g
-  if (range == LIS3DH_RANGE_8_G)
-    divider = 4096;
-  if (range == LIS3DH_RANGE_4_G)
-    divider = 8190;
-  if (range == LIS3DH_RANGE_2_G)
-    divider = 16380;
 
-  x_g = (float)x / divider;
-  y_g = (float)y / divider;
-  z_g = (float)z / divider;
+  // this scaling process accounts for the shift due to actually being 10 bits
+  // (normal mode) as well as the lsb=> mg conversion and the mg=> g conversion
+  // final value is raw_lsb => 10-bit lsb -> milli-gs -> gs
+
+  // regardless of the range, we'll always convert the value to 10 bits and g's
+  // so we'll always divide by LIS3DH_LSB16_TO_KILO_LSB10 (16000):
+
+  // then we can then multiply the resulting value by the lsb value to get the
+  // value in g's
+
+  uint8_t lsb_value = 1;
+  if (range == LIS3DH_RANGE_2_G)
+    lsb_value = 4;
+  if (range == LIS3DH_RANGE_4_G)
+    lsb_value = 8;
+  if (range == LIS3DH_RANGE_8_G)
+    lsb_value = 16;
+  if (range == LIS3DH_RANGE_16_G)
+    lsb_value = 48;
+  x_g = lsb_value * ((float)x / LIS3DH_LSB16_TO_KILO_LSB10);
+  y_g = lsb_value * ((float)y / LIS3DH_LSB16_TO_KILO_LSB10);
+  z_g = lsb_value * ((float)z / LIS3DH_LSB16_TO_KILO_LSB10);
 }
 
 /*!
@@ -323,6 +331,31 @@ uint8_t Adafruit_LIS3DH::getClick(void) {
       i2c_dev, spi_dev, ADDRBIT8_HIGH_TOREAD, LIS3DH_REG_CLICKSRC, 1);
 
   return click_reg.read();
+}
+
+/**
+ * @brief Enable or disable the Data Ready interupt
+ *
+ * @param enable_drdy true to enable the given Data Ready interrupt on INT1,
+ * false to disable it
+ * @param int_pin which DRDY interrupt to enable; 1 for DRDY1, 2 for DRDY2
+ * @return true: success false: failure
+ */
+bool Adafruit_LIS3DH::enableDRDY(bool enable_drdy, uint8_t int_pin) {
+  Adafruit_BusIO_Register _ctrl3 = Adafruit_BusIO_Register(
+      i2c_dev, spi_dev, ADDRBIT8_HIGH_TOREAD, LIS3DH_REG_CTRL3, 1);
+  Adafruit_BusIO_RegisterBits _drdy1_int_enable =
+      Adafruit_BusIO_RegisterBits(&_ctrl3, 1, 4);
+  Adafruit_BusIO_RegisterBits _drdy2_int_enable =
+      Adafruit_BusIO_RegisterBits(&_ctrl3, 1, 3);
+
+  if (int_pin == 1) {
+    return _drdy1_int_enable.write(enable_drdy);
+  } else if (int_pin == 2) {
+    return _drdy2_int_enable.write(enable_drdy);
+  } else {
+    return false;
+  }
 }
 
 /*!
