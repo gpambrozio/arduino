@@ -79,20 +79,8 @@ void setup() {
   Serial.begin(115200); // Starts the serial communication
   DL(F(NAME));
   
-  D(F("Connecting"));
+  DL(F("Starting WiFi"));
   WiFi.begin(WLAN_SSID, WLAN_PASS);
-  int failCount = 0;
-  while (WiFi.status() != WL_CONNECTED) {
-    delay(500);
-    D(F("."));
-    if (++failCount > 20) {
-      DL(F("WiFi not connected!"));
-      ESP.restart();
-    }
-    digitalWrite(LED, failCount % 2 == 0 ? HIGH : LOW);
-  }
-  digitalWrite(LED, LOW);
-  DL(F("Connected!"));
 
   if (MDNS.begin(NAME)) {
     DL(F("MDNS responder started"));
@@ -117,43 +105,53 @@ bool goingDown = false;
 long startMove;
 long lastReported = -1;
 
+bool wifiConnected = false;
+long wifiLastConnectionStatus = 0;
+
 void loop() {
   debouncerDn.update();
   debouncerUp.update();
 
-  if (WiFi.status() != WL_CONNECTED) {
-    DL(F("WiFi not connected!"));
-    ESP.restart();
+  bool wifi = WiFi.status() == WL_CONNECTED;
+  if (wifiConnected != wifi) {
+    wifiConnected = wifi;
+    digitalWrite(LED, wifiConnected ? LOW : HIGH);
+    DL(F("wifi connection changed"));
   }
 
-  if (!client.connected()) {
-    DL(F("connecting to server."));
-    client.stop();
-    if (client.connect(WiFi.gatewayIP(), 5000)) {
-      DL(F("connected to server."));
+  if (wifiConnected) {
+    if (!client.connected()) {
+      DL(F("connecting to server."));
+      client.stop();
+      if (client.connect(WiFi.gatewayIP(), 5000)) {
+        DL(F("connected to server."));
+        commandsToSend.clear();
+        client.setTimeout(15);
+        client.println(NAME);
+        client.flush();
+      } else {
+        DL(F("failed connecting to server."));
+      }
+    } else if (client.available()) {
+      String line = client.readStringUntil('\n');
+      if (line.startsWith("P")) {
+        goToPosition = line.substring(1).toInt();
+      } else if (line.startsWith("R")) {
+        goToPosition = currentPosition + line.substring(1).toInt();
+      }
+      D(F("Will go to ")); DL(goToPosition);
+    } else if (!commandsToSend.empty()) {
+      for (uint8_t i=0; i<commandsToSend.size(); i++) {
+        client.print(commandsToSend[i] + "\n");
+      }
       commandsToSend.clear();
-      client.setTimeout(15);
-      client.println(NAME);
-      client.flush();
-    } else {
-      DL(F("failed connecting to server."));
     }
-  } else if (client.available()) {
-    String line = client.readStringUntil('\n');
-    if (line.startsWith("P")) {
-      goToPosition = line.substring(1).toInt();
-    } else if (line.startsWith("R")) {
-      goToPosition = currentPosition + line.substring(1).toInt();
-    }
-    D(F("Will go to ")); DL(goToPosition);
-  } else if (!commandsToSend.empty()) {
-    for (uint8_t i=0; i<commandsToSend.size(); i++) {
-      client.print(commandsToSend[i] + "\n");
-    }
-    commandsToSend.clear();
+    ArduinoOTA.handle();
+  } else if (millis() - wifiLastConnectionStatus > 5000) {
+    DL(F("not connected to wifi!!!"));
+    wifiLastConnectionStatus = millis();
   }
-  ArduinoOTA.handle();
-  
+
   goToPosition = min(100l, goToPosition);
   if (currentPosition != goToPosition) {
     bool goingUp = goToPosition > currentPosition;
