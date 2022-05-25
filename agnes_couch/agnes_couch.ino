@@ -80,15 +80,8 @@ void setup() {
   DL(F(NAME));
   
   DL(F("Starting WiFi"));
+  WiFi.mode(WIFI_STA);
   WiFi.begin(WLAN_SSID, WLAN_PASS);
-
-  if (MDNS.begin(NAME)) {
-    DL(F("MDNS responder started"));
-  }
-
-  ArduinoOTA.setPort(8266);
-  ArduinoOTA.setHostname(NAME);
-  ArduinoOTA.begin();
 
   if (!EEPROM.begin(EEPROM_SIZE)) {
     DL(F("failed to initialise EEPROM"));
@@ -116,7 +109,18 @@ void loop() {
   if (wifiConnected != wifi) {
     wifiConnected = wifi;
     digitalWrite(LED, wifiConnected ? LOW : HIGH);
-    DL(F("wifi connection changed"));
+    if (wifiConnected) {
+      if (MDNS.begin(NAME)) {
+        DL(F("MDNS responder started"));
+      }
+
+      ArduinoOTA.setPort(8266);
+      ArduinoOTA.setHostname(NAME);
+      ArduinoOTA.begin();
+      DL(F("wifi connected!!!"));
+    } else {
+      DL(F("wifi disconnected!!!"));
+    }
   }
 
   if (wifiConnected) {
