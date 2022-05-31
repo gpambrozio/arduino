@@ -1,6 +1,6 @@
 /*******************************
  * Sparkfun ESP32 Thing
- * For some weird reson needs to be compiled with "Core Debug Level: ERROR"
+ * For some weird reson needs to be compiled with "Core Debug Level: Warn"
  *******************************/
 
 #define PIN_UP   12
