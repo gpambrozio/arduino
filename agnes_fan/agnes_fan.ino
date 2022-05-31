@@ -15,7 +15,7 @@
 #define KEY_UP     5
 #define KEY_DOWN   4
 
-#define TOTAL_MOVE_TIME   (4500.0f)
+#define TOTAL_MOVE_TIME   (2200.0f)
 
 #define NAME   "Fan"
 
