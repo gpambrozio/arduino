@@ -1,6 +1,5 @@
 /*******************************
  * Sparkfun ESP32 Thing
- * For some weird reson needs to be compiled with "Core Debug Level: Warn"
  *******************************/
 
 #define PIN_UP   12
@@ -80,17 +79,22 @@ void setup() {
   Serial.begin(115200); // Starts the serial communication
   DL(F(NAME));
   
-  DL(F("Starting WiFi"));
-  WiFi.disconnect(true);
-  WiFi.mode(WIFI_STA);
-  WiFi.begin(WLAN_SSID, WLAN_PASS);
-
   if (!EEPROM.begin(EEPROM_SIZE)) {
     DL(F("failed to initialise EEPROM"));
   }
   currentPosition = min(100l, (long)EEPROM.read(EEPROM_POSITION));
   goToPosition = currentPosition;
   D(F("Initial position: ")); DL(currentPosition);
+
+  DL(F("Starting WiFi"));
+  WiFi.mode(WIFI_STA);
+  WiFi.begin(WLAN_SSID, WLAN_PASS);
+
+  // From https://github.com/espressif/arduino-esp32/issues/3381#issuecomment-849014677
+  WiFi.persistent(false);
+  WiFi.setAutoConnect(false);
+  WiFi.setAutoReconnect(true);
+  WiFi.setTxPower(WIFI_POWER_2dBm);
 
   DL(F("started"));
 }
