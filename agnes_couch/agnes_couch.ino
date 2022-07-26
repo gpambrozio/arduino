@@ -78,7 +78,7 @@ void setup() {
   
   Serial.begin(115200); // Starts the serial communication
   DL(F(NAME));
-  
+
   if (!EEPROM.begin(EEPROM_SIZE)) {
     DL(F("failed to initialise EEPROM"));
   }
@@ -87,6 +87,7 @@ void setup() {
   D(F("Initial position: ")); DL(currentPosition);
 
   DL(F("Starting WiFi"));
+  WiFi.disconnect(false, true);
   WiFi.mode(WIFI_STA);
   WiFi.begin(WLAN_SSID, WLAN_PASS);
 
@@ -116,6 +117,7 @@ void loop() {
     wifiConnected = wifi;
     digitalWrite(LED, wifiConnected ? LOW : HIGH);
     if (wifiConnected) {
+      wifiLastConnectionStatus = millis();
       if (MDNS.begin(NAME)) {
         DL(F("MDNS responder started"));
       }
@@ -125,18 +127,20 @@ void loop() {
       ArduinoOTA.begin();
       DL(F("wifi connected!!!"));
     } else {
-      DL(F("wifi disconnected!!!"));
+      DL(F("wifi disconnected!!! Restarting."));
+      delay(1000);
+      ESP.restart();
     }
   }
 
   if (wifiConnected) {
-    if (!client.connected()) {
+    if (!client.connected() && millis() - wifiLastConnectionStatus > 5000) {
       DL(F("connecting to server."));
-      client.stop();
-      if (client.connect(WiFi.gatewayIP(), 5000)) {
+      client = WiFiClient();
+      if (client.connect(WiFi.gatewayIP(), 5000, 15000)) {
         DL(F("connected to server."));
         commandsToSend.clear();
-        client.setTimeout(15);
+        lastReported = -1;
         client.println(NAME);
         client.flush();
       } else {
@@ -152,7 +156,8 @@ void loop() {
       D(F("Will go to ")); DL(goToPosition);
     } else if (!commandsToSend.empty()) {
       for (uint8_t i=0; i<commandsToSend.size(); i++) {
-        client.print(commandsToSend[i] + "\n");
+        client.println(commandsToSend[i]);
+        client.flush();
       }
       commandsToSend.clear();
     }
@@ -180,6 +185,8 @@ void loop() {
 //    }
 //    DL(F(""));
     wifiLastConnectionStatus = millis();
+  } else {
+    client.stop();
   }
 
   goToPosition = min(100l, goToPosition);
